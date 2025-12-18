@@ -4,12 +4,6 @@ import Participant from '@/lib/db/models/Participant';
 import User from '@/lib/db/models/User';
 import { sendEventPassEmail } from '@/lib/email';
 
-// Helper to generate unique IDs
-function generateTeamId(count: number): string {
-    const num = String(count + 1).padStart(3, '0');
-    return `VIBE-${num}`;
-}
-
 function generateParticipantId(teamId: string, memberIndex: number): string {
     return `${teamId}-${memberIndex + 1}`;
 }
@@ -28,7 +22,7 @@ export async function POST(request: NextRequest) {
         await dbConnect();
 
         const body = await request.json();
-        const { members, college, ticketType, screenshot } = body;
+        const { members, college, ticketType, screenshot, transactionId } = body;
 
         if (!members || members.length === 0) {
             return NextResponse.json(
@@ -37,10 +31,24 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Generate IDs
-        const participantCount = await Participant.countDocuments();
-        const teamId = generateTeamId(Math.floor(participantCount / 4)); // Approximate
-        const teamEmail = `${teamId.split('-')[1]}@vibe.com`;
+        // Generate IDs - Find the last team ID from both collections to increment properly
+        const [lastParticipant, lastUser] = await Promise.all([
+            Participant.findOne().sort({ teamId: -1 }),
+            User.findOne({ role: 'participant' }).sort({ teamId: -1 })
+        ]);
+
+        let nextTeamNum = 1;
+        const lastTeamId = lastParticipant?.teamId || lastUser?.teamId;
+
+        if (lastTeamId) {
+            const match = lastTeamId.match(/VIBE-(\d+)/);
+            if (match) {
+                nextTeamNum = parseInt(match[1]) + 1;
+            }
+        }
+
+        const teamId = `VIBE-${String(nextTeamNum).padStart(3, '0')}`;
+        const teamEmail = `${String(nextTeamNum).padStart(3, '0')}@vibe.com`;
         const passkey = generatePasskey();
 
         // Determine ticket type
@@ -74,6 +82,7 @@ export async function POST(request: NextRequest) {
             type: mappedType,
             status: 'Pending',
             paymentScreenshotUrl: screenshot || '',
+            transactionId: transactionId,
         }));
 
         const createdParticipants = await Participant.insertMany(participantsToCreate);
@@ -114,8 +123,10 @@ export async function POST(request: NextRequest) {
 
         // Handle duplicate email error (User or Participant)
         if (error && typeof error === 'object' && 'code' in error && (error as any).code === 11000) {
+            const key = Object.keys((error as any).keyPattern || {})[0];
+            const message = key === 'transactionId' ? 'This Transaction ID has already been used.' : 'Team ID or Email collision. Please try again.';
             return NextResponse.json(
-                { error: 'Team ID or Email collision. Please try again.' },
+                { error: message },
                 { status: 409 }
             );
         }

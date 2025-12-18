@@ -60,25 +60,18 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
         setError('');
 
         try {
-            // Small delay for UX
-            await new Promise(resolve => setTimeout(resolve, 500));
+            const response = await fetch(`/api/auth/verify-email?email=${encodeURIComponent(email)}`);
+            const data = await response.json();
 
-            const lowerEmail = email.toLowerCase();
-
-            // Simple logic to set hint for passkey type
-            if (lowerEmail.includes('admin')) {
-                setDetectedRole('admin');
-            } else if (lowerEmail.includes('coord')) {
-                setDetectedRole('coordinator');
-            } else if (lowerEmail.includes('faculty')) {
-                setDetectedRole('faculty');
-            } else {
-                setDetectedRole('participant');
+            if (!response.ok) {
+                throw new Error(data.error || 'Email not found in our records');
             }
 
+            setDetectedRole(data.role);
             setStep('auth');
-        } catch {
-            setError('An error occurred. Please try again.');
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Invalid email. Please check and try again.';
+            setError(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -91,17 +84,24 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
         setIsLoading(true);
         setError('');
 
+        const authPayload: any = {
+            email,
+            role: detectedRole
+        };
+
+        if (detectedRole === 'participant') {
+            authPayload.passkey = authInput;
+        } else {
+            authPayload.password = authInput;
+        }
+
         try {
             const response = await fetch('/api/auth', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    email,
-                    password: authInput, // Using password field for both password and passkey
-                    role: detectedRole
-                }),
+                body: JSON.stringify(authPayload),
             });
 
             const data = await response.json();
@@ -193,7 +193,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
                                         value={authInput}
                                         onChange={(e) => setAuthInput(detectedRole === 'participant' ? e.target.value.toUpperCase() : e.target.value)}
                                         className="bg-brand-dark border-gray-700 px-10 h-11 focus-visible:ring-brand-primary font-mono tracking-widest"
-                                        placeholder={detectedRole === 'participant' ? 'VIBE-XXXX' : '••••••••'}
+                                        placeholder={detectedRole === 'participant' ? 'VIBE12' : '••••••••'}
                                     />
                                     {detectedRole !== 'participant' && (
                                         <button

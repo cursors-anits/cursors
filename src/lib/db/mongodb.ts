@@ -33,10 +33,11 @@ async function dbConnect() {
     if (!cached.promise) {
         const opts = {
             bufferCommands: false,
+            dbName: 'vibecoding', // Explicitly set the database name
         };
 
         cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-            console.log('✅ MongoDB connected successfully');
+            console.log(`✅ MongoDB connected successfully to: ${mongoose.connection.db?.databaseName}`);
             return mongoose;
         });
     }

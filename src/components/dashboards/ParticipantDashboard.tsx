@@ -113,6 +113,29 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                 ))}
             </div>
 
+            {/* Accommodation Info */}
+            <Card className="bg-brand-surface border-brand-primary/20">
+                <CardContent className="p-6 flex items-start gap-4">
+                    <div className="bg-yellow-500/10 p-3 rounded-full">
+                        <AlertTriangle className="w-6 h-6 text-yellow-500" />
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className="font-bold text-lg text-white">Accommodation Information</h3>
+                        <p className="text-gray-400 text-sm leading-relaxed">
+                            Accommodation is <span className="text-red-400 font-bold">NOT provided</span> for the event (except for Hackathon night for participants).
+                            <br />
+                            For nearby hostels and stay assistance, please contact:
+                        </p>
+                        <div className="flex items-center gap-3 pt-2">
+                            <Badge variant="outline" className="border-brand-primary text-brand-primary font-mono text-sm px-3 py-1">
+                                8897892720
+                            </Badge>
+                            <span className="text-xs text-gray-500 uppercase tracking-widest">Coordinator</span>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+
             {/* ID Card Modal */}
             <Dialog open={showIdCard} onOpenChange={setShowIdCard}>
                 <DialogContent className="max-w-sm p-0 bg-brand-dark border-white/20 rounded-3xl overflow-hidden shadow-2xl">

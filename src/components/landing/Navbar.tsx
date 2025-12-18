@@ -22,7 +22,7 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onRegisterClick, onLoginClick }) => {
-    const { currentUser, logout } = useData();
+    const { currentUser, logout, settings } = useData();
     const router = useRouter();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -103,13 +103,22 @@ const Navbar: React.FC<NavbarProps> = ({ onRegisterClick, onLoginClick }) => {
                                         Login
                                     </Button>
 
-                                    <Button
-                                        onClick={onRegisterClick}
-                                        className="group bg-white text-brand-dark px-6 py-2.5 rounded-full font-bold text-sm transition-all hover:bg-gray-100 flex items-center gap-2 border-none"
-                                    >
-                                        Register
-                                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                                    </Button>
+                                    {!settings?.registrationClosed ? (
+                                        <Button
+                                            onClick={onRegisterClick}
+                                            className="group bg-white text-brand-dark px-6 py-2.5 rounded-full font-bold text-sm transition-all hover:bg-gray-100 flex items-center gap-2 border-none"
+                                        >
+                                            Register
+                                            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            disabled
+                                            className="bg-white/10 text-gray-400 px-6 py-2.5 rounded-full font-bold text-sm border-none cursor-not-allowed"
+                                        >
+                                            Closed
+                                        </Button>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -177,15 +186,24 @@ const Navbar: React.FC<NavbarProps> = ({ onRegisterClick, onLoginClick }) => {
                                 >
                                     Login
                                 </Button>
-                                <Button
-                                    onClick={() => {
-                                        setIsMobileMenuOpen(false);
-                                        onRegisterClick();
-                                    }}
-                                    className="w-full mt-4 bg-brand-primary text-white px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 border-none"
-                                >
-                                    Secure Your Spot <ArrowRight size={18} />
-                                </Button>
+                                {!settings?.registrationClosed ? (
+                                    <Button
+                                        onClick={() => {
+                                            setIsMobileMenuOpen(false);
+                                            onRegisterClick();
+                                        }}
+                                        className="w-full mt-4 bg-brand-primary text-white px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 border-none"
+                                    >
+                                        Secure Your Spot <ArrowRight size={18} />
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        disabled
+                                        className="w-full mt-4 bg-white/10 text-gray-400 px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 border-none cursor-not-allowed"
+                                    >
+                                        Registrations Closed
+                                    </Button>
+                                )}
                             </>
                         )}
                     </div>

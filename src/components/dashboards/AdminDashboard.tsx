@@ -17,7 +17,8 @@ import {
     Download,
     BarChart3,
     Search,
-    Mail
+    Mail,
+    Zap
 } from 'lucide-react';
 import {
     BarChart,
@@ -59,6 +60,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 interface AdminDashboardProps {
@@ -481,9 +483,49 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                                 </div>
                             </CardContent>
                         </Card>
+
+                        <Card className="bg-brand-surface border-white/5 p-6 md:col-span-2">
+                            <CardHeader className="px-0 pt-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-green-500/10 text-green-400">
+                                        <Zap className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-lg">Payment Configuration</CardTitle>
+                                        <CardDescription>Update UPI ID and QR Code for registration payments</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="px-0 pt-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-xs text-gray-400">Merchant UPI ID</Label>
+                                        <Input
+                                            defaultValue={settings?.upiId}
+                                            onBlur={(e) => updateSettings({ upiId: e.target.value })}
+                                            className="bg-brand-dark border-white/10"
+                                            placeholder="example@upi"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-xs text-gray-400">Payment QR Code URL (relative or absolute)</Label>
+                                        <Input
+                                            defaultValue={settings?.qrImageUrl}
+                                            onBlur={(e) => updateSettings({ qrImageUrl: e.target.value })}
+                                            className="bg-brand-dark border-white/10"
+                                            placeholder="/qr-payment.png"
+                                        />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </TabsContent>
-                {/* Coordinators tab similar to participants... */}
+                <TabsContent value="coordinators">
+                    <Card className="bg-brand-surface border-white/5 p-6 text-center text-gray-400">
+                        Coordinator management functionality coming soon...
+                    </Card>
+                </TabsContent>
             </Tabs>
         </div>
     );

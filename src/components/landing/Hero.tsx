@@ -22,10 +22,11 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
     useEffect(() => {
         if (!settings?.eventDate) return;
 
+        // Use UTC or specific local date to avoid mismatches
         const targetDate = new Date(settings.eventDate).getTime();
 
         const calculateTimeLeft = () => {
-            const now = new Date().getTime();
+            const now = Date.now();
             const difference = targetDate - now;
 
             if (difference > 0) {

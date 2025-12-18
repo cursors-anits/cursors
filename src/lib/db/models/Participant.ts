@@ -11,6 +11,7 @@ export interface IParticipant {
     whatsapp: string;
     year: string;
     linkedin?: string;
+    transactionId: string;
     type: 'Workshop' | 'Hackathon' | 'Combo';
     status: 'Pending' | 'Paid' | 'Confirmed';
     assignedLab?: string;
@@ -84,6 +85,12 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
         },
         paymentScreenshotUrl: {
             type: String,
+        },
+        transactionId: {
+            type: String,
+            required: true,
+            unique: true,
+            index: true,
         },
     },
     {

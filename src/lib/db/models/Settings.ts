@@ -5,6 +5,8 @@ export interface ISettings {
     registrationClosed: boolean;
     maintenanceMode: boolean;
     eventDate: Date;
+    upiId: string;
+    qrImageUrl: string;
     updatedAt?: Date;
 }
 
@@ -23,6 +25,14 @@ const SettingsSchema = new Schema<ISettings, SettingsModel>(
         eventDate: {
             type: Date,
             default: () => new Date('2026-01-02T09:00:00'), // Default event date to Jan 2nd, 2026
+        },
+        upiId: {
+            type: String,
+            default: 'bmahesh498@okhdfcbank',
+        },
+        qrImageUrl: {
+            type: String,
+            default: '/payment qr.jpg',
         },
     },
     {

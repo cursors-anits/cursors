@@ -8,6 +8,8 @@ const transporter = nodemailer.createTransport({
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,   // 10 seconds
 });
 
 interface EmailMember {
@@ -131,9 +133,20 @@ function getTemplate(
             </div>
 
             <!-- Members -->
-            <div style="margin-bottom: 30px;">
+            <div style="margin-bottom: 25px;">
                 <h3 style="font-size: 12px; text-transform: uppercase; color: #666; letter-spacing: 1px; margin-bottom: 10px;">Registered Members</h3>
                 ${membersHtml}
+            </div>
+
+            <!-- Accommodation Policy -->
+            <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 12px; padding: 15px; margin-bottom: 30px;">
+                <h3 style="margin: 0 0 10px 0; font-size: 11px; text-transform: uppercase; color: #f59e0b; letter-spacing: 1px;">Stay & Accommodation</h3>
+                <p style="margin: 0; font-size: 12px; color: #ccc; line-height: 1.5;">
+                    Please note that accommodation is <strong>NOT provided</strong> for the event, except for the <strong>Hackathon night</strong> (for hackathon participants).
+                </p>
+                <p style="margin: 8px 0 0; font-size: 12px; color: #ccc;">
+                    For accommodation info or nearby hostel contacts, reach out to <strong>8897892720</strong>.
+                </p>
             </div>
 
             <!-- Actions -->
@@ -145,7 +158,7 @@ function getTemplate(
 
         <!-- Footer -->
         <div style="background-color: #050505; padding: 20px; text-align: center; font-size: 11px; color: #444; border-top: 1px solid #111;">
-            <p style="margin: 0;">&copy; 2026 Vibe Coding. All rights reserved.</p>
+            <p style="margin: 0;">&copy; 2026 Cursors, ANITS. All rights reserved.</p>
         </div>
     </div>
 </body>

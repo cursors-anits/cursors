@@ -34,7 +34,7 @@ export const RegistrationSchema = z.object({
     teamSize: z.number().min(1).max(5),
     members: z.array(TeamMemberSchema),
     transactionId: z.string().min(12, 'UTR must be 12 digits'),
-    screenshot: z.any().optional(), // Handled manually for now
+    screenshot: z.string().min(1, 'Payment screenshot is required'),
 });
 
 export type TeamMember = z.infer<typeof TeamMemberSchema>;
@@ -99,4 +99,6 @@ export interface Settings {
     registrationClosed: boolean;
     maintenanceMode: boolean;
     eventDate: string | Date;
+    upiId: string;
+    qrImageUrl: string;
 }
