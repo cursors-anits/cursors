@@ -18,7 +18,9 @@ import {
     BarChart3,
     Search,
     Mail,
-    Zap
+    Zap,
+    Eye,
+    Loader2
 } from 'lucide-react';
 import {
     BarChart,
@@ -58,6 +60,14 @@ import {
     TableHeader,
     TableRow
 } from '@/components/ui/table';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
@@ -97,16 +107,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
     };
 
     const [searchQuery, setSearchQuery] = useState('');
+    const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'participant' | 'coordinator' } | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    const handleDelete = async (id: string, type: 'participant' | 'coordinator') => {
-        if (confirm(`Are you sure you want to delete this ${type}?`)) {
-            try {
-                if (type === 'participant') await deleteParticipant(id);
-                else await deleteCoordinator(id);
-                toast.success(`${type} deleted successfully`);
-            } catch {
-                toast.error(`Failed to delete ${type}`);
-            }
+    const handleDelete = (id: string, type: 'participant' | 'coordinator') => {
+        setItemToDelete({ id, type });
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+
+        setIsDeleting(true);
+        try {
+            if (itemToDelete.type === 'participant') await deleteParticipant(itemToDelete.id);
+            else await deleteCoordinator(itemToDelete.id);
+            toast.success(`${itemToDelete.type} deleted successfully`);
+            setItemToDelete(null);
+        } catch {
+            toast.error(`Failed to delete ${itemToDelete.type}`);
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -299,6 +319,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                                                     <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-400" onClick={() => handleResendEmail(p.teamId)} title="Resend Email">
                                                         <Mail className="w-4 h-4" />
                                                     </Button>
+                                                    {p.paymentScreenshotUrl && (
+                                                        <Button
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            className="h-8 w-8 text-green-400"
+                                                            onClick={() => window.open(p.paymentScreenshotUrl, '_blank')}
+                                                            title="View Payment"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </Button>
+                                                    )}
                                                     <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-400"><Edit className="w-4 h-4" /></Button>
                                                     <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400" onClick={() => handleDelete(p._id, 'participant')}><Trash2 className="w-4 h-4" /></Button>
                                                 </div>
@@ -527,7 +558,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                     </Card>
                 </TabsContent>
             </Tabs>
-        </div>
+
+            {/* Delete Confirmation Modal */}
+            <Dialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+                <DialogContent className="bg-brand-surface border-white/10 text-white">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-500">
+                            <AlertTriangle className="w-5 h-5" />
+                            Confirm Deletion
+                        </DialogTitle>
+                        <DialogDescription className="text-gray-400">
+                            Are you sure you want to delete this {itemToDelete?.type}? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={() => setItemToDelete(null)} disabled={isDeleting} className="border-white/10">
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
+                            {isDeleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                            Delete Everything
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div >
     );
 };
 

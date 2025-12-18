@@ -3,6 +3,7 @@ import dbConnect from '@/lib/db/mongodb';
 import Participant from '@/lib/db/models/Participant';
 import User from '@/lib/db/models/User';
 import { sendEventPassEmail } from '@/lib/email';
+import { uploadToDrive } from '@/lib/gdrive';
 
 function generateParticipantId(teamId: string, memberIndex: number): string {
     return `${teamId}-${memberIndex + 1}`;
@@ -59,7 +60,31 @@ export async function POST(request: NextRequest) {
         };
         const mappedType = typeMap[ticketType] || 'Combo';
 
-        // 1. Create ONE User for the Team
+        // 1. Check for Duplicate Transaction ID
+        const existingTransaction = await Participant.findOne({ transactionId });
+        if (existingTransaction) {
+            return NextResponse.json(
+                { error: 'This Transaction ID has already been used for registration.' },
+                { status: 400 }
+            );
+        }
+
+        // 2. Upload Screenshot to Google Drive FIRST
+        let driveUrl = '';
+        if (screenshot) {
+            try {
+                driveUrl = await uploadToDrive(screenshot, `Payment_${teamId}`);
+                if (!driveUrl) throw new Error('GDrive upload returned empty URL');
+            } catch (driveError: any) {
+                console.error('Registration aborted: GDrive Upload failed:', driveError);
+                return NextResponse.json(
+                    { error: 'Payment verification failed. Please try again later.' },
+                    { status: 500 }
+                );
+            }
+        }
+
+        // 3. Create ONE User for the Team
         const teamUser = await User.create({
             email: teamEmail,
             name: `Team ${teamId}`,
@@ -81,7 +106,7 @@ export async function POST(request: NextRequest) {
             linkedin: m.linkedin,
             type: mappedType,
             status: 'Pending',
-            paymentScreenshotUrl: screenshot || '',
+            paymentScreenshotUrl: driveUrl || screenshot || '',
             transactionId: transactionId,
         }));
 

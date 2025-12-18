@@ -7,7 +7,8 @@ import {
     Camera,
     StopCircle,
     CheckCircle2,
-    ChevronRight
+    ChevronRight,
+    Eye
 } from 'lucide-react';
 import { User, Participant } from '@/types';
 import { useData } from '@/lib/context/DataContext';
@@ -411,9 +412,22 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                                         <p className="font-medium">{p.name}</p>
                                         <p className="text-xs text-gray-500">{p.teamId} • {p.participantId}</p>
                                     </div>
-                                    <Badge variant={p.status === 'Paid' ? 'outline' : 'secondary'} className={p.status === 'Paid' ? 'border-green-500/50 text-green-400' : ''}>
-                                        {p.status}
-                                    </Badge>
+                                    <div className="flex items-center gap-2">
+                                        {p.paymentScreenshotUrl && (
+                                            <Button
+                                                size="icon"
+                                                variant="ghost"
+                                                className="h-8 w-8 text-green-400"
+                                                onClick={() => window.open(p.paymentScreenshotUrl, '_blank')}
+                                                title="View Payment"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </Button>
+                                        )}
+                                        <Badge variant={p.status === 'Paid' ? 'outline' : 'secondary'} className={p.status === 'Paid' ? 'border-green-500/50 text-green-400' : ''}>
+                                            {p.status}
+                                        </Badge>
+                                    </div>
                                 </div>
                             ))}
                         </div>

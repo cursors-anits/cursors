@@ -89,7 +89,6 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
         transactionId: {
             type: String,
             required: true,
-            unique: true,
             index: true,
         },
     },
