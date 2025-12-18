@@ -1,0 +1,21 @@
+{
+    "name": "Vibe Coding",
+    "short_name": "VibeCoding",
+    "description": "Gen AI Workshop & 24H Hackathon",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#020617",
+    "theme_color": "#82d4fa",
+    "icons": [
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
