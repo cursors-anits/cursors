@@ -5,6 +5,9 @@ import { NavItem } from '@/types';
 import { Menu, X, ArrowRight, UserCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { useData } from '@/lib/context/DataContext';
+import { LogOut, LayoutDashboard } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 const navItems: NavItem[] = [
     { label: 'Schedule', href: '#schedule' },
@@ -19,6 +22,8 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ onRegisterClick, onLoginClick }) => {
+    const { currentUser, logout } = useData();
+    const router = useRouter();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -69,22 +74,44 @@ const Navbar: React.FC<NavbarProps> = ({ onRegisterClick, onLoginClick }) => {
                                 ))}
                             </div>
 
-                            <Button
-                                variant="ghost"
-                                onClick={onLoginClick}
-                                className="text-gray-300 hover:text-white hover:bg-transparent px-4 py-2 text-sm font-medium transition-colors mr-2 flex items-center gap-2"
-                            >
-                                <UserCircle className="w-5 h-5" />
-                                Login
-                            </Button>
+                            {currentUser ? (
+                                <>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => router.push(`/dashboard/${currentUser.role}`)}
+                                        className="text-gray-300 hover:text-white hover:bg-transparent px-4 py-2 text-sm font-medium transition-colors mr-2 flex items-center gap-2"
+                                    >
+                                        <LayoutDashboard className="w-5 h-5" />
+                                        Dashboard
+                                    </Button>
+                                    <Button
+                                        onClick={logout}
+                                        className="group bg-red-600/10 text-red-500 hover:bg-red-600/20 px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center gap-2 border border-red-600/20"
+                                    >
+                                        <LogOut className="w-4 h-4" />
+                                        Logout
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={onLoginClick}
+                                        className="text-gray-300 hover:text-white hover:bg-transparent px-4 py-2 text-sm font-medium transition-colors mr-2 flex items-center gap-2"
+                                    >
+                                        <UserCircle className="w-5 h-5" />
+                                        Login
+                                    </Button>
 
-                            <Button
-                                onClick={onRegisterClick}
-                                className="group bg-white text-brand-dark px-6 py-2.5 rounded-full font-bold text-sm transition-all hover:bg-gray-100 flex items-center gap-2 border-none"
-                            >
-                                Register
-                                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                            </Button>
+                                    <Button
+                                        onClick={onRegisterClick}
+                                        className="group bg-white text-brand-dark px-6 py-2.5 rounded-full font-bold text-sm transition-all hover:bg-gray-100 flex items-center gap-2 border-none"
+                                    >
+                                        Register
+                                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                                    </Button>
+                                </>
+                            )}
                         </div>
 
                         {/* Mobile menu button */}
@@ -116,25 +143,51 @@ const Navbar: React.FC<NavbarProps> = ({ onRegisterClick, onLoginClick }) => {
                                 {item.label}
                             </Link>
                         ))}
-                        <Button
-                            variant="ghost"
-                            onClick={() => {
-                                setIsMobileMenuOpen(false);
-                                onLoginClick();
-                            }}
-                            className="w-full text-left text-gray-300 hover:text-white hover:bg-white/5 block px-4 py-3 rounded-xl text-base font-medium transition-colors justify-start"
-                        >
-                            Login
-                        </Button>
-                        <Button
-                            onClick={() => {
-                                setIsMobileMenuOpen(false);
-                                onRegisterClick();
-                            }}
-                            className="w-full mt-4 bg-brand-primary text-white px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 border-none"
-                        >
-                            Secure Your Spot <ArrowRight size={18} />
-                        </Button>
+                        {currentUser ? (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => {
+                                        setIsMobileMenuOpen(false);
+                                        router.push(`/dashboard/${currentUser.role}`);
+                                    }}
+                                    className="w-full text-left text-gray-300 hover:text-white hover:bg-white/5 block px-4 py-3 rounded-xl text-base font-medium transition-colors justify-start"
+                                >
+                                    Dashboard
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        setIsMobileMenuOpen(false);
+                                        logout();
+                                    }}
+                                    className="w-full mt-4 bg-red-600/10 text-red-500 border border-red-600/20 px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2"
+                                >
+                                    Logout <LogOut size={18} />
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => {
+                                        setIsMobileMenuOpen(false);
+                                        onLoginClick();
+                                    }}
+                                    className="w-full text-left text-gray-300 hover:text-white hover:bg-white/5 block px-4 py-3 rounded-xl text-base font-medium transition-colors justify-start"
+                                >
+                                    Login
+                                </Button>
+                                <Button
+                                    onClick={() => {
+                                        setIsMobileMenuOpen(false);
+                                        onRegisterClick();
+                                    }}
+                                    className="w-full mt-4 bg-brand-primary text-white px-4 py-3 rounded-xl font-bold flex items-center justify-center gap-2 border-none"
+                                >
+                                    Secure Your Spot <ArrowRight size={18} />
+                                </Button>
+                            </>
+                        )}
                     </div>
                 </div>
             </nav>

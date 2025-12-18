@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:seed": "npx tsx --env-file=.env.local scripts/seed.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -37,6 +38,7 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-table": "^8.21.3",
+    "@types/nodemailer": "^7.0.4",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -49,6 +51,7 @@
     "mongoose": "^9.0.2",
     "next": "16.0.10",
     "next-themes": "^0.4.6",
+    "nodemailer": "^7.0.11",
     "react": "19.2.1",
     "react-day-picker": "^9.12.0",
     "react-dom": "19.2.1",

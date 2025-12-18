@@ -1,16 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { User, Participant as IParticipant } from '@/types';
+import React, { useMemo, useState } from 'react';
+import Image from 'next/image';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { User } from '@/types';
 import {
     QrCode,
-    Users,
     AlertTriangle,
     HelpCircle,
     MessageSquare,
     MapPin,
-    X,
-    Download,
     ShieldCheck,
     Calendar
 } from 'lucide-react';
@@ -18,13 +17,11 @@ import { useData } from '@/lib/context/DataContext';
 import { Button } from '@/components/ui/button';
 import {
     Card,
-    CardContent,
-    CardHeader,
-    CardTitle
+    CardContent
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 interface ParticipantDashboardProps {
     user: User;
@@ -32,16 +29,26 @@ interface ParticipantDashboardProps {
 
 const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => {
     const { participants } = useData();
-    const [participantData, setParticipantData] = useState<IParticipant | null>(null);
-    const [showIdCard, setShowIdCard] = useState(false);
 
-    useEffect(() => {
-        const data = participants.find(p => p.email === user.email || p.teamId === user.teamId);
-        if (data) setParticipantData(data);
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+
+    const showIdCard = searchParams.get('idcard') === 'true';
+
+    const setShowIdCard = (show: boolean) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (show) params.set('idcard', 'true');
+        else params.delete('idcard');
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const participantData = useMemo(() => {
+        return participants.find(p => p.email === user.email || p.teamId === user.teamId) || null;
     }, [participants, user]);
 
     const handleAction = (type: string) => {
-        alert(`${type} request sent! Help is on the way.`);
+        toast.success(`${type} request sent! Help is on the way.`);
     };
 
     return (
@@ -137,7 +144,7 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                         <div className="mt-16 px-6 pb-8 text-center space-y-6">
                             <div>
                                 <h2 className="text-2xl font-bold">{user.name}</h2>
-                                <p className="text-gray-500 text-sm mt-1">{participantData?.college || 'ANITS Engineering'}</p>
+                                <p className="text-gray-500 text-sm mt-1">{participantData?.college || 'Anil Neerukonda Institute of Technology and Sciences [ANITS]'}</p>
                             </div>
 
                             <div className="bg-white/5 rounded-2xl p-4 border border-white/10 grid grid-cols-2 gap-4 text-left">
@@ -152,11 +159,21 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                             </div>
 
                             <div className="bg-white p-4 rounded-3xl w-40 h-40 mx-auto flex items-center justify-center">
-                                {/* Simulated QR Code for the demo */}
-                                <div className="w-full h-full bg-black flex flex-col items-center justify-center text-white">
-                                    <QrCode className="w-20 h-20" />
-                                    <p className="text-[8px] mt-1 font-mono">{participantData?.participantId}</p>
-                                </div>
+                                {participantData?.participantId ? (
+                                    <Image
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${participantData.participantId}`}
+                                        alt="QR Code"
+                                        width={160}
+                                        height={160}
+                                        className="w-full h-full"
+                                        unoptimized
+                                    />
+                                ) : (
+                                    <div className="w-full h-full bg-black/5 flex flex-col items-center justify-center text-gray-400">
+                                        <QrCode className="w-12 h-12 animate-pulse" />
+                                        <p className="text-[10px] mt-2 italic">Generating...</p>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="flex items-center justify-center gap-2 text-green-400 font-bold text-xs uppercase tracking-widest">
@@ -165,7 +182,7 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                         </div>
 
                         <div className="bg-black/60 p-4 text-center text-[8px] text-gray-600 font-mono border-t border-white/5">
-                            OFFICIAL ENTRY PASS • VIBE CODING 2025
+                            OFFICIAL ENTRY PASS • VIBE CODING 2026
                         </div>
                     </div>
                 </DialogContent>

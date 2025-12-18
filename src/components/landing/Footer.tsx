@@ -101,7 +101,7 @@ const Footer: React.FC = () => {
                 </div>
 
                 <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
-                    <p>&copy; 2025 Vibe Coding. All rights reserved.</p>
+                    <p>&copy; 2026 Vibe Coding. All rights reserved.</p>
                 </div>
             </div>
         </footer>

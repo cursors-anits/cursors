@@ -30,7 +30,7 @@ export function proxy(request: NextRequest) {
             if (pathname.startsWith('/dashboard/participant') && role !== 'participant') {
                 return NextResponse.redirect(new URL(`/dashboard/${role}`, request.url));
             }
-        } catch (e) {
+        } catch {
             // Invalid cookie, clear and redirect
             const response = NextResponse.redirect(new URL('/', request.url));
             response.cookies.delete('vibe_session');

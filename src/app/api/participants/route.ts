@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
         const teamId = searchParams.get('teamId');
 
         // Build filter
-        const filter: any = {};
+        const filter: Record<string, string> = {};
         if (status) filter.status = status;
         if (lab) filter.assignedLab = lab;
         if (teamId) filter.teamId = teamId;

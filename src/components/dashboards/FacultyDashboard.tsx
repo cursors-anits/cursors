@@ -1,32 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
     Download,
     Users,
     UserCog,
-    BarChart3,
     Activity,
-    Search,
-    PieChart as PieChartIcon,
     TrendingUp,
-    Mail,
     MapPin
 } from 'lucide-react';
 import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
     Tooltip,
     Legend,
     ResponsiveContainer,
     PieChart,
     Pie,
-    Cell,
-    LineChart,
-    Line
+    Cell
 } from 'recharts';
 import { User } from '@/types';
 import { useData } from '@/lib/context/DataContext';
@@ -53,15 +44,49 @@ interface FacultyDashboardProps {
 
 const COLORS = ['#82d4fa', '#38bdf8', '#0ea5e9', '#1e293b'];
 
-const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
-    const { participants, coordinators, logs } = useData();
-    const [activeTab, setActiveTab] = useState('overview');
+const FacultyDashboard: React.FC<FacultyDashboardProps> = () => {
+    const { participants, coordinators, logs, isLoading } = useData();
+
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+
+    const activeTab = searchParams.get('tab') || 'overview';
+
+    const handleTabChange = (value: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('tab', value);
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
 
     const ticketDist = [
         { name: 'Combo', value: participants.filter(p => p.type.toLowerCase().includes('combo')).length },
         { name: 'Workshop', value: participants.filter(p => p.type.toLowerCase().includes('workshop')).length },
         { name: 'Hackathon', value: participants.filter(p => p.type.toLowerCase().includes('hackathon')).length },
     ];
+
+    const totalRevenue = participants.reduce<number>((acc, p) => {
+        const type = p.type.toLowerCase();
+        if (type.includes('combo')) return acc + 499;
+        if (type.includes('hackathon')) return acc + 349;
+        if (type.includes('workshop')) return acc + 199;
+        return acc + 499; // Default
+    }, 0);
+
+    if (isLoading && participants.length === 0) {
+        return (
+            <div className="pt-24 pb-12 px-6 max-w-7xl mx-auto space-y-8">
+                <Skeleton className="h-20 w-1/2 bg-white/5" />
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24 bg-white/5 rounded-xl" />)}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <Skeleton className="h-[400px] bg-white/5 rounded-2xl" />
+                    <Skeleton className="h-[400px] bg-white/5 rounded-2xl" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="pt-24 pb-12 px-6 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -79,7 +104,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
                 {[
                     { label: 'Total Registration', value: participants.length, icon: Users, color: 'text-blue-400' },
                     { label: 'Event Coordinators', value: coordinators.length, icon: UserCog, color: 'text-purple-400' },
-                    { label: 'Revenue Generated', value: `₹${(participants.length * 499 / 1000).toFixed(1)}k`, icon: TrendingUp, color: 'text-green-400' },
+                    { label: 'Revenue Generated', value: `₹${(totalRevenue / 1000).toFixed(1)}k`, icon: TrendingUp, color: 'text-green-400' },
                     { label: 'System Health', value: '100%', icon: Activity, color: 'text-orange-400' },
                 ].map((stat, i) => (
                     <Card key={i} className="bg-brand-surface border-white/5">
@@ -96,7 +121,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
                 ))}
             </div>
 
-            <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
                 <TabsList className="bg-brand-dark border-white/10">
                     <TabsTrigger value="overview">Event Overview</TabsTrigger>
                     <TabsTrigger value="participants">Participant List</TabsTrigger>

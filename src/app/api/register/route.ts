@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/mongodb';
 import Participant from '@/lib/db/models/Participant';
 import User from '@/lib/db/models/User';
+import { sendEventPassEmail } from '@/lib/email';
 
 // Helper to generate unique IDs
 function generateTeamId(count: number): string {
     const num = String(count + 1).padStart(3, '0');
-    return `VIBE-ID-${num}`;
+    return `VIBE-${num}`;
 }
 
 function generateParticipantId(teamId: string, memberIndex: number): string {
@@ -14,7 +15,12 @@ function generateParticipantId(teamId: string, memberIndex: number): string {
 }
 
 function generatePasskey(): string {
-    return Math.random().toString(36).substring(2, 10).toUpperCase();
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed ambiguous characters
+    let passkey = '';
+    for (let i = 0; i < 6; i++) {
+        passkey += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return passkey;
 }
 
 export async function POST(request: NextRequest) {
@@ -22,7 +28,7 @@ export async function POST(request: NextRequest) {
         await dbConnect();
 
         const body = await request.json();
-        const { members, college, city, ticketType, transactionId, screenshot } = body;
+        const { members, college, ticketType, screenshot } = body;
 
         if (!members || members.length === 0) {
             return NextResponse.json(
@@ -31,9 +37,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Get current participant count to generate unique team ID
+        // Generate IDs
         const participantCount = await Participant.countDocuments();
-        const teamId = generateTeamId(Math.floor(participantCount / 4)); // Approximate team count
+        const teamId = generateTeamId(Math.floor(participantCount / 4)); // Approximate
+        const teamEmail = `${teamId.split('-')[1]}@vibe.com`;
+        const passkey = generatePasskey();
 
         // Determine ticket type
         const typeMap: { [key: string]: 'Workshop' | 'Hackathon' | 'Combo' } = {
@@ -43,64 +51,71 @@ export async function POST(request: NextRequest) {
         };
         const mappedType = typeMap[ticketType] || 'Combo';
 
-        // Create participants and users
-        const createdParticipants = [];
-        const createdUsers = [];
+        // 1. Create ONE User for the Team
+        const teamUser = await User.create({
+            email: teamEmail,
+            name: `Team ${teamId}`,
+            role: 'participant',
+            passkey: passkey,
+            teamId: teamId,
+        });
 
-        for (let i = 0; i < members.length; i++) {
-            const member = members[i];
-            const participantId = generateParticipantId(teamId, i);
-            const passkey = generatePasskey();
+        // 2. Create Participant Details for each member
+        const participantsToCreate = members.map((m: any, index: number) => ({
+            participantId: generateParticipantId(teamId, index),
+            teamId,
+            name: m.fullName,
+            email: m.email,
+            college: college || 'Unknown',
+            department: m.department,
+            whatsapp: m.whatsapp,
+            year: m.year,
+            linkedin: m.linkedin,
+            type: mappedType,
+            status: 'Pending',
+            paymentScreenshotUrl: screenshot || '',
+        }));
 
-            // Create User document
-            const user = await User.create({
-                email: member.email,
-                name: member.fullName,
-                role: 'participant',
-                passkey: passkey,
-                teamId: teamId,
-            });
+        const createdParticipants = await Participant.insertMany(participantsToCreate);
 
-            // Create Participant document
-            const participant = await Participant.create({
-                participantId,
-                teamId,
-                name: member.fullName,
-                email: member.email,
-                college: college,
-                department: member.department,
-                whatsapp: member.whatsapp,
-                year: member.year,
-                linkedin: member.linkedin,
-                type: mappedType,
-                status: 'Pending', // Will be updated to 'Paid' after verification
-                paymentScreenshotUrl: screenshot || '',
-            });
-
-            createdParticipants.push(participant);
-            createdUsers.push({
-                email: user.email,
-                passkey: passkey,
-                participantId,
-            });
-        }
-
-        return NextResponse.json(
+        const response = NextResponse.json(
             {
                 success: true,
                 teamId,
-                participants: createdUsers,
-                message: 'Registration successful! Save your passkeys for login.',
+                teamEmail,
+                passkey,
+                participants: createdParticipants,
+                message: 'Registration successful!',
             },
             { status: 201 }
         );
-    } catch (error: any) {
+
+        // Send Email to all members PERSONAL emails
+        const emailMembers = createdParticipants.map(p => ({
+            name: p.name,
+            department: p.department,
+            year: p.year,
+            passkey: passkey
+        }));
+
+        const personalEmails = members.map((m: any) => m.email);
+
+        Promise.allSettled(personalEmails.map((email: string) =>
+            // We pass teamEmail and passkey as the last args for the V2 template
+            sendEventPassEmail(email, teamId, emailMembers, college, ticketType as any, teamEmail, passkey)
+        )).then(results => {
+            console.log('Email sending results:', results.map(r => r.status));
+            // Just for logging purposes
+        });
+
+        return response;
+    } catch (error) {
         console.error('Registration error:', error);
 
-        // Handle duplicate email error
-        if (error.code === 11000) {
+        // Handle duplicate email error (User or Participant)
+        if (error && typeof error === 'object' && 'code' in error && (error as any).code === 11000) {
             return NextResponse.json(
-                { error: 'One or more email addresses are already registered' },
+                { error: 'Team ID or Email collision. Please try again.' },
                 { status: 409 }
             );
         }

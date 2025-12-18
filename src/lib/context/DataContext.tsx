@@ -1,13 +1,16 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Participant, Coordinator, Log, User } from '@/types';
+import { Participant, Coordinator, Log, User, Settings } from '@/types';
 
 interface DataContextType {
     participants: Participant[];
     coordinators: Coordinator[];
     logs: Log[];
     currentUser: User | null;
+    settings: Settings | null;
+    fetchSettings: () => Promise<void>;
+    updateSettings: (newSettings: Partial<Settings>) => Promise<void>;
     isLoading: boolean;
     error: string | null;
 
@@ -38,6 +41,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [coordinators, setCoordinators] = useState<Coordinator[]>([]);
     const [logs, setLogs] = useState<Log[]>([]);
     const [currentUser, setCurrentUserState] = useState<User | null>(null);
+    const [settings, setSettings] = useState<Settings | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +51,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (savedUser) {
             try {
                 setCurrentUserState(JSON.parse(savedUser));
-            } catch (e) {
+            } catch {
                 localStorage.removeItem('vibe_session');
             }
         }
@@ -69,113 +73,150 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentUser(null);
     };
 
-    // API Fetchers
-    const fetchParticipants = useCallback(async () => {
+    // Generic fetcher with error handling
+    const apiCall = async <T,>(fn: () => Promise<T>, errorMsg: string): Promise<T | null> => {
         setIsLoading(true);
+        setError(null);
         try {
-            const res = await fetch('/api/participants');
-            const data = await res.json();
-            if (res.ok) setParticipants(data.participants);
+            return await fn();
         } catch (e) {
-            setError('Failed to fetch participants');
+            console.error(e);
+            setError(errorMsg);
+            return null;
         } finally {
             setIsLoading(false);
         }
+    };
+
+    // API Fetchers
+    const fetchParticipants = useCallback(async () => {
+        const data = await apiCall(async () => {
+            const res = await fetch('/api/participants');
+            if (!res.ok) throw new Error();
+            return res.json();
+        }, 'Failed to fetch participants');
+        if (data) setParticipants(data.participants);
     }, []);
 
     const fetchCoordinators = useCallback(async () => {
-        try {
+        const data = await apiCall(async () => {
             const res = await fetch('/api/coordinators');
-            const data = await res.json();
-            if (res.ok) setCoordinators(data.coordinators);
-        } catch (e) {
-            setError('Failed to fetch coordinators');
-        }
+            if (!res.ok) throw new Error();
+            return res.json();
+        }, 'Failed to fetch coordinators');
+        if (data) setCoordinators(data.coordinators);
     }, []);
 
     const fetchLogs = useCallback(async () => {
-        try {
+        const data = await apiCall(async () => {
             const res = await fetch('/api/logs');
-            const data = await res.json();
-            if (res.ok) setLogs(data.logs);
-        } catch (e) {
-            setError('Failed to fetch logs');
-        }
+            if (!res.ok) throw new Error();
+            return res.json();
+        }, 'Failed to fetch logs');
+        if (data) setLogs(data.logs);
     }, []);
+
+    const fetchSettings = useCallback(async () => {
+        const data = await apiCall(async () => {
+            const res = await fetch('/api/settings');
+            if (!res.ok) throw new Error();
+            return res.json();
+        }, 'Failed to fetch settings');
+        if (data) setSettings(data);
+    }, []);
+
+    const updateSettings = async (newSettings: Partial<Settings>) => {
+        const data = await apiCall(async () => {
+            const res = await fetch('/api/settings', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newSettings),
+            });
+            if (!res.ok) throw new Error();
+            return res.json();
+        }, 'Failed to update settings');
+        if (data) setSettings(data);
+    };
+
+    const refreshData = useCallback(async () => {
+        await fetchSettings();
+        if (!currentUser) return;
+        if (currentUser.role === 'admin') {
+            await Promise.all([fetchParticipants(), fetchCoordinators(), fetchLogs()]);
+        } else if (currentUser.role === 'coordinator' || currentUser.role === 'faculty') {
+            await Promise.all([fetchParticipants(), fetchLogs()]);
+        } else {
+            await fetchParticipants();
+        }
+    }, [currentUser, fetchParticipants, fetchCoordinators, fetchLogs, fetchSettings]);
 
     // CRUD Operations
     const addParticipant = async (p: Omit<Participant, '_id' | 'createdAt'>) => {
-        try {
+        await apiCall(async () => {
             const res = await fetch('/api/participants', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(p),
             });
-            if (res.ok) fetchParticipants();
-        } catch (e) {
-            setError('Failed to add participant');
-        }
+            if (!res.ok) throw new Error();
+            refreshData();
+        }, 'Failed to add participant');
     };
 
     const updateParticipant = async (p: Participant) => {
-        try {
+        await apiCall(async () => {
             const res = await fetch(`/api/participants?id=${p._id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(p),
             });
-            if (res.ok) fetchParticipants();
-        } catch (e) {
-            setError('Failed to update participant');
-        }
+            if (!res.ok) throw new Error();
+            refreshData();
+        }, 'Failed to update participant');
     };
 
     const deleteParticipant = async (id: string) => {
-        try {
+        await apiCall(async () => {
             const res = await fetch(`/api/participants?id=${id}`, {
                 method: 'DELETE',
             });
-            if (res.ok) fetchParticipants();
-        } catch (e) {
-            setError('Failed to delete participant');
-        }
+            if (!res.ok) throw new Error();
+            refreshData();
+        }, 'Failed to delete participant');
     };
 
     const addCoordinator = async (c: Omit<Coordinator, '_id'>) => {
-        try {
+        await apiCall(async () => {
             const res = await fetch('/api/coordinators', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(c),
             });
-            if (res.ok) fetchCoordinators();
-        } catch (e) {
-            setError('Failed to add coordinator');
-        }
+            if (!res.ok) throw new Error();
+            refreshData();
+        }, 'Failed to add coordinator');
     };
 
     const updateCoordinator = async (c: Coordinator) => {
-        try {
+        await apiCall(async () => {
             const res = await fetch(`/api/coordinators?id=${c._id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(c),
             });
-            if (res.ok) fetchCoordinators();
-        } catch (e) {
-            setError('Failed to update coordinator');
-        }
+            if (!res.ok) throw new Error();
+            refreshData();
+        }, 'Failed to update coordinator');
     };
 
     const deleteCoordinator = async (id: string) => {
-        try {
+        await apiCall(async () => {
             const res = await fetch(`/api/coordinators?id=${id}`, {
                 method: 'DELETE',
             });
-            if (res.ok) fetchCoordinators();
-        } catch (e) {
-            setError('Failed to delete coordinator');
-        }
+            if (!res.ok) throw new Error();
+            refreshData();
+        }, 'Failed to delete coordinator');
     };
 
     const addLog = async (action: string, details: string) => {
@@ -192,21 +233,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }),
             });
             fetchLogs();
-        } catch (e) {
+        } catch {
             console.error('Failed to add log');
         }
     };
 
-    // Auto-fetch if user is admin or coordinator
+    // Auto-fetch initialization
     useEffect(() => {
-        if (currentUser?.role === 'admin') {
-            fetchParticipants();
-            fetchCoordinators();
-            fetchLogs();
-        } else if (currentUser?.role === 'coordinator') {
-            fetchParticipants();
+        fetchSettings();
+        if (currentUser) {
+            refreshData();
         }
-    }, [currentUser, fetchParticipants, fetchCoordinators, fetchLogs]);
+    }, [currentUser, refreshData, fetchSettings]);
 
     return (
         <DataContext.Provider value={{
@@ -227,7 +265,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             addCoordinator,
             updateCoordinator,
             deleteCoordinator,
-            addLog
+            addLog,
+            settings,
+            fetchSettings,
+            updateSettings
         }}>
             {children}
         </DataContext.Provider>

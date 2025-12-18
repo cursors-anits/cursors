@@ -42,7 +42,7 @@ const Schedule: React.FC = () => {
                     </h2>
                     <div className="w-24 h-1 bg-linear-to-r from-brand-primary to-brand-secondary mx-auto rounded-full mb-6"></div>
                     <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-                        Four days of intense learning, creation, and celebration. From basics to building, we've got you covered.
+                        Four days of intense learning, creation, and celebration. From basics to building, we&apos;ve got you covered.
                     </p>
                 </div>
 

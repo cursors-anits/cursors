@@ -1,15 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
-    QrCode,
-    List,
-    Search,
-    MapPin,
-    AlertTriangle,
-    Users,
     Camera,
-    Utensils,
     StopCircle,
     CheckCircle2,
     ChevronRight
@@ -28,13 +23,10 @@ import {
 } from '@/components/ui/select';
 import {
     Card,
-    CardContent,
-    CardHeader,
-    CardTitle
+    CardContent
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 
 interface CoordinatorDashboardProps {
@@ -44,10 +36,27 @@ interface CoordinatorDashboardProps {
 type Mode = 'attendance' | 'entry' | 'lab' | 'food' | 'exit';
 
 const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => {
-    const { participants, logs, addLog, updateParticipant } = useData();
+    const { participants, logs, addLog, updateParticipant, isLoading } = useData();
 
-    const [view, setView] = useState<'scan' | 'list' | 'participants'>('scan');
-    const [mode, setMode] = useState<Mode>('attendance');
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+
+    const view = (searchParams.get('view') as 'scan' | 'list' | 'participants') || 'scan';
+    const mode = (searchParams.get('mode') as Mode) || 'attendance';
+
+    const setView = (newView: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('view', newView);
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    const setMode = (newMode: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('mode', newMode);
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
     const [workshopDay, setWorkshopDay] = useState('1');
     const [mealType, setMealType] = useState('Lunch');
     const [searchQuery, setSearchQuery] = useState('');
@@ -61,35 +70,11 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
     const [assignLab, setAssignLab] = useState('Lab 1 (CSE)');
     const [assignSeat, setAssignSeat] = useState('');
 
-    useEffect(() => {
-        if (showRealScanner && view === 'scan' && !scannedTeam) {
-            const timer = setTimeout(() => {
-                const scanner = new Html5QrcodeScanner(
-                    "reader",
-                    { fps: 10, qrbox: { width: 250, height: 250 } },
-                    false
-                );
 
-                scanner.render((decodedText) => {
-                    handleFetchTeam(decodedText);
-                    scanner.clear();
-                    setShowRealScanner(false);
-                }, () => { });
-                scannerRef.current = scanner;
-            }, 100);
-
-            return () => {
-                clearTimeout(timer);
-                if (scannerRef.current) {
-                    scannerRef.current.clear().catch(() => { });
-                }
-            };
-        }
-    }, [showRealScanner, view, scannedTeam]);
-
-    const handleFetchTeam = (overrideInput?: string) => {
+    const handleFetchTeam = useCallback((overrideInput?: string) => {
         const input = overrideInput || scanInput;
         if (!input) return;
+
 
         const found = participants.filter(p => p.teamId === input || p.participantId === input);
 
@@ -104,7 +89,45 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
         } else {
             toast.error(`ID not found: ${input}`);
         }
-    };
+    }, [participants, scanInput]);
+
+    useEffect(() => {
+        if (showRealScanner && view === 'scan' && !scannedTeam) {
+            const timer = setTimeout(() => {
+                const scanner = new Html5QrcodeScanner(
+                    "reader",
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    false
+                );
+
+                scanner.render((decodedText: string) => {
+                    handleFetchTeam(decodedText);
+                    scanner.clear();
+                    setShowRealScanner(false);
+                }, (error: unknown) => {
+                    console.warn(error);
+                });
+                scannerRef.current = scanner;
+            }, 100);
+
+            return () => {
+                clearTimeout(timer);
+                if (scannerRef.current) {
+                    scannerRef.current.clear().catch(() => { });
+                }
+            };
+        }
+    }, [showRealScanner, view, scannedTeam, handleFetchTeam]);
+
+    if (isLoading && participants.length === 0) {
+        return (
+            <div className="pt-24 pb-12 px-6 max-w-4xl mx-auto space-y-6">
+                <Skeleton className="h-20 w-full bg-white/5 rounded-2xl" />
+                <Skeleton className="h-32 w-full bg-white/5 rounded-2xl" />
+                <Skeleton className="h-[400px] w-full bg-white/5 rounded-2xl" />
+            </div>
+        );
+    }
 
     const toggleMember = (id: string) => {
         setSelectedMembers(prev =>
@@ -163,11 +186,11 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                 </div>
 
                 <div className="flex bg-brand-surface p-1 rounded-xl border border-white/10 w-full md:w-auto overflow-x-auto">
-                    {['scan', 'list', 'participants'].map((v: any) => (
+                    {['scan', 'list', 'participants'].map((v) => (
                         <Button
                             key={v}
                             variant={view === v ? "default" : "ghost"}
-                            onClick={() => setView(v)}
+                            onClick={() => setView(v as 'scan' | 'list' | 'participants')}
                             className={`rounded-lg capitalize ${view === v ? "bg-brand-primary text-brand-dark" : "text-gray-400"}`}
                         >
                             {v}
@@ -181,7 +204,7 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                 <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1">
                         <label className="text-xs font-bold text-gray-500 uppercase">Operation Mode</label>
-                        <Select onValueChange={(v: any) => { setMode(v); setScannedTeam(null); }} value={mode}>
+                        <Select onValueChange={(v) => { setMode(v as Mode); setScannedTeam(null); }} value={mode}>
                             <SelectTrigger className="bg-brand-dark border-white/10">
                                 <SelectValue />
                             </SelectTrigger>

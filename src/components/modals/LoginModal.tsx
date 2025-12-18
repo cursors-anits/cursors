@@ -18,7 +18,9 @@ import {
     Loader2,
     ArrowRight,
     RefreshCw,
-    AlertCircle
+    AlertCircle,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { User, UserRole } from '@/types';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -38,6 +40,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [detectedRole, setDetectedRole] = useState<UserRole | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     useEffect(() => {
         if (!isOpen) {
@@ -74,7 +77,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
             }
 
             setStep('auth');
-        } catch (err) {
+        } catch {
             setError('An error occurred. Please try again.');
         } finally {
             setIsLoading(false);
@@ -115,8 +118,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
                         '/dashboard/participant';
             router.push(rolePath);
             onClose();
-        } catch (err: any) {
-            setError(err.message || 'Invalid credentials. Please try again.');
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Invalid credentials. Please try again.';
+            setError(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -183,14 +187,23 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
                                     <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                     <Input
                                         id="authInput"
-                                        type={detectedRole === 'participant' ? 'text' : 'password'}
+                                        type={detectedRole === 'participant' ? 'text' : (showPassword ? 'text' : 'password')}
                                         required
                                         autoFocus
                                         value={authInput}
                                         onChange={(e) => setAuthInput(detectedRole === 'participant' ? e.target.value.toUpperCase() : e.target.value)}
-                                        className="bg-brand-dark border-gray-700 pl-10 h-11 focus-visible:ring-brand-primary font-mono tracking-widest"
+                                        className="bg-brand-dark border-gray-700 px-10 h-11 focus-visible:ring-brand-primary font-mono tracking-widest"
                                         placeholder={detectedRole === 'participant' ? 'VIBE-XXXX' : '••••••••'}
                                     />
+                                    {detectedRole !== 'participant' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                                        >
+                                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )}

@@ -21,9 +21,19 @@ export async function POST(request: NextRequest) {
 
         if (password) {
             // Admin, Coordinator, or Faculty login with password
+            console.log(`[AUTH] Attempting password login for: ${email}`);
             user = await User.findOne({ email }).select('+password');
 
-            if (!user || !user.password) {
+            if (!user) {
+                console.log(`[AUTH] User not found: ${email}`);
+                return NextResponse.json(
+                    { error: 'Invalid credentials' },
+                    { status: 401 }
+                );
+            }
+
+            if (!user.password) {
+                console.log(`[AUTH] User has no password set: ${email}`);
                 return NextResponse.json(
                     { error: 'Invalid credentials' },
                     { status: 401 }
@@ -31,6 +41,7 @@ export async function POST(request: NextRequest) {
             }
 
             const isPasswordValid = await user.comparePassword(password);
+            console.log(`[AUTH] Password valid: ${isPasswordValid}`);
 
             if (!isPasswordValid) {
                 return NextResponse.json(
@@ -40,9 +51,11 @@ export async function POST(request: NextRequest) {
             }
         } else if (passkey) {
             // Participant login with passkey
+            console.log(`[AUTH] Attempting passkey login for: ${email}`);
             user = await User.findOne({ email, passkey, role: 'participant' });
 
             if (!user) {
+                console.log(`[AUTH] Invalid passkey or role for: ${email}`);
                 return NextResponse.json(
                     { error: 'Invalid credentials' },
                     { status: 401 }

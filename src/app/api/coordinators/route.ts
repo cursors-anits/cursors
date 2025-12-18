@@ -26,10 +26,10 @@ export async function POST(request: NextRequest) {
         const coordinator = await Coordinator.create(body);
 
         return NextResponse.json({ coordinator }, { status: 201 });
-    } catch (error: any) {
+    } catch (error) {
         console.error('Create coordinator error:', error);
 
-        if (error.code === 11000) {
+        if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
             return NextResponse.json(
                 { error: 'Email already exists' },
                 { status: 409 }

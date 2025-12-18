@@ -1,4 +1,5 @@
 import React from 'react';
+import { z } from 'zod';
 
 // Navigation
 export interface NavItem {
@@ -14,26 +15,30 @@ export interface ScheduleItem {
     icon?: React.ReactNode;
 }
 
-// Team & Registration
-export interface TeamMember {
-    fullName: string;
-    department: string;
-    whatsapp: string;
-    year: string;
-    linkedin?: string;
-}
+// Zod Schemas for Validation
+export const TeamMemberSchema = z.object({
+    fullName: z.string().min(2, 'Name is required'),
+    email: z.email('Valid email is required'),
+    department: z.string().min(2, 'Department is required'),
+    whatsapp: z.string().regex(/^\d{10}$/, 'Must be 10 digits'),
+    year: z.string(),
+    linkedin: z.string().url().optional().or(z.literal('')),
+});
 
-export interface FormData {
-    college: string;
-    otherCollege?: string;
-    city: string;
-    otherCity?: string;
-    ticketType: 'workshop' | 'hackathon' | 'combo';
-    teamSize: number;
-    members: TeamMember[];
-    transactionId: string;
-    screenshot?: File | null;
-}
+export const RegistrationSchema = z.object({
+    college: z.string().min(1, 'College is required'),
+    otherCollege: z.string().optional(),
+    city: z.string().min(1, 'City is required'),
+    otherCity: z.string().optional(),
+    ticketType: z.enum(['workshop', 'hackathon', 'combo']),
+    teamSize: z.number().min(1).max(5),
+    members: z.array(TeamMemberSchema),
+    transactionId: z.string().min(12, 'UTR must be 12 digits'),
+    screenshot: z.any().optional(), // Handled manually for now
+});
+
+export type TeamMember = z.infer<typeof TeamMemberSchema>;
+export type FormData = z.infer<typeof RegistrationSchema>;
 
 // Features
 export interface Feature {
@@ -88,4 +93,10 @@ export interface Log {
     time: string;
     details: string;
     timestamp: number;
+}
+
+export interface Settings {
+    registrationClosed: boolean;
+    maintenanceMode: boolean;
+    eventDate: string | Date;
 }
