@@ -2,18 +2,27 @@ import React from 'react';
 import { Phone, MapPin, Mail } from 'lucide-react';
 import { siInstagram } from 'simple-icons';
 import Link from 'next/link';
+import Image from 'next/image';
+import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
 
 const Footer: React.FC = () => {
     return (
-        <footer id="contact" className="bg-brand-dark border-t border-white/5 pt-20 pb-10">
+        <footer id="contact" className="bg-brand-dark pt-20 pb-10 relative">
+            <Separator className="bg-white/5 absolute top-0 left-0 w-full" />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
 
                     {/* Brand */}
                     <div className="space-y-6">
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center">
-                                <span className="text-white font-bold">V</span>
+                            <div className="w-8 h-8 relative rounded-lg overflow-hidden border border-white/10">
+                                <Image
+                                    src="/sponsors/cursors.png"
+                                    alt="Cursors Logo"
+                                    fill
+                                    className="object-cover"
+                                />
                             </div>
                             <span className="text-2xl font-bold text-white tracking-tight">VIBE CODING</span>
                         </div>
@@ -21,29 +30,41 @@ const Footer: React.FC = () => {
                             Igniting innovation through code. Join the most electrifying tech event of the year at ANITS.
                         </p>
                         <div className="flex gap-4">
-                            <a
-                                href="https://www.instagram.com/cursors_2026"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-primary hover:text-white transition-all fill-current"
-                                aria-label="Instagram"
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                asChild
+                                className="w-10 h-10 rounded-full bg-white/5 hover:bg-brand-primary hover:text-white transition-all flex items-center justify-center"
                             >
-                                <svg
-                                    role="img"
-                                    viewBox="0 0 24 24"
-                                    className="w-5 h-5"
-                                    xmlns="http://www.w3.org/2000/svg"
+                                <a
+                                    href="https://www.instagram.com/cursors_2026"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label="Instagram"
                                 >
-                                    <path d={siInstagram.path} />
-                                </svg>
-                            </a>
-                            <a
-                                href="mailto:palikaomkar.22.cse@anits.edu.in"
-                                className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-brand-accent hover:text-white transition-all"
-                                aria-label="Email"
+                                    <svg
+                                        role="img"
+                                        viewBox="0 0 24 24"
+                                        className="w-5 h-5 fill-current"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path d={siInstagram.path} />
+                                    </svg>
+                                </a>
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                asChild
+                                className="w-10 h-10 rounded-full bg-white/5 hover:bg-brand-accent hover:text-white transition-all flex items-center justify-center"
                             >
-                                <Mail className="w-5 h-5" />
-                            </a>
+                                <a
+                                    href="mailto:palikaomkar.22.cse@anits.edu.in"
+                                    aria-label="Email"
+                                >
+                                    <Mail className="w-5 h-5" />
+                                </a>
+                            </Button>
                         </div>
                     </div>
 
@@ -91,16 +112,17 @@ const Footer: React.FC = () => {
                             </li>
                             <li className="flex items-center gap-3">
                                 <Phone className="w-5 h-5 text-brand-primary shrink-0" />
-                                <a href="tel:+918897892720" className="hover:text-white transition-colors">
+                                <Link href="tel:+918897892720" className="hover:text-brand-primary transition-colors">
                                     +91 8897892720 (Omkar)
-                                </a>
+                                </Link>
                             </li>
                         </ul>
                     </div>
 
                 </div>
 
-                <div className="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
+                <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500 relative">
+                    <Separator className="bg-white/5 absolute top-0 left-0 w-full" />
                     <p>&copy; 2026 Cursors, ANITS. All rights reserved.</p>
                 </div>
             </div>

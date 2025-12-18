@@ -20,7 +20,8 @@ import {
     Info,
     Zap,
     LayoutDashboard,
-    ShieldCheck
+    ShieldCheck,
+    AlertCircle
 } from 'lucide-react';
 import {
     Select,
@@ -31,6 +32,7 @@ import {
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { RegistrationSchema, FormData as IFormData } from '@/types';
@@ -87,7 +89,7 @@ const PRICES = {
 const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }) => {
     const [step, setStep] = useState(1);
     const [isSuccess, setIsSuccess] = useState(false);
-    const [generatedData, setGeneratedData] = useState<{ teamId: string, teamEmail: string, passkey: string } | null>(null);
+    const [generatedData, setGeneratedData] = useState<{ teamId: string, teamEmail: string, passkey: string, scheduled?: boolean } | null>(null);
     const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
     const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false);
     const router = useRouter();
@@ -196,10 +198,11 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
             setGeneratedData({
                 teamId: result.teamId,
                 teamEmail: result.teamEmail,
-                passkey: result.passkey
+                passkey: result.passkey,
+                scheduled: result.scheduled
             });
             setIsSuccess(true);
-            toast.success('Registration successful!');
+            toast.success(result.message || 'Registration successful!');
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Registration failed';
             toast.error(errorMessage);
@@ -247,7 +250,8 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="max-w-4xl bg-brand-surface border-white/10 text-white p-0 overflow-hidden h-[90vh] max-h-[90vh] flex flex-col">
-                <DialogHeader className="p-6 border-b border-white/5 bg-brand-dark/50 shrink-0">
+                <DialogHeader className="p-6 bg-brand-dark/50 shrink-0">
+                    <Separator className="bg-white/5 absolute bottom-0 left-0 w-full" />
                     <div className="flex justify-between items-center text-left">
                         <div className="w-full">
                             <DialogTitle className="text-2xl font-bold">
@@ -280,7 +284,8 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                         <p className="text-gray-400 text-xs uppercase mb-1">Team Login Email</p>
                                         <p className="text-xl font-mono font-bold text-white">{generatedData.teamEmail}</p>
                                     </div>
-                                    <div className="border-t border-white/10 pt-4">
+                                    <Separator className="bg-white/10" />
+                                    <div>
                                         <p className="text-gray-400 text-xs uppercase mb-1">Team Passkey</p>
                                         <p className="text-xl font-mono font-bold text-brand-primary tracking-widest">{generatedData.passkey}</p>
                                     </div>
@@ -288,6 +293,14 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                 <div className="text-xs text-gray-400 text-center max-w-sm">
                                     Please save these credentials. Any team member can login using these details to verify payment and manage the team.
                                 </div>
+                                {generatedData.scheduled && (
+                                    <Alert className="bg-orange-500/10 border-orange-500/20 text-orange-300 py-3">
+                                        <AlertCircle className="w-4 h-4" />
+                                        <AlertDescription className="text-[10px]">
+                                            Due to SMTP limits, your confirmation email has been scheduled for delivery within 24 hours. Your registration is confirmed.
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
                                 <Alert className="bg-blue-500/10 border-blue-500/20 text-blue-300 py-3">
                                     <Info className="w-4 h-4" />
                                     <AlertDescription className="text-[10px]">
@@ -486,9 +499,10 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                         unoptimized
                                                     />
                                                 </div>
-                                                <div className="text-black font-bold text-center border-t border-gray-100 pt-3 w-full">
+                                                <div className="text-black font-bold text-center w-full">
+                                                    <Separator className="bg-gray-100 mb-3" />
                                                     <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">UPI ID</p>
-                                                    <p className="text-xs select-all">{settings?.upiId || "8897892720@ybl"}</p>
+                                                    <p className="text-xs select-all text-black">{settings?.upiId || "8897892720@ybl"}</p>
                                                 </div>
                                             </div>
                                             <div className="space-y-4">
@@ -539,7 +553,8 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                     </div>
                 </ScrollArea>
 
-                <div className="p-6 border-t border-white/5 bg-brand-dark/50 shrink-0 mt-auto">
+                <div className="p-6 bg-brand-dark/50 shrink-0 mt-auto">
+                    <Separator className="bg-white/5 mb-6" />
                     {isSuccess ? (
                         <div className="flex flex-col gap-3">
                             <Button

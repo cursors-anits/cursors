@@ -1,0 +1,117 @@
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/db/mongodb';
+import Participant from '@/lib/db/models/Participant';
+import User from '@/lib/db/models/User';
+
+function generatePasskey(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let passkey = '';
+    for (let i = 0; i < 6; i++) {
+        passkey += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return passkey;
+}
+
+export async function POST(request: NextRequest) {
+    try {
+        await dbConnect();
+        const body = await request.json();
+        const { name, email, college, department, whatsapp, year, type, status, transactionId } = body;
+
+        // Generate IDs
+        const lastParticipant = await Participant.findOne().sort({ teamId: -1 });
+        let nextTeamNum = 1;
+        if (lastParticipant?.teamId) {
+            const match = lastParticipant.teamId.match(/VIBE-(\d+)/);
+            if (match) nextTeamNum = parseInt(match[1]) + 1;
+        }
+
+        const teamId = `VIBE-${String(nextTeamNum).padStart(3, '0')}`;
+        const teamEmail = `${String(nextTeamNum).padStart(3, '0')}@vibe.com`;
+        const passkey = generatePasskey();
+
+        // Create Team User
+        await User.create({
+            email: teamEmail,
+            name: `Team ${teamId}`,
+            role: 'participant',
+            passkey: passkey,
+            teamId: teamId,
+        });
+
+        // Create Participant
+        const newParticipant = await Participant.create({
+            participantId: `${teamId}-1`,
+            teamId,
+            name,
+            email,
+            college,
+            department,
+            whatsapp,
+            year,
+            type,
+            status: status || 'Confirmed',
+            transactionId: transactionId || 'ADMIN_ADDED',
+        });
+
+        return NextResponse.json({ success: true, participant: newParticipant }, { status: 201 });
+    } catch (error: any) {
+        console.error('Admin Add Participant error:', error);
+        return NextResponse.json({ error: error.message || 'Failed to add participant' }, { status: 500 });
+    }
+}
+
+export async function GET() {
+    try {
+        await dbConnect();
+        const participants = await Participant.find().sort({ createdAt: -1 });
+        return NextResponse.json(participants);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function PUT(request: NextRequest) {
+    try {
+        await dbConnect();
+        const body = await request.json();
+        const { id, _id, ...updateData } = body;
+        const targetId = id || _id;
+
+        if (!targetId) {
+            return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+        }
+
+        const participant = await Participant.findByIdAndUpdate(targetId, updateData, { new: true });
+
+        if (!participant) {
+            return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true, participant });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message || 'Failed to update' }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: NextRequest) {
+    try {
+        await dbConnect();
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json({ error: 'ID is required' }, { status: 400 });
+        }
+
+        const participant = await Participant.findByIdAndDelete(id);
+
+        if (!participant) {
+            return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message || 'Failed to delete' }, { status: 500 });
+    }
+}

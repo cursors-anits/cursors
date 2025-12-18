@@ -5,6 +5,7 @@ import { ArrowRight, Terminal, Cpu, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/lib/context/DataContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 
 interface HeroProps {
     onRegisterClick: () => void;
@@ -145,21 +146,30 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                 </div>
 
                 {/* Features Grid Mini */}
-                <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 w-full max-w-4xl border-t border-white/10 pt-10">
-                    <div className="flex flex-col items-center gap-2">
-                        <Terminal className="w-6 h-6 text-brand-primary" />
+                <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12 w-full max-w-4xl pt-10 relative">
+                    <Separator className="bg-white/10 absolute top-0 left-0 w-full" />
+                    <div className="flex flex-col items-center text-center group">
+                        <div className="h-10 flex items-center justify-center mb-1">
+                            <Terminal className="w-6 h-6 text-brand-primary group-hover:scale-110 transition-transform" />
+                        </div>
                         <span className="text-sm font-medium text-gray-300">Gen AI Workshop</span>
                     </div>
-                    <div className="flex flex-col items-center gap-2">
-                        <Cpu className="w-6 h-6 text-brand-secondary" />
+                    <div className="flex flex-col items-center text-center group">
+                        <div className="h-10 flex items-center justify-center mb-1">
+                            <Cpu className="w-6 h-6 text-brand-secondary group-hover:scale-110 transition-transform" />
+                        </div>
                         <span className="text-sm font-medium text-gray-300">24h Hackathon</span>
                     </div>
-                    <div className="flex flex-col items-center gap-2">
-                        <span className="text-xl font-bold text-white font-mono">40K+</span>
+                    <div className="flex flex-col items-center text-center group">
+                        <div className="h-10 flex items-center justify-center mb-1">
+                            <span className="text-2xl font-bold text-white font-mono group-hover:text-brand-primary transition-colors">40K+</span>
+                        </div>
                         <span className="text-sm font-medium text-gray-300">Prize Pool</span>
                     </div>
-                    <div className="flex flex-col items-center gap-2">
-                        <span className="text-xl font-bold text-white font-mono">500+</span>
+                    <div className="flex flex-col items-center text-center group">
+                        <div className="h-10 flex items-center justify-center mb-1">
+                            <span className="text-2xl font-bold text-white font-mono group-hover:text-brand-secondary transition-colors">500+</span>
+                        </div>
                         <span className="text-sm font-medium text-gray-300">Participants</span>
                     </div>
                 </div>

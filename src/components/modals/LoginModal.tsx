@@ -196,13 +196,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
                                         placeholder={detectedRole === 'participant' ? 'VIBE12' : '••••••••'}
                                     />
                                     {detectedRole !== 'participant' && (
-                                        <button
+                                        <Button
                                             type="button"
+                                            variant="ghost"
+                                            size="icon"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                                            className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 hover:bg-transparent transition-colors h-9 w-9"
                                         >
                                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                        </button>
+                                        </Button>
                                     )}
                                 </div>
                             </div>

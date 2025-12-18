@@ -21,6 +21,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://cursors-anits.vercel.app'),
   title: "Vibe Coding | Workshop & Hackathon",
   description: "Join the ultimate fusion of Gen AI Workshop and a 24-Hour Hackathon at ANITS. Build, innovate, and vibe with the best minds.",
   keywords: ["hackathon", "workshop", "coding", "ANITS", "Gen AI", "programming competition"],
@@ -30,10 +31,25 @@ export const metadata: Metadata = {
     description: "Join the ultimate fusion of Gen AI Workshop and a 24-Hour Hackathon",
     type: "website",
     locale: "en_US",
+    images: [{
+      url: "/link preview.jpeg",
+      width: 1200,
+      height: 630,
+      alt: "Vibe Coding Event Preview"
+    }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vibe Coding | Workshop & Hackathon",
+    description: "Join the ultimate fusion of Gen AI Workshop and a 24-Hour Hackathon",
+    images: ["/link preview.jpeg"],
   },
   manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
     apple: "/apple-touch-icon.png",
   },
 };

@@ -7,6 +7,7 @@ export interface ISettings {
     eventDate: Date;
     upiId: string;
     qrImageUrl: string;
+    prizePool: string;
     updatedAt?: Date;
 }
 
@@ -33,6 +34,10 @@ const SettingsSchema = new Schema<ISettings, SettingsModel>(
         qrImageUrl: {
             type: String,
             default: '/payment qr.jpg',
+        },
+        prizePool: {
+            type: String,
+            default: '₹40,000',
         },
     },
     {

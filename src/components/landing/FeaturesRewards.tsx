@@ -1,7 +1,8 @@
-import React from 'react';
 import { Wifi, Coffee, Music, Trophy, Gift, Award, Star } from 'lucide-react';
+import { useData } from '@/lib/context/DataContext';
 
 const FeaturesRewards: React.FC = () => {
+    const { settings } = useData();
     return (
         <div className="py-24 bg-brand-surface relative overflow-hidden">
 
@@ -29,8 +30,8 @@ const FeaturesRewards: React.FC = () => {
                             <div className="w-14 h-14 bg-brand-secondary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-secondary group-hover:text-brand-dark transition-all text-brand-secondary">
                                 <Coffee className="w-7 h-7" />
                             </div>
-                            <h3 className="text-xl font-bold mb-3 text-white">Unlimited Snacks</h3>
-                            <p className="text-gray-400 leading-relaxed">Keep your energy levels high with a constant supply of snacks and beverages.</p>
+                            <h3 className="text-xl font-bold mb-3 text-white">Quality Refreshments</h3>
+                            <p className="text-gray-400 leading-relaxed">Stay energized with high-quality snacks and beverages served throughout the event.</p>
                         </div>
 
                         {/* Feature 3 */}
@@ -59,7 +60,7 @@ const FeaturesRewards: React.FC = () => {
                             <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
                                 Win Big. <br />
                                 <span className="text-transparent bg-clip-text bg-linear-to-r from-brand-primary to-brand-secondary">
-                                    ₹40,000 Prize Pool
+                                    {settings?.prizePool || '₹40,000'} Prize Pool
                                 </span>
                             </h2>
                             <p className="text-lg text-gray-300 mb-10 leading-relaxed">

@@ -101,3 +101,89 @@ export async function uploadToDrive(base64Data: string, fileName: string): Promi
         throw new Error('Failed to upload screenshot to Google Drive');
     }
 }
+
+/**
+ * Ensures a folder exists within a parent folder
+ * @param folderName Name of the folder to find or create
+ * @param parentId ID of the parent folder
+ * @returns The ID of the found or created folder
+ */
+export async function ensureFolderExists(folderName: string, parentId: string = FOLDER_ID!): Promise<string> {
+    try {
+        const response = await drive.files.list({
+            q: `name = '${folderName}' and '${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
+            fields: 'files(id, name)',
+            spaces: 'drive',
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true
+        });
+
+        const files = response.data.files || [];
+        if (files.length > 0) {
+            return files[0].id!;
+        }
+
+        // Create the folder
+        const createResponse = await drive.files.create({
+            requestBody: {
+                name: folderName,
+                mimeType: 'application/vnd.google-apps.folder',
+                parents: [parentId],
+            },
+            fields: 'id',
+            supportsAllDrives: true,
+        });
+
+        return createResponse.data.id!;
+    } catch (error: any) {
+        console.error('GDrive ensureFolderExists Error:', error.message);
+        throw new Error(`Failed to ensure folder ${folderName} exists`);
+    }
+}
+
+/**
+ * Uploads a file to a specific parent folder
+ */
+export async function uploadToFolder(base64Data: string, fileName: string, parentId: string): Promise<string> {
+    try {
+        const base64Content = base64Data.includes('base64,')
+            ? base64Data.split('base64,')[1]
+            : base64Data;
+
+        const buffer = Buffer.from(base64Content, 'base64');
+        const bufferStream = new Readable();
+        bufferStream.push(buffer);
+        bufferStream.push(null);
+
+        const response = await drive.files.create({
+            requestBody: {
+                name: `${fileName}.jpg`,
+                parents: [parentId],
+                mimeType: 'image/jpeg',
+            },
+            media: {
+                mimeType: 'image/jpeg',
+                body: bufferStream,
+            },
+            fields: 'id, webViewLink, webContentLink',
+            supportsAllDrives: true,
+        });
+
+        const fileId = response.data.id;
+
+        await drive.permissions.create({
+            fileId: fileId!,
+            requestBody: {
+                role: 'reader',
+                type: 'anyone',
+            },
+            supportsAllDrives: true,
+        });
+
+        // Use direct link for display
+        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+    } catch (error: any) {
+        console.error('GDrive uploadToFolder Error:', error.message);
+        throw new Error('Failed to upload file to GDrive folder');
+    }
+}

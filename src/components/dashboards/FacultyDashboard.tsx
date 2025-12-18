@@ -37,6 +37,14 @@ import {
 } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 
 interface FacultyDashboardProps {
     user: User;
@@ -114,7 +122,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = () => {
                             </div>
                             <div>
                                 <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">{stat.label}</p>
-                                <h3 className="text-2xl font-bold">{stat.value}</h3>
+                                <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
                             </div>
                         </CardContent>
                     </Card>
@@ -187,26 +195,30 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = () => {
                     <Card className="bg-brand-surface border-white/5">
                         <ScrollArea className="h-[500px]">
                             <div className="p-6">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="text-xs text-gray-500 uppercase border-b border-white/10">
-                                            <th className="pb-4">Name</th>
-                                            <th className="pb-4">College</th>
-                                            <th className="pb-4">Team</th>
-                                            <th className="pb-4">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-white/5">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="border-white/10 hover:bg-transparent">
+                                            <TableHead className="text-xs text-gray-500 uppercase">Name</TableHead>
+                                            <TableHead className="text-xs text-gray-500 uppercase">College</TableHead>
+                                            <TableHead className="text-xs text-gray-500 uppercase">Team</TableHead>
+                                            <TableHead className="text-xs text-gray-500 uppercase">Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
                                         {participants.map(p => (
-                                            <tr key={p._id} className="hover:bg-white/5 transition-colors">
-                                                <td className="py-4 text-sm font-medium">{p.name}</td>
-                                                <td className="py-4 text-sm text-gray-400">{p.college}</td>
-                                                <td className="py-4 text-sm font-mono text-brand-primary">{p.teamId}</td>
-                                                <td className="py-4"><Badge variant="outline" className="text-[10px]">{p.status}</Badge></td>
-                                            </tr>
+                                            <TableRow key={p._id} className="border-white/5 hover:bg-white/5 transition-colors">
+                                                <TableCell className="font-medium text-white">{p.name}</TableCell>
+                                                <TableCell className="text-gray-400">{p.college}</TableCell>
+                                                <TableCell className="font-mono text-brand-primary">{p.teamId}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="text-[10px]">
+                                                        {p.status}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </TableBody>
+                                </Table>
                             </div>
                         </ScrollArea>
                     </Card>

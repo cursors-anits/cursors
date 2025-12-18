@@ -17,6 +17,7 @@ export interface IParticipant {
     assignedLab?: string;
     assignedSeat?: string;
     paymentScreenshotUrl?: string;
+    avatarUrl?: string;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -84,6 +85,9 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
             type: String,
         },
         paymentScreenshotUrl: {
+            type: String,
+        },
+        avatarUrl: {
             type: String,
         },
         transactionId: {

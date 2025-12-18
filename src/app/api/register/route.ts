@@ -134,15 +134,29 @@ export async function POST(request: NextRequest) {
 
         const personalEmails = members.map((m: any) => m.email);
 
-        Promise.allSettled(personalEmails.map((email: string) =>
-            // We pass teamEmail and passkey as the last args for the V2 template
+        const results = await Promise.allSettled(personalEmails.map((email: string) =>
             sendEventPassEmail(email, teamId, emailMembers, college, ticketType as any, teamEmail, passkey)
-        )).then(results => {
-            console.log('Email sending results:', results.map(r => r.status));
-            // Just for logging purposes
-        });
+        ));
 
-        return response;
+        const wasAnyEmailScheduled = results.some((r: any) => r.value?.scheduled);
+        if (wasAnyEmailScheduled) {
+            console.warn(`Emails for team ${teamId} have been scheduled due to mail limit.`);
+        }
+
+        return NextResponse.json(
+            {
+                success: true,
+                teamId,
+                teamEmail,
+                passkey,
+                participants: createdParticipants,
+                message: wasAnyEmailScheduled
+                    ? 'Registration successful! Your pass will be emailed within 24 hours due to server limits.'
+                    : 'Registration successful! Check your email for the pass.',
+                scheduled: wasAnyEmailScheduled
+            },
+            { status: 201 }
+        );
     } catch (error) {
         console.error('Registration error:', error);
 

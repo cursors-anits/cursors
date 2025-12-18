@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { NavItem } from '@/types';
 import { Menu, X, ArrowRight, UserCircle } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useData } from '@/lib/context/DataContext';
+import { Separator } from '@/components/ui/separator';
 import { LogOut, LayoutDashboard } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -47,8 +49,14 @@ const Navbar: React.FC<NavbarProps> = ({ onRegisterClick, onLoginClick }) => {
                     <div className="flex items-center justify-between h-16">
                         {/* Logo */}
                         <div className="shrink-0 flex items-center gap-3 group cursor-pointer" onClick={() => window.scrollTo(0, 0)}>
-                            <div className="w-10 h-10 bg-linear-to-br from-brand-primary to-brand-secondary rounded-xl flex items-center justify-center transform transition-transform group-hover:rotate-12">
-                                <span className="text-white font-bold text-xl">V</span>
+                            <div className="w-10 h-10 bg-linear-to-br from-brand-primary/20 to-brand-secondary/20 rounded-xl flex items-center justify-center transform transition-transform group-hover:rotate-12 overflow-hidden border border-white/10">
+                                <Image
+                                    src="/sponsors/cursors.png"
+                                    alt="Cursors Logo"
+                                    width={40}
+                                    height={40}
+                                    className="w-full h-full object-cover"
+                                />
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-xl font-bold tracking-tight text-white leading-none">
@@ -138,9 +146,10 @@ const Navbar: React.FC<NavbarProps> = ({ onRegisterClick, onLoginClick }) => {
 
                 {/* Mobile Menu */}
                 <div
-                    className={`md:hidden absolute top-full left-0 w-full bg-brand-dark border-b border-white/10 transition-all duration-300 overflow-hidden ${isMobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                    className={`md:hidden absolute top-full left-0 w-full bg-brand-dark transition-all duration-300 overflow-hidden ${isMobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
                         }`}
                 >
+                    <Separator className="bg-white/10" />
                     <div className="px-4 py-4 space-y-2">
                         {navItems.map((item) => (
                             <Link

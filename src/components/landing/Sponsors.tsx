@@ -1,11 +1,13 @@
 import React from 'react';
 import { Building2, Code2, Cpu, Shirt } from 'lucide-react';
+import Image from 'next/image';
 
 interface Sponsor {
     name: string;
     role: string;
     icon: React.ReactNode;
     color: string;
+    logo?: string;
 }
 
 const sponsors: Sponsor[] = [
@@ -13,25 +15,29 @@ const sponsors: Sponsor[] = [
         name: "ANITS",
         role: "Hosting Partner",
         icon: <Building2 className="w-8 h-8" />,
-        color: "text-blue-400"
+        color: "text-blue-400",
+        logo: "/sponsors/anits.png"
     },
     {
         name: "Cursors",
         role: "As Part of",
         icon: <Code2 className="w-8 h-8" />,
-        color: "text-emerald-400"
+        color: "text-emerald-400",
+        logo: "/sponsors/cursors.png"
     },
     {
         name: "Brain o Vision",
         role: "Powered By",
         icon: <Cpu className="w-8 h-8" />,
-        color: "text-purple-400"
+        color: "text-purple-400",
+        logo: "/sponsors/brainovision.png"
     },
     {
         name: "GeeksforGeeks",
         role: "Merchandise Partner",
         icon: <Shirt className="w-8 h-8" />,
-        color: "text-green-500"
+        color: "text-green-500",
+        logo: "/sponsors/gfg.svg"
     },
 ];
 
@@ -60,8 +66,25 @@ const Sponsors: React.FC = () => {
                                 {sponsor.role}
                             </span>
 
-                            <div className={`relative z-10 p-4 rounded-xl bg-black/20 mb-4 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 ${sponsor.color} border border-white/5`}>
-                                {sponsor.icon}
+                            <div className={`relative z-10 w-20 h-20 flex items-center justify-center p-4 rounded-xl bg-black/20 mb-4 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 ${sponsor.color} border border-white/5 overflow-hidden`}>
+                                {sponsor.logo ? (
+                                    <Image
+                                        src={sponsor.logo}
+                                        alt={sponsor.name}
+                                        width={100}
+                                        height={100}
+                                        className="w-full h-full object-contain filter brightness-110 contrast-110 group-hover:brightness-125 transition-all"
+                                        onError={(e) => {
+                                            (e.target as HTMLImageElement).src = ""; // Clear src to show fallback
+                                            (e.target as HTMLImageElement).style.display = "none";
+                                        }}
+                                    />
+                                ) : sponsor.icon}
+                                {sponsor.logo && (
+                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-0 pointer-events-none">
+                                        {/* This ensures icon is only visible if image fails or not present */}
+                                    </div>
+                                )}
                             </div>
 
                             <h3 className="relative z-10 text-xl font-bold text-white group-hover:text-brand-primary transition-colors">

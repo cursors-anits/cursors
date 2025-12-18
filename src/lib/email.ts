@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import ScheduledEmail from '@/lib/db/models/ScheduledEmail';
+import connectDB from '@/lib/db/mongodb';
 
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -176,18 +178,91 @@ export async function sendEventPassEmail(
     teamPasskey: string
 ) {
     const html = getTemplate(ticketType, teamId, members, college, teamEmail, teamPasskey);
+    const subject = `🎟️ Event Pass: ${teamId} | Vibe Coding`;
 
     try {
         const info = await transporter.sendMail({
             from: `"Vibe Coding 2026" <${process.env.SMTP_USER}>`,
             to,
-            subject: `🎟️ Event Pass: ${teamId} | Vibe Coding`,
+            subject,
             html,
         });
         console.log("Message sent to %s: %s", to, info.messageId);
-        return info;
-    } catch (error) {
+        return { success: true, info };
+    } catch (error: any) {
         console.error("Error sending email:", error);
+
+        // Check if it's a limit error
+        const errorMessage = error.message?.toLowerCase() || '';
+        const isLimitError =
+            errorMessage.includes('limit exceeded') ||
+            errorMessage.includes('too many messages') ||
+            errorMessage.includes('rate limit') ||
+            error.responseCode === 421 ||
+            error.responseCode === 450 ||
+            error.responseCode === 452 ||
+            error.responseCode === 550 ||
+            error.responseCode === 554;
+
+        if (isLimitError) {
+            console.warn("Mail limit detected. Scheduling email for later...");
+            await connectDB();
+            await ScheduledEmail.create({
+                to,
+                subject,
+                body: html,
+                type: 'EventPass',
+                teamId,
+                scheduledFor: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours later
+                status: 'Pending'
+            });
+            return { success: false, scheduled: true };
+        }
+
         throw error;
+    }
+}
+
+/**
+ * Processes the queue of scheduled emails that were deferred due to limits.
+ */
+export async function processEmailQueue() {
+    await connectDB();
+    const now = new Date();
+    const pendingEmails = await ScheduledEmail.find({
+        status: 'Pending',
+        scheduledFor: { $lte: now },
+        attempts: { $lt: 3 }
+    }).limit(10); // Process in small batches
+
+    console.log(`Processing ${pendingEmails.length} scheduled emails...`);
+
+    for (const email of pendingEmails) {
+        try {
+            await transporter.sendMail({
+                from: `"Vibe Coding 2026" <${process.env.SMTP_USER}>`,
+                to: email.to,
+                subject: email.subject,
+                html: email.body,
+            });
+
+            email.status = 'Sent';
+            email.attempts += 1;
+            await email.save();
+            console.log(`Successfully sent scheduled email to ${email.to}`);
+        } catch (error: any) {
+            console.error(`Failed to send scheduled email to ${email.to}:`, error);
+            email.attempts += 1;
+            email.lastError = error.message;
+
+            // If it's still a limit error, reschedule for another 24h
+            if (error.message?.includes('limit')) {
+                email.scheduledFor = new Date(Date.now() + 24 * 60 * 60 * 1000);
+            } else if (email.attempts >= 3) {
+                email.status = 'Failed';
+            }
+
+            await email.save();
+        }
     }
 }

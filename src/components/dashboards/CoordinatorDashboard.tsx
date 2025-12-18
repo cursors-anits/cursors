@@ -8,9 +8,12 @@ import {
     StopCircle,
     CheckCircle2,
     ChevronRight,
-    Eye
+    Eye,
+    MessageSquare,
+    CheckCircle,
+    AlertTriangle
 } from 'lucide-react';
-import { User, Participant } from '@/types';
+import { User, Participant, SupportRequest } from '@/types';
 import { useData } from '@/lib/context/DataContext';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { Button } from '@/components/ui/button';
@@ -29,22 +32,41 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 interface CoordinatorDashboardProps {
     user: User;
 }
 
-type Mode = 'attendance' | 'entry' | 'lab' | 'food' | 'exit';
+type Mode = 'entry' | 'exit' | 'workshop' | 'hackathon' | 'snacks';
 
 const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => {
-    const { participants, logs, addLog, updateParticipant, isLoading } = useData();
+    const {
+        participants,
+        logs,
+        addLog,
+        updateParticipant,
+        isLoading,
+        supportRequests,
+        updateSupportRequest,
+        fetchSupportRequests
+    } = useData();
 
     const router = useRouter();
     const searchParams = useSearchParams();
     const pathname = usePathname();
 
-    const view = (searchParams.get('view') as 'scan' | 'list' | 'participants') || 'scan';
-    const mode = (searchParams.get('mode') as Mode) || 'attendance';
+    const view = (searchParams.get('view') as 'scan' | 'list' | 'participants' | 'requests') || 'scan';
+    const mode = (searchParams.get('mode') as Mode) || 'workshop';
 
     const setView = (newView: string) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -70,6 +92,7 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
 
     const [assignLab, setAssignLab] = useState('Lab 1 (CSE)');
     const [assignSeat, setAssignSeat] = useState('');
+    const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
 
 
     const handleFetchTeam = useCallback((overrideInput?: string) => {
@@ -87,6 +110,7 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                 members: teamMembers
             });
             setSelectedMembers([]);
+            setIsAttendanceModalOpen(true);
         } else {
             toast.error(`ID not found: ${input}`);
         }
@@ -120,6 +144,24 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
         }
     }, [showRealScanner, view, scannedTeam, handleFetchTeam]);
 
+    // SOS Notification Effect
+    const lastRequestCount = useRef(supportRequests.length);
+    useEffect(() => {
+        const newRequests = supportRequests.slice(0, Math.max(0, supportRequests.length - lastRequestCount.current));
+        newRequests.forEach(req => {
+            if (req.type === 'SOS' && req.status === 'Open') {
+                toast.error(`🚨 SOS ALERT: Team ${req.teamId} in ${req.labName}!`, {
+                    duration: 10000,
+                    action: {
+                        label: 'View',
+                        onClick: () => setView('requests')
+                    }
+                });
+            }
+        });
+        lastRequestCount.current = supportRequests.length;
+    }, [supportRequests, setView]);
+
     if (isLoading && participants.length === 0) {
         return (
             <div className="pt-24 pb-12 px-6 max-w-4xl mx-auto space-y-6">
@@ -148,34 +190,32 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
         let actionType = '';
         let details = '';
 
-        if (mode === 'lab') {
-            if (!assignSeat) {
-                toast.error("Please enter a seat number");
-                return;
-            }
-            actionType = 'LAB_ALLOCATION';
-            details = `Allocated to ${assignLab} - Seat ${assignSeat}`;
-
-            for (const m of targets) {
-                await updateParticipant({ ...m, assignedLab: assignLab, assignedSeat: assignSeat });
-            }
-        } else if (mode === 'food') {
-            const mealKey = `FOOD_${mealType.toUpperCase()}_D${workshopDay}`;
-            actionType = mealKey;
-            details = `${mealType} Issued`;
-        } else {
-            actionType = mode === 'attendance' ? `ATTENDANCE_D${workshopDay}` : mode.toUpperCase();
-            details = mode === 'entry' ? 'Checked In' : mode === 'exit' ? 'Checked Out' : 'Marked Present';
+        if (mode === 'workshop') {
+            actionType = `WORKSHOP_D${workshopDay}`;
+            details = `Workshop Attendance Day ${workshopDay}`;
+        } else if (mode === 'snacks') {
+            const eventLabel = workshopDay === 'hackathon' ? 'Hackathon' : `Day ${workshopDay}`;
+            actionType = `SNACKS_${workshopDay.toUpperCase()}`;
+            details = `Snacks Issued for ${eventLabel}`;
+        } else if (mode === 'hackathon') {
+            actionType = 'HACKATHON_ATTENDANCE';
+            details = 'Hackathon Attendance Marked';
+        } else if (mode === 'entry') {
+            actionType = 'ENTRY_GATE';
+            details = 'Gate Check-In';
+        } else if (mode === 'exit') {
+            actionType = 'EXIT_GATE';
+            details = 'Gate Check-Out';
         }
 
-        await addLog(actionType, `${details} for ${targets.length} members of Team ${scannedTeam.id}`);
-        toast.success(`${actionType} successful`);
+        await addLog(actionType, `${details} for ${targets.length} members of Team ${scannedTeam.id}: ${targets.map(t => t.name).join(', ')}`);
+        toast.success(`${actionType} successful for ${targets.length} members`);
 
         // Reset
         setScannedTeam(null);
         setScanInput('');
         setSelectedMembers([]);
-        setAssignSeat('');
+        setIsAttendanceModalOpen(false);
     };
 
     return (
@@ -187,13 +227,16 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                 </div>
 
                 <div className="flex bg-brand-surface p-1 rounded-xl border border-white/10 w-full md:w-auto overflow-x-auto">
-                    {['scan', 'list', 'participants'].map((v) => (
+                    {['scan', 'list', 'participants', 'requests'].map((v) => (
                         <Button
                             key={v}
                             variant={view === v ? "default" : "ghost"}
-                            onClick={() => setView(v as 'scan' | 'list' | 'participants')}
+                            onClick={() => setView(v as 'scan' | 'list' | 'participants' | 'requests')}
                             className={`rounded-lg capitalize ${view === v ? "bg-brand-primary text-brand-dark" : "text-gray-400"}`}
                         >
+                            {v === 'requests' && supportRequests.filter(r => r.status === 'Open').length > 0 && (
+                                <span className="mr-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                            )}
                             {v}
                         </Button>
                     ))}
@@ -204,24 +247,24 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
             <Card className="bg-brand-surface border-white/5">
                 <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase">Operation Mode</label>
+                        <Label className="text-xs font-bold text-gray-500 uppercase">Operation Mode</Label>
                         <Select onValueChange={(v) => { setMode(v as Mode); setScannedTeam(null); }} value={mode}>
                             <SelectTrigger className="bg-brand-dark border-white/10">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="attendance">Workshop Attendance</SelectItem>
+                                <SelectItem value="workshop">Workshop Attendance</SelectItem>
                                 <SelectItem value="entry">Entry Gate</SelectItem>
-                                <SelectItem value="lab">Lab Allocation</SelectItem>
-                                <SelectItem value="food">Food Distribution</SelectItem>
+                                <SelectItem value="hackathon">Hackathon Attendance</SelectItem>
+                                <SelectItem value="snacks">Snacks Distribution</SelectItem>
                                 <SelectItem value="exit">Exit Gate</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
-                    {(mode === 'attendance' || mode === 'food') && (
+                    {(mode === 'workshop' || mode === 'snacks') && (
                         <div className="space-y-1 animate-in fade-in duration-300">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Event Day</label>
+                            <Label className="text-xs font-bold text-gray-500 uppercase">Event / Day</Label>
                             <Select onValueChange={setWorkshopDay} value={workshopDay}>
                                 <SelectTrigger className="bg-brand-dark border-white/10">
                                     <SelectValue />
@@ -230,22 +273,7 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                                     <SelectItem value="1">Day 1</SelectItem>
                                     <SelectItem value="2">Day 2</SelectItem>
                                     <SelectItem value="3">Day 3</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    )}
-
-                    {mode === 'food' && (
-                        <div className="space-y-1 animate-in fade-in duration-300">
-                            <label className="text-xs font-bold text-gray-500 uppercase">Meal Type</label>
-                            <Select onValueChange={setMealType} value={mealType}>
-                                <SelectTrigger className="bg-brand-dark border-white/10">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Lunch">Lunch</SelectItem>
-                                    <SelectItem value="Snacks">Snacks</SelectItem>
-                                    <SelectItem value="Dinner">Dinner</SelectItem>
+                                    {(mode === 'snacks') && <SelectItem value="hackathon">Hackathon</SelectItem>}
                                 </SelectContent>
                             </Select>
                         </div>
@@ -281,8 +309,8 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                             )}
 
                             <div className="relative">
-                                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/5" /></div>
-                                <div className="relative flex justify-center text-xs uppercase"><span className="bg-brand-surface px-2 text-gray-500">Or Manual Entry</span></div>
+                                <Separator className="bg-white/5" />
+                                <div className="relative flex justify-center text-xs uppercase -translate-y-1/2 -mt-px"><span className="bg-brand-surface px-2 text-gray-500">Or Manual Entry</span></div>
                             </div>
 
                             <div className="flex gap-2">
@@ -297,7 +325,8 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                         </div>
                     ) : (
                         <div className="w-full space-y-6 animate-in zoom-in-95 duration-300">
-                            <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                            <div className="flex items-center justify-between pb-4 relative">
+                                <Separator className="bg-white/5 absolute bottom-0 left-0 w-full" />
                                 <div>
                                     <p className="text-xs text-brand-primary font-bold uppercase">Scanned Success</p>
                                     <h3 className="text-2xl font-bold">Team {scannedTeam.id}</h3>
@@ -328,32 +357,6 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                                 </div>
                             </ScrollArea>
 
-                            {mode === 'lab' && (
-                                <div className="grid grid-cols-2 gap-4 bg-brand-dark/50 p-4 rounded-xl border border-white/5">
-                                    <div className="space-y-1">
-                                        <label className="text-xs text-gray-500 uppercase">Lab</label>
-                                        <Select onValueChange={setAssignLab} value={assignLab}>
-                                            <SelectTrigger className="h-9 bg-brand-surface border-white/10">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="Lab 1 (CSE)">Lab 1 (CSE)</SelectItem>
-                                                <SelectItem value="Lab 2 (IT)">Lab 2 (IT)</SelectItem>
-                                                <SelectItem value="Lab 3 (ECE)">Lab 3 (ECE)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-xs text-gray-500 uppercase">Seat</label>
-                                        <Input
-                                            placeholder="A01"
-                                            className="h-9 bg-brand-surface border-white/10"
-                                            value={assignSeat}
-                                            onChange={(e) => setAssignSeat(e.target.value.toUpperCase())}
-                                        />
-                                    </div>
-                                </div>
-                            )}
 
                             <div className="flex gap-4">
                                 <Button variant="outline" className="flex-1" onClick={() => handleAction(false)} disabled={selectedMembers.length === 0}>
@@ -396,7 +399,8 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
 
             {view === 'participants' && (
                 <Card className="bg-brand-surface border-white/5 overflow-hidden">
-                    <div className="p-4 border-b border-white/5">
+                    <div className="p-4 relative">
+                        <Separator className="bg-white/5 absolute bottom-0 left-0 w-full" />
                         <Input
                             placeholder="Search participants list..."
                             className="bg-brand-dark border-white/10"
@@ -434,6 +438,117 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                     </ScrollArea>
                 </Card>
             )}
+
+            {view === 'requests' && (
+                <div className="space-y-4 animate-in fade-in duration-500">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-xl font-bold flex items-center gap-2">
+                            <MessageSquare className="w-5 h-5 text-brand-primary" />
+                            Support Requests
+                        </h3>
+                        <Button variant="outline" size="sm" onClick={() => fetchSupportRequests(user.assignedLab)}>
+                            Refresh
+                        </Button>
+                    </div>
+                    <div className="grid gap-4">
+                        {supportRequests.length === 0 ? (
+                            <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
+                                <CheckCircle className="w-12 h-12 text-green-500/20 mx-auto mb-4" />
+                                <p className="text-gray-500">All clear! No pending requests.</p>
+                            </div>
+                        ) : (
+                            supportRequests.map((req) => (
+                                <Card key={req._id} className={`bg-brand-surface border-white/5 ${req.type === 'SOS' ? 'border-red-500/20' : ''}`}>
+                                    <CardContent className="p-6">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex items-start gap-4">
+                                                <div className={`p-3 rounded-2xl ${req.type === 'SOS' ? 'bg-red-500/10 text-red-500' :
+                                                    req.type === 'Help' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'
+                                                    }`}>
+                                                    {req.type === 'SOS' ? <AlertTriangle className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="font-bold text-lg">{req.type} Request</h4>
+                                                        <Badge variant="outline" className="bg-white/5 text-[10px]">{req.labName}</Badge>
+                                                    </div>
+                                                    <p className="text-gray-400 text-sm mt-1">From Team: <span className="text-white font-mono">{req.teamId}</span></p>
+                                                    <p className="text-xs text-gray-600 mt-2 italic">
+                                                        Received {new Date(req.timestamp).toLocaleTimeString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <Button
+                                                className="bg-green-500 hover:bg-green-600 text-white"
+                                                onClick={() => updateSupportRequest(req._id, 'Resolved')}
+                                            >
+                                                Resolve
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Attendance Modal */}
+            <Dialog open={isAttendanceModalOpen} onOpenChange={setIsAttendanceModalOpen}>
+                <DialogContent className="bg-brand-surface border-white/10 text-white max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold">
+                            {mode === 'workshop' ? `Day ${workshopDay} Workshop` :
+                                mode === 'snacks' ? `${workshopDay === 'hackathon' ? 'Hackathon' : `Day ${workshopDay}`} Snacks` :
+                                    mode === 'hackathon' ? 'Hackathon' : mode === 'entry' ? 'Gate Entry' : 'Gate Exit'}
+                        </DialogTitle>
+                        <p className="text-sm text-gray-400">Team {scannedTeam?.id || '...'}</p>
+                    </DialogHeader>
+
+                    <div className="py-4 space-y-4">
+                        <Label className="text-sm font-medium text-gray-500 uppercase">Select Members</Label>
+                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                            {scannedTeam?.members.map(member => (
+                                <div
+                                    key={member._id}
+                                    className={`flex items-center justify-between p-3 rounded-xl border transition-colors cursor-pointer ${selectedMembers.includes(member._id) ? 'bg-brand-primary/10 border-brand-primary/50' : 'bg-brand-dark border-white/5'}`}
+                                    onClick={() => toggleMember(member._id)}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Checkbox
+                                            checked={selectedMembers.includes(member._id)}
+                                            onCheckedChange={() => toggleMember(member._id)}
+                                            className="border-white/20 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary"
+                                        />
+                                        <div>
+                                            <p className="font-medium text-sm">{member.name}</p>
+                                            <p className="text-[10px] text-gray-500 font-mono">{member.participantId}</p>
+                                        </div>
+                                    </div>
+                                    <Badge variant="outline" className="text-[10px] opacity-70">{member.type}</Badge>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                        <Button
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => handleAction(false)}
+                            disabled={selectedMembers.length === 0}
+                        >
+                            Mark Attendance ({selectedMembers.length})
+                        </Button>
+                        <Button
+                            className="flex-1 bg-brand-primary text-brand-dark hover:bg-white"
+                            onClick={() => handleAction(true)}
+                        >
+                            Mark All
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

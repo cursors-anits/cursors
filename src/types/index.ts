@@ -57,7 +57,7 @@ export interface User {
     passkey?: string; // For participants
     password?: string; // For admin, coordinator, faculty
     teamId?: string;
-    assignedLab?: string; // For coordinators
+    assignedLab?: string; // For coordinators and participants
 }
 
 export type DashboardView = 'landing' | 'admin' | 'coordinator' | 'participant' | 'faculty';
@@ -74,6 +74,7 @@ export interface Participant {
     status: string;
     assignedLab?: string;
     assignedSeat?: string;
+    avatarUrl?: string;
     paymentScreenshotUrl?: string;
     createdAt: string;
 }
@@ -84,6 +85,25 @@ export interface Coordinator {
     email: string;
     role: string;
     assigned: string;
+    assignedLab?: string;
+}
+
+export interface Lab {
+    _id: string;
+    name: string;
+    roomNumber: string;
+    capacity: number;
+    currentCount: number;
+}
+
+export interface SupportRequest {
+    _id: string;
+    type: 'SOS' | 'Help' | 'Complaint';
+    teamId: string;
+    labName: string;
+    message?: string;
+    status: 'Open' | 'Resolved';
+    timestamp: number;
 }
 
 export interface Log {
@@ -101,4 +121,5 @@ export interface Settings {
     eventDate: string | Date;
     upiId: string;
     qrImageUrl: string;
+    prizePool: string;
 }
