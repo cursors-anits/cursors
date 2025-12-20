@@ -165,11 +165,15 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
 
     const calculatePricing = () => {
         const basePrice = PRICES[ticketType] || 499;
-        // Group discount: ₹10 OFF per person for groups of 2-5
-        const discount = teamSize > 1 ? 10 : 0;
-        const pricePerPerson = basePrice - discount;
+        // Group discount: Each member gets ₹10 OFF per additional member
+        const discountPerPerson = (teamSize - 1) * 10;
+        const pricePerPerson = basePrice - discountPerPerson;
+        const total = pricePerPerson * teamSize;
         return {
-            total: pricePerPerson * teamSize,
+            total,
+            basePrice,
+            discountPerPerson,
+            totalDiscount: discountPerPerson * teamSize,
             perPerson: pricePerPerson
         };
     };
@@ -428,11 +432,26 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                     </Button>
                                                 ))}
                                             </div>
-                                            {teamSize > 1 && (
-                                                <Alert className="bg-brand-primary/10 border-brand-primary/20 text-brand-primary py-2 mt-4">
+                                            {teamSize > 0 && ticketType && (
+                                                <Alert className="bg-brand-primary/10 border-brand-primary/20 text-brand-primary py-3 mt-4">
                                                     <Info className="h-4 w-4" />
-                                                    <AlertDescription className="text-xs">
-                                                        Group Discount Applied: ₹10 OFF per person!
+                                                    <AlertDescription className="text-xs space-y-1">
+                                                        <div className="font-semibold">Price Breakdown:</div>
+                                                        <div className="flex justify-between">
+                                                            <span>Base Price (per person) = ₹{calculatePricing().basePrice}</span>
+                                                        </div>
+                                                        {teamSize > 1 && (
+                                                            <div className="flex justify-between text-green-400">
+                                                                <span>Group Discount (₹10 × {teamSize - 1} per person) = ₹{calculatePricing().discountPerPerson} per person</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex justify-between">
+                                                            <span>Final Price per Person = ₹{calculatePricing().perPerson}</span>
+                                                        </div>
+                                                        <Separator className="bg-brand-primary/20 my-1" />
+                                                        <div className="flex justify-between font-bold text-sm">
+                                                            <span>Total Amount ({teamSize} × ₹{calculatePricing().perPerson}) = ₹{calculatePricing().total}</span>
+                                                        </div>
                                                     </AlertDescription>
                                                 </Alert>
                                             )}
