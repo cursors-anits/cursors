@@ -42,6 +42,12 @@ export async function GET() {
             }
         }
 
+        // Ensure showInternships exists (local migration if needed)
+        if (settings.showInternships === undefined) {
+            settings.showInternships = false;
+            await settings.save();
+        }
+
         return NextResponse.json(settings);
     } catch {
         return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });

@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            role: user.role
+            role: user.role,
+            needsPasswordSet: user.role !== 'participant' && !user.isPasswordSet
         });
     } catch (error) {
         console.error('Email verification error:', error);

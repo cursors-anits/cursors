@@ -45,6 +45,10 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { SettingsTab } from '@/components/dashboards/SettingsTab';
+import { DashboardShell } from '@/components/dashboards/DashboardShell';
+import { NavItem } from '@/components/dashboards/DashboardNav';
+import { Lock } from 'lucide-react';
 
 interface FacultyDashboardProps {
     user: User;
@@ -52,7 +56,7 @@ interface FacultyDashboardProps {
 
 const COLORS = ['#82d4fa', '#38bdf8', '#0ea5e9', '#1e293b'];
 
-const FacultyDashboard: React.FC<FacultyDashboardProps> = () => {
+const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
     const { participants, coordinators, logs, isLoading } = useData();
 
     const router = useRouter();
@@ -81,6 +85,13 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = () => {
         return acc + 499; // Default
     }, 0);
 
+    const navItems: NavItem[] = [
+        { label: 'Overview', icon: TrendingUp, value: 'overview', group: 'Management' },
+        { label: 'Teams List', icon: Users, value: 'participants', group: 'Management' },
+        { label: 'Coordinators', icon: UserCog, value: 'coordinators', group: 'Management' },
+        { label: 'Account', icon: Lock, value: 'settings', group: 'Profile' },
+    ];
+
     if (isLoading && participants.length === 0) {
         return (
             <div className="pt-24 pb-12 px-6 max-w-7xl mx-auto space-y-8">
@@ -97,46 +108,41 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = () => {
     }
 
     return (
-        <div className="pt-24 pb-12 px-6 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold">Faculty Oversight</h1>
-                    <p className="text-gray-400 mt-1">Institutional overview of Vibe Coding event</p>
-                </div>
-                <Button variant="outline" className="border-white/10">
-                    <Download className="w-4 h-4 mr-2" /> Export Report
-                </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                {[
-                    { label: 'Total Registration', value: participants.length, icon: Users, color: 'text-blue-400' },
-                    { label: 'Event Coordinators', value: coordinators.length, icon: UserCog, color: 'text-purple-400' },
-                    { label: 'Revenue Generated', value: `₹${(totalRevenue / 1000).toFixed(1)}k`, icon: TrendingUp, color: 'text-green-400' },
-                    { label: 'System Health', value: '100%', icon: Activity, color: 'text-orange-400' },
-                ].map((stat, i) => (
-                    <Card key={i} className="bg-brand-surface border-white/5">
-                        <CardContent className="p-6 flex items-center gap-4">
-                            <div className={`p-3 rounded-xl bg-white/5 ${stat.color}`}>
-                                <stat.icon className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">{stat.label}</p>
-                                <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
+        <DashboardShell
+            title="Faculty Oversight"
+            description="Institutional overview of Vibe Coding event"
+            items={navItems}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            user={{
+                name: user.name,
+                email: user.email,
+                role: 'Faculty'
+            }}
+        >
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <TabsList className="bg-brand-dark border-white/10">
-                    <TabsTrigger value="overview">Event Overview</TabsTrigger>
-                    <TabsTrigger value="participants">Participant List</TabsTrigger>
-                    <TabsTrigger value="coordinators">Coordinators</TabsTrigger>
-                </TabsList>
 
                 <TabsContent value="overview" className="mt-8 space-y-8">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        {[
+                            { label: 'Total Registration', value: participants.length, icon: Users, color: 'text-blue-400' },
+                            { label: 'Event Coordinators', value: coordinators.length, icon: UserCog, color: 'text-purple-400' },
+                            { label: 'Revenue Generated', value: `₹${(totalRevenue / 1000).toFixed(1)}k`, icon: TrendingUp, color: 'text-green-400' },
+                            { label: 'System Health', value: '100%', icon: Activity, color: 'text-orange-400' },
+                        ].map((stat, i) => (
+                            <Card key={i} className="bg-brand-surface border-white/5 hover:border-brand-primary/20 transition-all">
+                                <CardContent className="p-6 flex items-center gap-4">
+                                    <div className={`p-3 rounded-xl bg-white/5 ${stat.color}`}>
+                                        <stat.icon className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">{stat.label}</p>
+                                        <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <Card className="bg-brand-surface border-white/5 p-6">
                             <CardHeader className="px-0 pt-0">
@@ -248,8 +254,12 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = () => {
                         </ScrollArea>
                     </Card>
                 </TabsContent>
+
+                <TabsContent value="settings" className="mt-8">
+                    <SettingsTab user={user} />
+                </TabsContent>
             </Tabs>
-        </div>
+        </DashboardShell>
     );
 };
 

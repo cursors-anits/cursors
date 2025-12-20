@@ -4,6 +4,7 @@ export interface ICoordinator {
     _id?: mongoose.Types.ObjectId;
     name: string;
     email: string;
+    personalEmail?: string;
     role: string;
     assigned: string;
     assignedLab?: string;
@@ -25,6 +26,11 @@ const CoordinatorSchema = new Schema<ICoordinator, CoordinatorModel>(
             type: String,
             required: true,
             unique: true,
+            lowercase: true,
+            trim: true,
+        },
+        personalEmail: {
+            type: String,
             lowercase: true,
             trim: true,
         },

@@ -1,4 +1,4 @@
-import { Wifi, Coffee, Music, Trophy, Gift, Award, Star } from 'lucide-react';
+import { Wifi, Coffee, Music, Trophy, Gift, Award, Star, Globe } from 'lucide-react';
 import { useData } from '@/lib/context/DataContext';
 
 const FeaturesRewards: React.FC = () => {
@@ -95,6 +95,17 @@ const FeaturesRewards: React.FC = () => {
                                         <p className="text-gray-400 text-sm">Verified certificates of merit and participation for all.</p>
                                     </div>
                                 </div>
+                                {settings?.showInternships && (
+                                    <div className="flex items-start gap-4">
+                                        <div className="p-3 bg-blue-500/10 rounded-xl">
+                                            <Globe className="w-6 h-6 text-blue-400" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-white font-bold text-lg">Internship Opportunities</h4>
+                                            <p className="text-gray-400 text-sm">Exclusive internship offers for top performers at the event.</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

@@ -8,6 +8,7 @@ export interface ISettings {
     upiId: string;
     qrImageUrl: string;
     prizePool: string;
+    showInternships: boolean;
     updatedAt?: Date;
 }
 
@@ -38,6 +39,10 @@ const SettingsSchema = new Schema<ISettings, SettingsModel>(
         prizePool: {
             type: String,
             default: '₹40,000',
+        },
+        showInternships: {
+            type: Boolean,
+            default: false,
         },
     },
     {

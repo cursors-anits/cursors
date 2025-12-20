@@ -9,7 +9,15 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'vibe-coding.vercel.app',
+        hostname: 'cursors-anits.vercel.app',
+      },
+      {
+        protocol: 'https',
+        hostname: 'drive.google.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
       },
     ],
   },

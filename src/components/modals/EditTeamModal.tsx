@@ -1,0 +1,254 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Participant, User } from '@/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+interface EditTeamModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    teamMembers: Participant[];
+    teamUser: User | null;
+    onSave: (members: Participant[], userUpdates: { email: string, passkey: string }) => Promise<void>;
+}
+
+const COLLEGES = [
+    "Aditya Institute of Technology and Management [AITAM]",
+    "Andhra University College of Engineering [AUCE]",
+    "Andhra University College of Engineering for Women [AUCEW]",
+    "Anil Neerukonda Institute of Technology and Sciences [ANITS]",
+    "Avanthi Institute Of Engineering and Technology [AIET]",
+    "Baba Institute of Technology and Sciences [BITS]",
+    "Behara College of Engineering and Technology [BCET]",
+    "Centurion University of Technology and Management [CUTM]",
+    "Chaitanya Engineering College [CEC]",
+    "Dr. Lankapalli Bullayya College [LBCE]",
+    "Gandhi Institute of Technology and Management [GITAM]",
+    "Gayatri Vidya Parishad College for Degree & P.G. Courses [GVPCDPGC]",
+    "Gayatri Vidya Parishad College of Engineering [GVPCE]",
+    "Gayatri Vidya Parishad College of Engineering Women [GVPCEW]",
+    "GMR Institute of Technology [GMRIT]",
+    "Jawaharlal Nehru Technological University - Gurajada [JNTU-GV]",
+    "Lendi Institute of Engineering & Technology [LIET]",
+    "Maharaj Vijayaram Gajapathi Raj College of Engineering [MVGR]",
+    "Nadimpalli Satyanarayana Raju Institute of Technology [NSRIT]",
+    "N S Raju Institute of Engineering and Technology [NSRIET]",
+    "Pydah College of Engineering and Technology [PCET]",
+    "Raghu Engineering College (Autonomous) [REC]",
+    "Raghu Institute of Technology [RIT]",
+    "Sanketika Vidya Parishad Engineering College [SVPEC]",
+    "Vignan's Institute of Engineering for Women [VIEW]",
+    "Vignan's Institute of Information Technology [VIIT]",
+    "Visakha Institute of Engineering and Technology [VIET]",
+    "Other"
+];
+
+// Helper to parse year from database (can be number, "4", or "4th Year" string)
+const parseYearValue = (year: any): string => {
+    if (!year && year !== 0) return '';
+    if (typeof year === 'number') return String(year);
+    if (typeof year === 'string') {
+        // Extract number from "4th Year", "2nd Year", etc.
+        const match = year.match(/(\d+)/);
+        return match ? match[1] : '';
+    }
+    return '';
+};
+
+export const EditTeamModal: React.FC<EditTeamModalProps> = ({
+    isOpen,
+    onClose,
+    teamMembers,
+    teamUser,
+    onSave,
+}) => {
+    const [members, setMembers] = useState<Participant[]>([]);
+    const [generatedEmail, setGeneratedEmail] = useState('');
+    const [passkey, setPasskey] = useState('');
+    const [customColleges, setCustomColleges] = useState<Record<number, string>>({});
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (teamMembers.length > 0) {
+            const membersCopy = JSON.parse(JSON.stringify(teamMembers));
+            setMembers(membersCopy);
+
+            // Extract custom colleges
+            const customs: Record<number, string> = {};
+            membersCopy.forEach((member: Participant, idx: number) => {
+                if (member.college && !COLLEGES.includes(member.college)) {
+                    customs[idx] = member.college;
+                }
+            });
+            setCustomColleges(customs);
+        }
+    }, [teamMembers]);
+
+    useEffect(() => {
+        if (teamUser && teamUser.email) {
+            setGeneratedEmail(teamUser.email);
+            setPasskey(teamUser.passkey || '');
+        } else {
+            setGeneratedEmail('');
+            setPasskey('');
+        }
+    }, [teamUser]);
+
+    const updateMember = (index: number, field: keyof Participant, value: any) => {
+        const updated = [...members];
+        updated[index] = { ...updated[index], [field]: value };
+        setMembers(updated);
+    };
+
+    const handleCollegeChange = (index: number, value: string) => {
+        if (value === 'Other') {
+            updateMember(index, 'college', 'Other');
+            setCustomColleges({ ...customColleges, [index]: customColleges[index] || '' });
+        } else {
+            updateMember(index, 'college', value);
+            const customs = { ...customColleges };
+            delete customs[index];
+            setCustomColleges(customs);
+        }
+    };
+
+    const handleCustomCollegeChange = (index: number, value: string) => {
+        setCustomColleges({ ...customColleges, [index]: value });
+        updateMember(index, 'college', value);
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await onSave(members, { email: generatedEmail, passkey });
+            onClose();
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (members.length === 0) return null;
+
+    const teamId = members[0].teamId;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="bg-brand-surface border-white/10 text-white max-w-4xl max-h-[90vh]">
+                <DialogHeader>
+                    <DialogTitle className="text-xl">Edit Team - {teamId}</DialogTitle>
+                    <DialogDescription className="text-gray-400">
+                        Update team and member information. Team credentials are from Users collection.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <ScrollArea className="max-h-[60vh] pr-4">
+                    {/* Team Credentials */}
+                    <div className="mb-6 p-4 bg-brand-dark rounded-lg border border-white/10">
+                        <h3 className="text-sm font-semibold mb-3 text-brand-primary">Team Credentials (Users Collection)</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="generatedEmail">Generated Email</Label>
+                                <Input
+                                    id="generatedEmail"
+                                    value={generatedEmail}
+                                    onChange={(e) => setGeneratedEmail(e.target.value)}
+                                    className="bg-brand-surface border-white/10 font-mono text-sm"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="passkey">Passkey</Label>
+                                <Input
+                                    id="passkey"
+                                    value={passkey}
+                                    onChange={(e) => setPasskey(e.target.value)}
+                                    className="bg-brand-surface border-white/10 font-mono text-sm"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Members */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-semibold text-white">Team Members</h3>
+                        {members.map((member, index) => {
+                            const isCustomCollege = customColleges.hasOwnProperty(index) || (member.college && !COLLEGES.includes(member.college));
+                            const collegeValue = isCustomCollege ? 'Other' : (member.college || '');
+                            const yearValue = parseYearValue(member.year);
+
+                            return (
+                                <div key={member._id} className="p-4 bg-brand-dark rounded-lg border border-white/5">
+                                    <div className="text-xs text-gray-500 mb-3">Member {index + 1}: {member.participantId}</div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-2">
+                                            <Label>Name *</Label>
+                                            <Input value={member.name || ''} onChange={(e) => updateMember(index, 'name', e.target.value)} className="bg-brand-surface border-white/10" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Email *</Label>
+                                            <Input value={member.email || ''} onChange={(e) => updateMember(index, 'email', e.target.value)} className="bg-brand-surface border-white/10" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>College *</Label>
+                                            <Select value={collegeValue} onValueChange={(v) => handleCollegeChange(index, v)}>
+                                                <SelectTrigger className="bg-brand-surface border-white/10">
+                                                    <SelectValue placeholder="Select college" />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-brand-surface border-white/10 max-h-[300px]">
+                                                    {COLLEGES.map((college) => (
+                                                        <SelectItem key={college} value={college}>{college}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            {isCustomCollege && (
+                                                <Input
+                                                    value={customColleges[index] || member.college || ''}
+                                                    onChange={(e) => handleCustomCollegeChange(index, e.target.value)}
+                                                    className="bg-brand-surface border-white/10 mt-2"
+                                                    placeholder="Enter college name"
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Department</Label>
+                                            <Input value={member.department || ''} onChange={(e) => updateMember(index, 'department', e.target.value)} className="bg-brand-surface border-white/10" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>WhatsApp</Label>
+                                            <Input value={member.whatsapp || ''} onChange={(e) => updateMember(index, 'whatsapp', e.target.value)} className="bg-brand-surface border-white/10" placeholder="10-digit number" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Year</Label>
+                                            <Select value={yearValue} onValueChange={(v) => updateMember(index, 'year', v ? parseInt(v) : undefined)}>
+                                                <SelectTrigger className="bg-brand-surface border-white/10">
+                                                    <SelectValue placeholder="Select year" />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-brand-surface border-white/10">
+                                                    <SelectItem value="1">1st Year</SelectItem>
+                                                    <SelectItem value="2">2nd Year</SelectItem>
+                                                    <SelectItem value="3">3rd Year</SelectItem>
+                                                    <SelectItem value="4">4th Year</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </ScrollArea>
+
+                <div className="flex justify-end gap-2 pt-4 border-t border-white/10">
+                    <Button variant="outline" onClick={onClose} className="border-white/10">Cancel</Button>
+                    <Button onClick={handleSave} disabled={isSaving || members.some(m => !m.name || !m.email)} className="bg-brand-primary text-brand-dark hover:bg-white">
+                        {isSaving ? 'Saving...' : 'Save All Changes'}
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+};

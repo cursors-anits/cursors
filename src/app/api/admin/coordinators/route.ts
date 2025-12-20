@@ -2,39 +2,57 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/mongodb';
 import Coordinator from '@/lib/db/models/Coordinator';
 import User from '@/lib/db/models/User';
+import { sendStaffWelcomeEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
     try {
         await dbConnect();
         const body = await request.json();
-        const { name, email, role, assigned } = body;
+        const { name, email, role, assigned } = body; // email is personalEmail from form
 
-        // Check if user already exists
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 });
+        // Check if personal email is already used
+        const existingCoord = await Coordinator.findOne({ personalEmail: email });
+        if (existingCoord) {
+            return NextResponse.json({ error: 'Staff with this personal email already exists' }, { status: 400 });
+        }
+
+        // Generate unique vibe email
+        const baseEmail = name.toLowerCase().replace(/\s+/g, '');
+        let vibeEmail = `${baseEmail}@vibe.com`;
+        let counter = 1;
+        while (await User.findOne({ email: vibeEmail })) {
+            vibeEmail = `${baseEmail}${counter}@vibe.com`;
+            counter++;
         }
 
         // Create User account first
         const newUser = await User.create({
-            email,
+            email: vibeEmail,
             name,
-            role: 'coordinator',
-            password: 'Vibe@Coordinator', // Default password
+            role: (role || 'coordinator').toLowerCase(),
+            isPasswordSet: false,
             assignedLab: assigned
         });
 
         // Create Coordinator profile
         const newCoordinator = await Coordinator.create({
             name,
-            email,
+            email: vibeEmail,
+            personalEmail: email,
             role: role || 'Coordinator',
             assigned: assigned || 'General',
             assignedLab: assigned,
             userId: newUser._id
         });
 
-        return NextResponse.json({ success: true, coordinator: newCoordinator }, { status: 201 });
+        // Send Welcome Email to PERSONAL email
+        try {
+            await sendStaffWelcomeEmail(email, name, role, vibeEmail, assigned);
+        } catch (emailError) {
+            console.error('Failed to send staff welcome email:', emailError);
+        }
+
+        return NextResponse.json({ success: true, coordinator: newCoordinator, vibeEmail }, { status: 201 });
     } catch (error: any) {
         console.error('Admin Add Coordinator error:', error);
         return NextResponse.json({ error: error.message || 'Failed to add coordinator' }, { status: 500 });

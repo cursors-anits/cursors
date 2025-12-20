@@ -15,6 +15,8 @@ export interface IParticipant {
     type: 'Workshop' | 'Hackathon' | 'Combo';
     status: 'Pending' | 'Paid' | 'Confirmed';
     assignedLab?: string;
+    assignedWorkshopLab?: string;
+    assignedHackathonLab?: string;
     assignedSeat?: string;
     paymentScreenshotUrl?: string;
     avatarUrl?: string;
@@ -73,12 +75,13 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
             enum: ['Workshop', 'Hackathon', 'Combo'],
             required: true,
         },
-        status: {
-            type: String,
-            enum: ['Pending', 'Paid', 'Confirmed'],
-            default: 'Pending',
-        },
         assignedLab: {
+            type: String,
+        },
+        assignedWorkshopLab: {
+            type: String,
+        },
+        assignedHackathonLab: {
             type: String,
         },
         assignedSeat: {

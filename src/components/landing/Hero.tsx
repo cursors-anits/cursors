@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useData } from '@/lib/context/DataContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 
 interface HeroProps {
     onRegisterClick: () => void;
@@ -116,24 +117,26 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
 
                 {/* CTA Section */}
                 <div className="mt-12 flex flex-col sm:flex-row gap-6 items-center w-full justify-center">
-                    {!settings?.registrationClosed ? (
-                        <Button
-                            onClick={onRegisterClick}
-                            className="group relative h-14 px-8 rounded-full bg-white text-brand-dark font-bold text-lg overflow-hidden transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(130,212,250,0.3)] border-none"
-                        >
-                            <div className="absolute inset-0 bg-linear-to-r from-brand-primary to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <span className="relative flex items-center gap-3">
-                                Register Now <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                            </span>
-                        </Button>
-                    ) : (
-                        <Button
-                            disabled
-                            className="h-14 px-8 rounded-full bg-white/10 text-gray-500 font-bold text-lg border border-white/5"
-                        >
-                            Registration Closed
-                        </Button>
-                    )}
+                    <div className="flex flex-col items-center gap-4">
+                        {!settings?.registrationClosed ? (
+                            <Button
+                                onClick={onRegisterClick}
+                                className="group relative h-14 px-8 rounded-full bg-white text-brand-dark font-bold text-lg overflow-hidden transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(130,212,250,0.3)] border-none"
+                            >
+                                <div className="absolute inset-0 bg-linear-to-r from-brand-primary to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                <span className="relative flex items-center gap-3">
+                                    Register Now <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                </span>
+                            </Button>
+                        ) : (
+                            <Button
+                                disabled
+                                className="h-14 px-8 rounded-full bg-white/10 text-gray-500 font-bold text-lg border border-white/5"
+                            >
+                                Registration Closed
+                            </Button>
+                        )}
+                    </div>
 
                     <div className="flex flex-col items-start gap-1">
                         <div className="flex items-center gap-2 text-sm font-mono text-gray-400 uppercase tracking-widest">
@@ -142,11 +145,17 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                         <div className="text-3xl font-bold text-white font-mono">
                             ₹199 <span className="text-lg text-gray-500 font-normal">/ person</span>
                         </div>
+                        
+                        {!settings?.registrationClosed && (
+                            <Badge className="bg-brand-primary/20 text-brand-primary border-brand-primary/30 animate-pulse">
+                                Group Discounts available!
+                            </Badge>
+                        )}
                     </div>
                 </div>
 
                 {/* Features Grid Mini */}
-                <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12 w-full max-w-4xl pt-10 relative">
+                <div className={`mt-20 grid ${settings?.showInternships ? 'grid-cols-2 md:grid-cols-5' : 'grid-cols-2 md:grid-cols-4'} gap-6 md:gap-10 w-full max-w-5xl pt-10 relative`}>
                     <Separator className="bg-white/10 absolute top-0 left-0 w-full" />
                     <div className="flex flex-col items-center text-center group">
                         <div className="h-10 flex items-center justify-center mb-1">
@@ -162,10 +171,24 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                     </div>
                     <div className="flex flex-col items-center text-center group">
                         <div className="h-10 flex items-center justify-center mb-1">
-                            <span className="text-2xl font-bold text-white font-mono group-hover:text-brand-primary transition-colors">40K+</span>
+                            <span className="text-2xl font-bold text-white font-mono group-hover:text-brand-primary transition-colors">
+                                {(() => {
+                                    if (!settings?.prizePool) return '40K+';
+                                    const num = parseInt(settings.prizePool.replace(/[^0-9]/g, ''), 10);
+                                    return !isNaN(num) && num >= 1000 ? `${Math.floor(num / 1000)}K+` : settings.prizePool;
+                                })()}
+                            </span>
                         </div>
                         <span className="text-sm font-medium text-gray-300">Prize Pool</span>
                     </div>
+                    {settings?.showInternships && (
+                        <div className="flex flex-col items-center text-center group">
+                            <div className="h-10 flex items-center justify-center mb-1">
+                                <span className="text-2xl group-hover:scale-110 transition-transform">🎓</span>
+                            </div>
+                            <span className="text-sm text-brand-primary font-bold">Internships</span>
+                        </div>
+                    )}
                     <div className="flex flex-col items-center text-center group">
                         <div className="h-10 flex items-center justify-center mb-1">
                             <span className="text-2xl font-bold text-white font-mono group-hover:text-brand-secondary transition-colors">500+</span>

@@ -6,6 +6,7 @@ export interface ILab {
     roomNumber: string;
     capacity: number;
     currentCount: number;
+    type: 'Workshop' | 'Hackathon';
 }
 
 type LabModel = Model<ILab>;
@@ -20,7 +21,6 @@ const LabSchema = new Schema<ILab, LabModel>(
         },
         roomNumber: {
             type: String,
-            required: true,
             trim: true,
         },
         capacity: {
@@ -32,12 +32,18 @@ const LabSchema = new Schema<ILab, LabModel>(
             type: Number,
             default: 0,
         },
+        type: {
+            type: String,
+            enum: ['Workshop', 'Hackathon'],
+            required: true,
+            default: 'Workshop'
+        }
     },
     {
         timestamps: true,
     }
 );
 
-const Lab = (mongoose.models.Lab as LabModel) || mongoose.model<ILab, LabModel>('Lab', LabSchema);
+const Lab = (mongoose.models.Lab_Optimized as LabModel) || mongoose.model<ILab, LabModel>('Lab_Optimized', LabSchema, 'labs');
 
 export default Lab;

@@ -7,6 +7,7 @@ export interface ISupportRequest {
     labName: string;
     message?: string;
     status: 'Open' | 'Resolved';
+    resolvedBy?: string;
     timestamp: number;
 }
 
@@ -36,6 +37,9 @@ const SupportRequestSchema = new Schema<ISupportRequest, SupportRequestModel>(
             type: String,
             enum: ['Open', 'Resolved'],
             default: 'Open',
+        },
+        resolvedBy: {
+            type: String,
         },
         timestamp: {
             type: Number,

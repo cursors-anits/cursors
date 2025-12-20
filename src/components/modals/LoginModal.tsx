@@ -34,9 +34,10 @@ interface LoginModalProps {
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
     const router = useRouter();
-    const [step, setStep] = useState<'email' | 'auth'>('email');
+    const [step, setStep] = useState<'email' | 'auth' | 'set_password'>('email');
     const [email, setEmail] = useState('');
     const [authInput, setAuthInput] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const [detectedRole, setDetectedRole] = useState<UserRole | null>(null);
@@ -47,6 +48,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
             setStep('email');
             setEmail('');
             setAuthInput('');
+            setConfirmPassword('');
             setError('');
             setDetectedRole(null);
         }
@@ -68,7 +70,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
             }
 
             setDetectedRole(data.role);
-            setStep('auth');
+            if (data.needsPasswordSet) {
+                setStep('set_password');
+            } else {
+                setStep('auth');
+            }
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Invalid email. Please check and try again.';
             setError(errorMessage);
@@ -126,6 +132,47 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
         }
     };
 
+    const handleSetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!authInput || !confirmPassword) return;
+
+        if (authInput !== confirmPassword) {
+            setError('Passwords do not match');
+            return;
+        }
+
+        if (authInput.length < 6) {
+            setError('Password must be at least 6 characters');
+            return;
+        }
+
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const response = await fetch('/api/auth/set-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password: authInput }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to set password');
+
+            onLoginSuccess(data.user);
+            const rolePath = data.user.role === 'admin' ? '/dashboard/admin' :
+                data.user.role === 'coordinator' ? '/dashboard/coordinator' :
+                    data.user.role === 'faculty' ? '/dashboard/faculty' :
+                        '/dashboard/participant';
+            router.push(rolePath);
+            onClose();
+        } catch (err: any) {
+            setError(err.message || 'Error setting password');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const resetLogin = () => {
         setStep('email');
         setAuthInput('');
@@ -141,11 +188,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
                     <DialogDescription className="text-gray-400">
                         {step === 'email'
                             ? "Enter your email to continue to your dashboard."
-                            : "Enter your secure passkey or password."}
+                            : step === 'set_password'
+                                ? "Set a strong password for your new account."
+                                : "Enter your secure passkey or password."}
                     </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={step === 'email' ? validateEmail : handleAuthSubmit} className="space-y-6 pt-4">
+                <form onSubmit={step === 'email' ? validateEmail : (step === 'set_password' ? handleSetPassword : handleAuthSubmit)} className="space-y-6 pt-4">
                     <div className="space-y-4">
                         {/* EMAIL FIELD */}
                         <div className="space-y-2">
@@ -178,10 +227,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
                         </div>
 
                         {/* PASSKEY / PASSWORD FIELD */}
-                        {step === 'auth' && (
+                        {(step === 'auth' || step === 'set_password') && (
                             <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
                                 <Label htmlFor="authInput" className="text-gray-400">
-                                    {detectedRole === 'participant' ? 'Passkey' : 'Password'}
+                                    {step === 'set_password' ? 'New Password' : (detectedRole === 'participant' ? 'Passkey' : 'Password')}
                                 </Label>
                                 <div className="relative">
                                     <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -193,7 +242,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
                                         value={authInput}
                                         onChange={(e) => setAuthInput(detectedRole === 'participant' ? e.target.value.toUpperCase() : e.target.value)}
                                         className="bg-brand-dark border-gray-700 px-10 h-11 focus-visible:ring-brand-primary font-mono tracking-widest"
-                                        placeholder={detectedRole === 'participant' ? 'VIBE12' : '••••••••'}
+                                        placeholder={detectedRole === 'participant' ? 'VIBE12' : (step === 'set_password' ? 'At least 6 chars' : '••••••••')}
                                     />
                                     {detectedRole !== 'participant' && (
                                         <Button
@@ -206,6 +255,24 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
                                             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                         </Button>
                                     )}
+                                </div>
+                            </div>
+                        )}
+
+                        {step === 'set_password' && (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <Label htmlFor="confirmPassword" className="text-gray-400">Confirm Password</Label>
+                                <div className="relative">
+                                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                    <Input
+                                        id="confirmPassword"
+                                        type={showPassword ? 'text' : 'password'}
+                                        required
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="bg-brand-dark border-gray-700 px-10 h-11 focus-visible:ring-brand-primary font-mono tracking-widest"
+                                        placeholder="••••••••"
+                                    />
                                 </div>
                             </div>
                         )}
@@ -230,6 +297,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
                                 <Loader2 className="w-5 h-5 animate-spin" />
                             ) : step === 'email' ? (
                                 <>Continue <ArrowRight className="w-4 h-4 ml-2" /></>
+                            ) : step === 'set_password' ? (
+                                'Set Password & Login'
                             ) : (
                                 'Sign In'
                             )}

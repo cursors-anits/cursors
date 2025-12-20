@@ -10,6 +10,7 @@ export interface IUser {
     passkey?: string;
     teamId?: string;
     assignedLab?: string;
+    isPasswordSet?: boolean;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -54,6 +55,10 @@ const UserSchema = new Schema<IUser, UserModel, IUserMethods>(
         },
         assignedLab: {
             type: String,
+        },
+        isPasswordSet: {
+            type: Boolean,
+            default: true,
         },
     },
     {

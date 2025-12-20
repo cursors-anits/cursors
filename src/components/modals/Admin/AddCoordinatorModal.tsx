@@ -12,6 +12,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -79,27 +86,34 @@ export const AddCoordinatorModal: React.FC<AddCoordinatorModalProps> = ({ isOpen
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="c-email">Email</Label>
+                        <Label htmlFor="c-email">Personal Email Address</Label>
                         <Input
                             id="c-email"
                             type="email"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             className="bg-brand-dark border-white/10"
+                            placeholder="To receive their @vibe.com login..."
                             required
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="role">Role</Label>
-                            <Input
-                                id="role"
-                                value={formData.role}
-                                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                className="bg-brand-dark border-white/10"
-                                required
-                            />
+                            <Label htmlFor="role">Staff Role</Label>
+                            <Select
+                                value={formData.role.toLowerCase()}
+                                onValueChange={(value) => setFormData({ ...formData, role: value })}
+                            >
+                                <SelectTrigger className="bg-brand-dark border-white/10">
+                                    <SelectValue placeholder="Select role" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-brand-surface border-white/10 text-white">
+                                    <SelectItem value="coordinator">Coordinator</SelectItem>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="faculty">Faculty</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="assigned">Assigned To (Lab/Task)</Label>

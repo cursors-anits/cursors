@@ -92,6 +92,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     const [generatedData, setGeneratedData] = useState<{ teamId: string, teamEmail: string, passkey: string, scheduled?: boolean } | null>(null);
     const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
     const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const router = useRouter();
     const { setCurrentUser, settings } = useData();
 
@@ -130,12 +131,14 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
             reset();
             setGeneratedData(null);
             setScreenshotPreview(null);
+            setSelectedFile(null);
         }
     }, [isOpen, reset]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            setSelectedFile(file);
             const reader = new FileReader();
             reader.onloadend = () => {
                 const base64 = reader.result as string;
@@ -162,7 +165,8 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
 
     const calculatePricing = () => {
         const basePrice = PRICES[ticketType] || 499;
-        const discount = (teamSize - 1) * 10;
+        // Group discount: ₹10 OFF per person for groups of 2-5
+        const discount = teamSize > 1 ? 10 : 0;
         const pricePerPerson = basePrice - discount;
         return {
             total: pricePerPerson * teamSize,
@@ -186,10 +190,18 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
 
     const onSubmit = async (data: IFormData) => {
         try {
+            const formData = new FormData();
+            // Remove heavy base64 from JSON data to maximize speed
+            const { screenshot, ...rest } = data;
+            formData.append('data', JSON.stringify(rest));
+
+            if (selectedFile) {
+                formData.append('screenshot', selectedFile);
+            }
+
             const response = await fetch('/api/register', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: formData
             });
 
             const result = await response.json();
@@ -416,6 +428,14 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                     </Button>
                                                 ))}
                                             </div>
+                                            {teamSize > 1 && (
+                                                <Alert className="bg-brand-primary/10 border-brand-primary/20 text-brand-primary py-2 mt-4">
+                                                    <Info className="h-4 w-4" />
+                                                    <AlertDescription className="text-xs">
+                                                        Group Discount Applied: ₹10 OFF per person!
+                                                    </AlertDescription>
+                                                </Alert>
+                                            )}
                                         </div>
                                     </div>
                                 )}

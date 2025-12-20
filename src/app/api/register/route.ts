@@ -22,8 +22,26 @@ export async function POST(request: NextRequest) {
     try {
         await dbConnect();
 
-        const body = await request.json();
-        const { members, college, ticketType, screenshot, transactionId } = body;
+        let body: any;
+        let screenshotSource: string | Buffer | undefined;
+
+        const contentType = request.headers.get('content-type') || '';
+        if (contentType.includes('multipart/form-data')) {
+            const formData = await request.formData();
+            const jsonData = formData.get('data') as string;
+            body = JSON.parse(jsonData);
+
+            const file = formData.get('screenshot') as File;
+            if (file) {
+                const arrayBuffer = await file.arrayBuffer();
+                screenshotSource = Buffer.from(arrayBuffer);
+            }
+        } else {
+            body = await request.json();
+            screenshotSource = body.screenshot;
+        }
+
+        const { members, college, ticketType, transactionId } = body;
 
         if (!members || members.length === 0) {
             return NextResponse.json(
@@ -71,9 +89,9 @@ export async function POST(request: NextRequest) {
 
         // 2. Upload Screenshot to Google Drive FIRST
         let driveUrl = '';
-        if (screenshot) {
+        if (screenshotSource) {
             try {
-                driveUrl = await uploadToDrive(screenshot, `Payment_${teamId}`);
+                driveUrl = await uploadToDrive(screenshotSource, `Payment_${teamId}`);
                 if (!driveUrl) throw new Error('GDrive upload returned empty URL');
             } catch (driveError: any) {
                 console.error('Registration aborted: GDrive Upload failed:', driveError);
@@ -105,8 +123,7 @@ export async function POST(request: NextRequest) {
             year: m.year,
             linkedin: m.linkedin,
             type: mappedType,
-            status: 'Pending',
-            paymentScreenshotUrl: driveUrl || screenshot || '',
+            paymentScreenshotUrl: driveUrl || (typeof screenshotSource === 'string' ? screenshotSource : ''),
             transactionId: transactionId,
         }));
 

@@ -223,6 +223,64 @@ export async function sendEventPassEmail(
     }
 }
 
+export async function sendStaffWelcomeEmail(
+    to: string,
+    name: string,
+    role: string,
+    vibeEmail: string,
+    assigned: string
+) {
+    const loginUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+</head>
+<body style="margin: 0; padding: 0; background-color: #000000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #ffffff;">
+    <div style="max-width: 600px; margin: 20px auto; background-color: #0a0a0a; border-radius: 16px; overflow: hidden; border: 1px solid #333; padding: 40px;">
+        <h1 style="color: #3b82f6; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px;">Welcome to the Team, ${name}!</h1>
+        <p style="color: #ccc; line-height: 1.6;">You have been added as <strong>${role}</strong> for VIBE CODING 2026. Your role is assigned to: <strong>${assigned}</strong>.</p>
+        
+        <div style="background: #111; border: 1px solid #222; border-radius: 12px; padding: 25px; margin: 30px 0;">
+            <h2 style="font-size: 14px; text-transform: uppercase; color: #888; margin-bottom: 15px; letter-spacing: 1px;">Your Application Credentials</h2>
+            <div style="margin-bottom: 15px;">
+                <div style="font-size: 11px; color: #666; text-transform: uppercase;">Login Email</div>
+                <div style="font-family: monospace; font-size: 18px; color: #fff;">${vibeEmail}</div>
+            </div>
+            <p style="font-size: 12px; color: #3b82f6; margin-top: 20px;">
+                <strong>IMPORTANT:</strong> Use your official vibe email above for your first login. You will be prompted to set your password upon entering.
+            </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="${loginUrl}" style="display: inline-block; background-color: #3b82f6; color: #fff; text-decoration: none; font-weight: bold; padding: 16px 40px; border-radius: 30px; font-size: 14px;">LOGIN TO DASHBOARD</a>
+        </div>
+        
+        <p style="font-size: 11px; color: #444; margin-top: 50px; text-align: center; border-top: 1px solid #111; padding-top: 20px;">
+            &copy; 2026 Cursors, ANITS. Internal Staff Communication.
+        </p>
+    </div>
+</body>
+</html>
+    `;
+
+    const subject = `🚀 Welcome to the Staff Team: ${role} | Vibe Coding`;
+
+    try {
+        await transporter.sendMail({
+            from: `"Vibe Coding 2026" <${process.env.SMTP_USER}>`,
+            to,
+            subject,
+            html,
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error sending staff welcome email:", error);
+        throw error;
+    }
+}
+
 /**
  * Processes the queue of scheduled emails that were deferred due to limits.
  */

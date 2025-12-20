@@ -32,6 +32,14 @@ export async function POST(request: NextRequest) {
                 );
             }
 
+            // Check if password setup is required for staff
+            if (user.role !== 'participant' && !user.isPasswordSet) {
+                return NextResponse.json(
+                    { error: 'first_login', message: 'Set up your password', vibeEmail: email },
+                    { status: 200 }
+                );
+            }
+
             if (!user.password) {
                 console.log(`[AUTH] User has no password set: ${email}`);
                 return NextResponse.json(

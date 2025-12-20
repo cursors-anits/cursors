@@ -23,12 +23,12 @@ oauth2Client.setCredentials({
 const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
 /**
- * Uploads a base64 string to Google Drive
- * @param base64Data The base64 encoded image string
+ * Uploads a base64 string or Buffer to Google Drive
+ * @param source The base64 encoded image string or a Buffer
  * @param fileName Name of the file in Drive
  * @returns The web view link of the uploaded file
  */
-export async function uploadToDrive(base64Data: string, fileName: string): Promise<string> {
+export async function uploadToDrive(source: string | Buffer, fileName: string): Promise<string> {
     if (!CLIENT_ID || !CLIENT_SECRET || !REFRESH_TOKEN || !FOLDER_ID) {
         throw new Error('Google Drive OAuth2 configuration is incomplete');
     }
@@ -49,12 +49,16 @@ export async function uploadToDrive(base64Data: string, fileName: string): Promi
             throw new Error(`Cannot access destination folder ${FOLDER_ID}. Ensure the authenticated account has access to this folder.`);
         }
 
-        // Remove the data URL prefix if it exists
-        const base64Content = base64Data.includes('base64,')
-            ? base64Data.split('base64,')[1]
-            : base64Data;
+        let buffer: Buffer;
+        if (Buffer.isBuffer(source)) {
+            buffer = source;
+        } else {
+            const base64Content = source.includes('base64,')
+                ? source.split('base64,')[1]
+                : source;
+            buffer = Buffer.from(base64Content, 'base64');
+        }
 
-        const buffer = Buffer.from(base64Content, 'base64');
         const bufferStream = new Readable();
         bufferStream.push(buffer);
         bufferStream.push(null);
@@ -75,7 +79,7 @@ export async function uploadToDrive(base64Data: string, fileName: string): Promi
 
         const fileId = response.data.id;
 
-        // Make the file publicly viewable (Required for dashboards to display it)
+        // Make the file publicly viewable
         await drive.permissions.create({
             fileId: fileId!,
             requestBody: {
@@ -85,7 +89,6 @@ export async function uploadToDrive(base64Data: string, fileName: string): Promi
             supportsAllDrives: true,
         });
 
-        // Use the webContentLink for direct image embedding or webViewLink for the page
         return response.data.webViewLink || '';
     } catch (error: any) {
         console.error('Google Drive Upload Error Details:', {
@@ -144,13 +147,18 @@ export async function ensureFolderExists(folderName: string, parentId: string = 
 /**
  * Uploads a file to a specific parent folder
  */
-export async function uploadToFolder(base64Data: string, fileName: string, parentId: string): Promise<string> {
+export async function uploadToFolder(source: string | Buffer, fileName: string, parentId: string): Promise<string> {
     try {
-        const base64Content = base64Data.includes('base64,')
-            ? base64Data.split('base64,')[1]
-            : base64Data;
+        let buffer: Buffer;
+        if (Buffer.isBuffer(source)) {
+            buffer = source;
+        } else {
+            const base64Content = source.includes('base64,')
+                ? source.split('base64,')[1]
+                : source;
+            buffer = Buffer.from(base64Content, 'base64');
+        }
 
-        const buffer = Buffer.from(base64Content, 'base64');
         const bufferStream = new Readable();
         bufferStream.push(buffer);
         bufferStream.push(null);

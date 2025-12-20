@@ -70,12 +70,18 @@ export interface Participant {
     name: string;
     email: string;
     college: string;
+    department?: string;
+    whatsapp?: string;
+    year?: number;
     type: string;
-    status: string;
     assignedLab?: string;
+    assignedWorkshopLab?: string;
+    assignedHackathonLab?: string;
     assignedSeat?: string;
     avatarUrl?: string;
     paymentScreenshotUrl?: string;
+    generatedEmail?: string;
+    passkey?: string;
     createdAt: string;
 }
 
@@ -94,6 +100,7 @@ export interface Lab {
     roomNumber: string;
     capacity: number;
     currentCount: number;
+    type: 'Workshop' | 'Hackathon';
 }
 
 export interface SupportRequest {
@@ -103,6 +110,7 @@ export interface SupportRequest {
     labName: string;
     message?: string;
     status: 'Open' | 'Resolved';
+    resolvedBy?: string;
     timestamp: number;
 }
 
@@ -122,4 +130,5 @@ export interface Settings {
     upiId: string;
     qrImageUrl: string;
     prizePool: string;
+    showInternships: boolean;
 }

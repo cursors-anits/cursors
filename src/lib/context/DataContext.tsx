@@ -24,7 +24,7 @@ interface DataContextType {
     deleteLab: (id: string) => Promise<void>;
 
     fetchSupportRequests: (labName?: string) => Promise<void>;
-    updateSupportRequest: (id: string, status: string) => Promise<void>;
+    updateSupportRequest: (id: string, status: string, resolvedBy?: string) => Promise<void>;
 
     // Auth
     setCurrentUser: (user: User | null) => void;
@@ -44,7 +44,7 @@ interface DataContextType {
     deleteCoordinator: (id: string) => Promise<void>;
 
     addLog: (action: string, details: string) => Promise<void>;
-    allocateLabs: () => Promise<void>;
+    allocateLabs: (eventType: 'Workshop' | 'Hackathon') => Promise<void>;
     processEmailQueue: () => Promise<void>;
 }
 
@@ -58,8 +58,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [logs, setLogs] = useState<Log[]>([]);
     const [currentUser, setCurrentUserState] = useState<User | null>(null);
     const [settings, setSettings] = useState<Settings | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isSessionLoaded, setIsSessionLoaded] = useState(false);
 
     // Load session from localStorage on mount
     useEffect(() => {
@@ -71,6 +72,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 localStorage.removeItem('vibe_session');
             }
         }
+        setIsSessionLoaded(true);
     }, []);
 
     const setCurrentUser = (user: User | null) => {
@@ -90,8 +92,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     // Generic fetcher with error handling
-    const apiCall = async <T,>(fn: () => Promise<T>, errorMsg: string): Promise<T | null> => {
-        setIsLoading(true);
+    const apiCall = useCallback(async <T,>(fn: () => Promise<T>, errorMsg: string, isBackground = false): Promise<T | null> => {
+        if (!isBackground) setIsLoading(true);
         setError(null);
         try {
             return await fn();
@@ -100,56 +102,56 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setError(errorMsg);
             return null;
         } finally {
-            setIsLoading(false);
+            if (!isBackground) setIsLoading(false);
         }
-    };
+    }, []);
 
     // API Fetchers
-    const fetchParticipants = useCallback(async () => {
+    const fetchParticipants = useCallback(async (isBackground = false) => {
         const data = await apiCall(async () => {
             const res = await fetch('/api/admin/participants');
             if (!res.ok) throw new Error();
             return res.json();
-        }, 'Failed to fetch participants');
+        }, 'Failed to fetch participants', isBackground);
         if (data) setParticipants(Array.isArray(data) ? data : data.participants);
-    }, []);
+    }, [apiCall]);
 
-    const fetchCoordinators = useCallback(async () => {
+    const fetchCoordinators = useCallback(async (isBackground = false) => {
         const data = await apiCall(async () => {
             const res = await fetch('/api/admin/coordinators');
             if (!res.ok) throw new Error();
             return res.json();
-        }, 'Failed to fetch coordinators');
+        }, 'Failed to fetch coordinators', isBackground);
         if (data) setCoordinators(Array.isArray(data) ? data : data.coordinators);
-    }, []);
+    }, [apiCall]);
 
-    const fetchLogs = useCallback(async () => {
+    const fetchLogs = useCallback(async (isBackground = false) => {
         const data = await apiCall(async () => {
             const res = await fetch('/api/logs');
             if (!res.ok) throw new Error();
             return res.json();
-        }, 'Failed to fetch logs');
+        }, 'Failed to fetch logs', isBackground);
         if (data) setLogs(data.logs);
-    }, []);
+    }, [apiCall]);
 
-    const fetchLabs = useCallback(async () => {
+    const fetchLabs = useCallback(async (isBackground = false) => {
         const data = await apiCall(async () => {
             const res = await fetch('/api/admin/labs');
             if (!res.ok) throw new Error();
             return res.json();
-        }, 'Failed to fetch labs');
+        }, 'Failed to fetch labs', isBackground);
         if (data) setLabs(data);
-    }, []);
+    }, [apiCall]);
 
-    const fetchSupportRequests = useCallback(async (labName?: string) => {
+    const fetchSupportRequests = useCallback(async (labName?: string, isBackground = false) => {
         const url = labName ? `/api/support-requests?labName=${labName}` : '/api/support-requests';
         const data = await apiCall(async () => {
             const res = await fetch(url);
             if (!res.ok) throw new Error();
             return res.json();
-        }, 'Failed to fetch support requests');
+        }, 'Failed to fetch support requests', isBackground);
         if (data) setSupportRequests(data);
-    }, []);
+    }, [apiCall]);
 
     const fetchSettings = useCallback(async () => {
         const data = await apiCall(async () => {
@@ -169,20 +171,31 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
             if (!res.ok) throw new Error();
             return res.json();
-        }, 'Failed to update settings');
+        }, 'Failed to update settings', true);
         if (data) setSettings(data);
     };
 
     const refreshData = useCallback(async () => {
+        // Use background fetching to prevent full page loader on refreshes
         await fetchSettings();
         if (!currentUser) return;
         if (currentUser.role === 'admin') {
-            await Promise.all([fetchParticipants(), fetchCoordinators(), fetchLogs(), fetchLabs(), fetchSupportRequests()]);
+            await Promise.all([
+                fetchParticipants(true),
+                fetchCoordinators(true),
+                fetchLogs(true),
+                fetchLabs(true),
+                fetchSupportRequests(undefined, true)
+            ]);
         } else if (currentUser.role === 'coordinator' || currentUser.role === 'faculty') {
             const lab = currentUser.assignedLab;
-            await Promise.all([fetchParticipants(), fetchLogs(), fetchSupportRequests(lab)]);
+            await Promise.all([
+                fetchParticipants(true),
+                fetchLogs(true),
+                fetchSupportRequests(lab, true)
+            ]);
         } else {
-            await fetchParticipants();
+            await fetchParticipants(true);
         }
     }, [currentUser, fetchParticipants, fetchCoordinators, fetchLogs, fetchSettings, fetchLabs, fetchSupportRequests]);
 
@@ -255,16 +268,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }, 'Failed to delete lab');
     };
 
-    const updateSupportRequest = async (id: string, status: string) => {
+    const updateSupportRequest = async (id: string, status: string, resolvedBy?: string) => {
         await apiCall(async () => {
             const res = await fetch('/api/support-requests', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, status }),
+                body: JSON.stringify({ id, status, resolvedBy }),
             });
             if (!res.ok) throw new Error();
             refreshData();
-        }, 'Failed to update request');
+        }, 'Failed to update request', true);
     };
 
     const addCoordinator = async (c: Omit<Coordinator, '_id'>) => {
@@ -320,9 +333,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const allocateLabs = async () => {
+    const allocateLabs = async (eventType: 'Workshop' | 'Hackathon') => {
         await apiCall(async () => {
-            const res = await fetch('/api/admin/allocate', {
+            const res = await fetch(`/api/admin/allocate?type=${eventType}`, {
                 method: 'POST',
             });
             if (!res.ok) throw new Error();
@@ -343,11 +356,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Auto-fetch initialization
     useEffect(() => {
-        fetchSettings();
-        if (currentUser) {
-            refreshData();
-        }
-    }, [currentUser, refreshData, fetchSettings]);
+        const init = async () => {
+            if (isSessionLoaded) {
+                await fetchSettings();
+                if (currentUser) {
+                    await refreshData();
+                }
+                setIsLoading(false);
+            }
+        };
+        init();
+    }, [currentUser, refreshData, fetchSettings, isSessionLoaded]);
 
     return (
         <DataContext.Provider value={{

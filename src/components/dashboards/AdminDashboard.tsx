@@ -19,7 +19,8 @@ import {
     Mail,
     Zap,
     Eye,
-    Loader2
+    Loader2,
+    RotateCcw
 } from 'lucide-react';
 import {
     BarChart,
@@ -62,6 +63,16 @@ import {
     CardDescription
 } from '@/components/ui/card';
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -74,6 +85,18 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { AddParticipantModal } from '@/components/modals/Admin/AddParticipantModal';
 import { AddCoordinatorModal } from '@/components/modals/Admin/AddCoordinatorModal';
+import { SettingsTab } from '@/components/dashboards/SettingsTab';
+import { DeleteTeamModal } from '@/components/modals/DeleteTeamModal';
+import { EditTeamModal } from '@/components/modals/EditTeamModal';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { DashboardShell } from '@/components/dashboards/DashboardShell';
+import { NavItem } from '@/components/dashboards/DashboardNav';
 
 interface AdminDashboardProps {
     user: User;
@@ -81,7 +104,7 @@ interface AdminDashboardProps {
 
 const COLORS = ['#82d4fa', '#0ea5e9', '#38bdf8', '#334155'];
 
-const AdminDashboard: React.FC<AdminDashboardProps> = () => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
     const {
         participants,
         coordinators,
@@ -95,6 +118,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
         deleteParticipant,
         deleteCoordinator,
         updateCoordinator,
+        updateParticipant,
         labs,
         supportRequests,
         addLab,
@@ -139,14 +163,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
             )
         },
         {
-            accessorKey: "status",
-            header: "Status",
+            accessorKey: "allocation",
+            header: "Allocation",
             cell: ({ row }) => {
-                const status = row.getValue("status") as string;
-                return (
-                    <Badge variant="outline" className={status === 'Paid' ? 'bg-green-500/10 text-green-400 border-green-500/20 text-[10px]' : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20 text-[10px]'}>
-                        {status}
-                    </Badge>
+                const p = row.original;
+                const hasWorkshop = !!p.assignedWorkshopLab;
+                const hasHackathon = !!p.assignedHackathonLab;
+                const hasAny = hasWorkshop || hasHackathon;
+
+                return hasAny ? (
+                    <div className="flex items-center gap-2">
+                        <div className="text-[10px] text-gray-400 space-y-1">
+                            {hasWorkshop && <div>W: {p.assignedWorkshopLab}</div>}
+                            {hasHackathon && <div>H: {p.assignedHackathonLab}</div>}
+                        </div>
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-orange-400"
+                            onClick={() => handleRevertAllocation(p._id, hasWorkshop && hasHackathon ? 'both' : hasWorkshop ? 'workshop' : 'hackathon')}
+                            title="Revert allocation"
+                        >
+                            <RotateCcw className="w-3 h-3" />
+                        </Button>
+                    </div>
+                ) : (
+                    <span className="text-[10px] text-gray-600">Not allocated</span>
                 );
             }
         },
@@ -171,7 +213,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                                 <Eye className="w-4 h-4" />
                             </Button>
                         )}
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-400"><Edit className="w-4 h-4" /></Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-400" onClick={() => handleEditParticipant(p)} title="Edit"><Edit className="w-4 h-4" /></Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8 text-red-400" onClick={() => handleDelete(p._id, 'participant')}><Trash2 className="w-4 h-4" /></Button>
                     </div>
                 );
@@ -269,6 +311,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
             header: "Lab Name",
         },
         {
+            accessorKey: "type",
+            header: "Type",
+            cell: ({ row }) => <Badge variant="outline" className="text-[10px]">{row.original.type || 'Workshop'}</Badge>
+        },
+        {
             accessorKey: "roomNumber",
             header: "Room #",
             cell: ({ row }) => <span className="font-mono text-brand-primary">{row.getValue("roomNumber")}</span>
@@ -298,7 +345,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                         variant="ghost"
                         className="text-blue-400 h-8 w-8"
                         onClick={() => {
-                            setEditingLab(row.original);
+                            setEditingLab({ ...row.original, type: row.original.type || 'Workshop' });
                             setIsEditLabOpen(true);
                         }}
                     >
@@ -356,6 +403,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
             )
         },
         {
+            accessorKey: "resolvedBy",
+            header: "Resolved By",
+            cell: ({ row }) => <span className="text-xs text-gray-500">{row.original.resolvedBy || '-'}</span>
+        },
+        {
             accessorKey: "timestamp",
             header: "Time",
             cell: ({ row }) => <span className="text-[10px] text-gray-500">{new Date(row.original.timestamp).toLocaleString()}</span>
@@ -371,7 +423,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                             <Button
                                 size="sm"
                                 className="h-7 px-2 text-[11px] bg-green-500 text-white hover:bg-green-600"
-                                onClick={() => updateSupportRequest(req._id, 'Resolved')}
+                                onClick={() => updateSupportRequest(req._id, 'Resolved', user.name)}
                             >
                                 Resolve
                             </Button>
@@ -398,12 +450,57 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
     const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'participant' | 'coordinator' | 'lab' } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isAllocating, setIsAllocating] = useState(false);
-    const [newLab, setNewLab] = useState({ name: '', roomNumber: '', capacity: 0 });
+    const [newLab, setNewLab] = useState<{ name: string, roomNumber: string, capacity: number, type: 'Workshop' | 'Hackathon' }>({ name: '', roomNumber: '', capacity: 0, type: 'Workshop' });
+    const [sosOpen, setSosOpen] = useState(false);
+    const [acknowledgedSOSIds, setAcknowledgedSOSIds] = useState<string[]>([]);
+
+    // SOS Buzzer Logic
+    React.useEffect(() => {
+        // Find open SOS requests that haven't been acknowledged yet
+        const newSOS = supportRequests.filter(r => r.type === 'SOS' && r.status === 'Open' && !acknowledgedSOSIds.includes(r._id));
+
+        if (newSOS.length > 0 && !sosOpen) {
+            setSosOpen(true);
+            // Play buzzer sound if valid interaction allows (browsers block auto-audio usually)
+            // Using a simple beep sound data URI
+            const audio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU'); // Short beep placeholder
+            audio.play().catch(e => console.log('Audio play blocked', e));
+        }
+    }, [supportRequests, acknowledgedSOSIds, sosOpen]);
+
+    const handleAcknowledge = () => {
+        setSosOpen(false);
+        // Add all currently open SOS IDs to acknowledged list
+        const openSOSIds = supportRequests.filter(r => r.type === 'SOS' && r.status === 'Open').map(r => r._id);
+        setAcknowledgedSOSIds(prev => [...prev, ...openSOSIds]);
+    };
+
     const [isAddLabOpen, setIsAddLabOpen] = useState(false);
     const [editingLab, setEditingLab] = useState<Lab | null>(null);
     const [isEditLabOpen, setIsEditLabOpen] = useState(false);
     const [isAddParticipantOpen, setIsAddParticipantOpen] = useState(false);
     const [isAddCoordinatorOpen, setIsAddCoordinatorOpen] = useState(false);
+
+    const handleEditParticipant = async (participant: Participant) => {
+        const teamMembers = participants.filter(p => p.teamId === participant.teamId);
+        setEditingTeamMembers(teamMembers);
+
+        try {
+            const response = await fetch(`/api/auth/user-by-team?teamId=${participant.teamId}`);
+
+            if (response.ok) {
+                const userData = await response.json();
+                setEditingTeamUser(userData);
+            } else {
+                setEditingTeamUser(null);
+            }
+        } catch (error) {
+            console.error('Error fetching user:', error);
+            setEditingTeamUser(null);
+        }
+
+        setEditTeamModalOpen(true);
+    };
 
     const handleDelete = (id: string, type: 'participant' | 'coordinator' | 'lab') => {
         setItemToDelete({ id, type });
@@ -446,10 +543,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
         }
     };
 
-    const handleAllocate = async () => {
+    const handleAllocate = async (eventType: 'Workshop' | 'Hackathon') => {
         setIsAllocating(true);
         try {
-            const res = await fetch('/api/admin/allocate', { method: 'POST' });
+            const res = await fetch(`/api/admin/allocate?type=${eventType}`, { method: 'POST' });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             toast.success(data.message);
@@ -461,16 +558,38 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
         }
     };
 
+    const handleRevertAllocation = async (participantId: string, eventType: 'workshop' | 'hackathon' | 'both') => {
+        const participant = participants.find(p => p._id === participantId);
+        if (!participant) return;
+
+        const updates: Partial<Participant> = { _id: participantId };
+
+        if (eventType === 'workshop' || eventType === 'both') {
+            updates.assignedWorkshopLab = undefined;
+        }
+        if (eventType === 'hackathon' || eventType === 'both') {
+            updates.assignedHackathonLab = undefined;
+        }
+
+        try {
+            await updateParticipant(updates as Participant);
+            toast.success(`Allocation reverted successfully`);
+            fetchParticipants();
+        } catch {
+            toast.error('Failed to revert allocation');
+        }
+    };
+
     const handleAddLab = async () => {
-        if (!newLab.name || !newLab.roomNumber || !newLab.capacity) {
-            toast.error('Please fill all fields');
+        if (!newLab.name || !newLab.capacity) {
+            toast.error('Please fill name and capacity');
             return;
         }
 
         try {
-            await addLab(newLab);
+            await addLab(newLab as any); // Cast because we know type is present or defaults
             toast.success('Lab added successfully');
-            setNewLab({ name: '', roomNumber: '', capacity: 0 });
+            setNewLab({ name: '', roomNumber: '', capacity: 0, type: 'Workshop' });
             setIsAddLabOpen(false);
         } catch {
             toast.error('Failed to add lab');
@@ -522,17 +641,106 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
         p.email?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // const filteredCoordinators = coordinators.filter(c =>
-    //     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    //     c.role.toLowerCase().includes(searchQuery.toLowerCase())
-    // );
+    // Group participants by teamId
+    const teamGroups = React.useMemo(() => {
+        const groups = new Map<string, Participant[]>();
+        filteredParticipants.forEach(p => {
+            const teamId = p.teamId || p._id;
+            if (!groups.has(teamId)) {
+                groups.set(teamId, []);
+            }
+            groups.get(teamId)!.push(p);
+        });
+        return Array.from(groups.entries()).map(([teamId, members]) => ({
+            teamId,
+            members,
+            teamSize: members.length,
+            type: members[0].type,
+            college: members[0].college,
+            hasPayment: members.some(m => m.paymentScreenshotUrl),
+            isAllocated: members.some(m => m.assignedWorkshopLab || m.assignedHackathonLab),
+        }));
+    }, [filteredParticipants]);
 
-    // Analytics Data
-    const ticketDist = [
-        { name: 'Combo', value: participants.filter(p => p.type.toLowerCase().includes('combo')).length },
-        { name: 'Workshop', value: participants.filter(p => p.type.toLowerCase().includes('workshop')).length },
-        { name: 'Hackathon', value: participants.filter(p => p.type.toLowerCase().includes('hackathon')).length },
-    ];
+    const [expandedTeams, setExpandedTeams] = React.useState<Set<string>>(new Set());
+    const [typeFilter, setTypeFilter] = useState('all');
+    const [allocationFilter, setAllocationFilter] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [selectedMembers, setSelectedMembers] = useState<Record<string, Set<string>>>({});
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deleteModalTeam, setDeleteModalTeam] = useState<{ teamId: string, members: Participant[] } | null>(null);
+    const [editTeamModalOpen, setEditTeamModalOpen] = useState(false);
+    const [editingTeamMembers, setEditingTeamMembers] = useState<Participant[]>([]);
+    const [editingTeamUser, setEditingTeamUser] = useState<User | null>(null);
+    const ITEMS_PER_PAGE = 10;
+
+    const toggleTeam = (teamId: string) => {
+        setExpandedTeams(prev => {
+            const next = new Set(prev);
+            if (next.has(teamId)) {
+                next.delete(teamId);
+            } else {
+                next.add(teamId);
+            }
+            return next;
+        });
+    };
+
+    const toggleMemberSelection = (teamId: string, memberId: string) => {
+        setSelectedMembers(prev => {
+            const teamSelections = new Set(prev[teamId] || []);
+            if (teamSelections.has(memberId)) {
+                teamSelections.delete(memberId);
+            } else {
+                teamSelections.add(memberId);
+            }
+            return { ...prev, [teamId]: teamSelections };
+        });
+    };
+
+    const handleDeleteSelected = async (teamId: string) => {
+        const selected = selectedMembers[teamId];
+        if (!selected || selected.size === 0) {
+            toast.error('No members selected');
+            return;
+        }
+        for (const memberId of Array.from(selected)) {
+            await deleteParticipant(memberId);
+        }
+        setSelectedMembers(prev => ({ ...prev, [teamId]: new Set() }));
+        toast.success(`Deleted ${selected.size} member(s)`);
+    };
+
+    const handleDeleteAll = async (teamId: string, memberIds: string[]) => {
+        for (const memberId of memberIds) {
+            await deleteParticipant(memberId);
+        }
+        setSelectedMembers(prev => ({ ...prev, [teamId]: new Set() }));
+        toast.success(`Deleted all ${memberIds.length} team members`);
+    };
+
+    // Apply filters
+    const filteredTeams = React.useMemo(() => {
+        return teamGroups.filter(team => {
+            const matchesType = typeFilter === 'all' || team.type === typeFilter;
+            const matchesAllocation = allocationFilter === 'all' ||
+                (allocationFilter === 'allocated' && team.isAllocated) ||
+                (allocationFilter === 'not-allocated' && !team.isAllocated);
+            return matchesType && matchesAllocation;
+        });
+    }, [teamGroups, typeFilter, allocationFilter]);
+
+    // Pagination
+    const totalPages = Math.ceil(filteredTeams.length / ITEMS_PER_PAGE);
+    const paginatedTeams = React.useMemo(() => {
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        return filteredTeams.slice(start, start + ITEMS_PER_PAGE);
+    }, [filteredTeams, currentPage]);
+
+    // Reset to page 1 when filters change
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [typeFilter, allocationFilter, searchQuery]);
 
     const totalRevenue = participants.reduce<number>((acc, p) => {
         const type = p.type.toLowerCase();
@@ -543,6 +751,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
     }, 0);
 
     const revenueDisplay = (totalRevenue / 1000).toFixed(3) + 'k';
+
+    const navItems: NavItem[] = [
+        { label: 'Participants', icon: Users, value: 'participants', group: 'Users' },
+        { label: 'Coordinators', icon: UserCog, value: 'coordinators', group: 'Users' },
+        { label: 'Activity & Labs', icon: Zap, value: 'activity', group: 'Operations' },
+        { label: 'Support Requests', icon: AlertTriangle, value: 'support', group: 'Operations' },
+        { label: 'Analytics', icon: BarChart3, value: 'analytics', group: 'Monitoring' },
+        { label: 'System Logs', icon: FileText, value: 'logs', group: 'Monitoring' },
+        { label: 'System Config', icon: Globe, value: 'system', group: 'Settings' },
+        { label: 'My Account', icon: Lock, value: 'settings', group: 'Settings' },
+    ];
 
     if (isLoading && participants.length === 0) {
         return (
@@ -563,50 +782,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
     }
 
     return (
-        <div className="pt-24 pb-12 px-6 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-linear-to-r from-white to-gray-500">
-                        Admin Workspace
-                    </h1>
-                    <p className="text-gray-400 mt-1">Real-time event management & insights</p>
-                </div>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {[
-                    { label: 'Total Registrations', value: participants.length, icon: Users, color: 'text-blue-400' },
-                    { label: 'Total Revenue', value: `₹${revenueDisplay}`, icon: BarChart3, color: 'text-green-400' },
-                    { label: 'Coordinators', value: coordinators.length, icon: UserCog, color: 'text-purple-400' },
-                    { label: 'Activity Logs', value: logs.length, icon: FileText, color: 'text-orange-400' },
-                ].map((stat, i) => (
-                    <Card key={i} className="bg-brand-surface border-white/5 hover:border-brand-primary/20 transition-all group">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-gray-400">{stat.label}</p>
-                                    <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
-                                </div>
-                                <div className={`p-3 rounded-xl bg-white/5 group-hover:scale-110 transition-transform ${stat.color}`}>
-                                    <stat.icon className="w-6 h-6" />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-
+        <DashboardShell
+            title="Admin Workspace"
+            description="Real-time event management & insights"
+            items={navItems}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            user={{
+                name: user.name,
+                email: user.email,
+                role: 'Administrator'
+            }}
+        >
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <TabsList className="bg-brand-dark border border-white/10 p-1 rounded-xl">
-                    <TabsTrigger value="participants" className="data-[state=active]:bg-brand-primary data-[state=active]:text-brand-dark">Participants</TabsTrigger>
-                    <TabsTrigger value="coordinators" className="data-[state=active]:bg-brand-primary data-[state=active]:text-brand-dark">Coordinators</TabsTrigger>
-                    <TabsTrigger value="activity" className="data-[state=active]:bg-brand-primary data-[state=active]:text-brand-dark">Activity & Labs</TabsTrigger>
-                    <TabsTrigger value="support" className="data-[state=active]:bg-brand-primary data-[state=active]:text-brand-dark">Support Requests</TabsTrigger>
-                    <TabsTrigger value="analytics" className="data-[state=active]:bg-brand-primary data-[state=active]:text-brand-dark">Analytics</TabsTrigger>
-                    <TabsTrigger value="logs" className="data-[state=active]:bg-brand-primary data-[state=active]:text-brand-dark">System Logs</TabsTrigger>
-                    <TabsTrigger value="settings" className="data-[state=active]:bg-brand-primary data-[state=active]:text-brand-dark">System Controls</TabsTrigger>
-                </TabsList>
 
                 <TabsContent value="participants" className="mt-6 space-y-4">
                     <div className="flex flex-wrap gap-2 items-center justify-between">
@@ -623,12 +811,160 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                         </Button>
                     </div>
 
-                    <DataTable
-                        columns={participantColumns}
-                        data={participants}
-                        searchKey="name"
-                        placeholder="Search participants by name..."
-                    />
+                    {/* Search and Filters */}
+                    <div className="flex flex-wrap gap-3 items-center bg-brand-surface p-4 rounded-lg border border-white/5">
+                        <Input
+                            placeholder="Search by team ID, name, or email..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="max-w-sm bg-brand-dark border-white/10"
+                        />
+                        <Select value={typeFilter} onValueChange={setTypeFilter}>
+                            <SelectTrigger className="w-[150px] bg-brand-dark border-white/10">
+                                <SelectValue placeholder="All Types" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-brand-surface border-white/10">
+                                <SelectItem value="all">All Types</SelectItem>
+                                <SelectItem value="Workshop">Workshop</SelectItem>
+                                <SelectItem value="Hackathon">Hackathon</SelectItem>
+                                <SelectItem value="Combo">Combo</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={allocationFilter} onValueChange={setAllocationFilter}>
+                            <SelectTrigger className="w-[150px] bg-brand-dark border-white/10">
+                                <SelectValue placeholder="Allocation" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-brand-surface border-white/10">
+                                <SelectItem value="all">All</SelectItem>
+                                <SelectItem value="allocated">Allocated</SelectItem>
+                                <SelectItem value="not-allocated">Not Allocated</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* Team-based Table */}
+                    <div className="bg-brand-surface border border-white/5 rounded-xl overflow-hidden">
+                        <Table>
+                            <TableHeader className="bg-white/5">
+                                <TableRow>
+                                    <TableHead className="text-gray-400">Team ID</TableHead>
+                                    <TableHead className="text-gray-400">Team Size</TableHead>
+                                    <TableHead className="text-gray-400">Type</TableHead>
+                                    <TableHead className="text-gray-400">Allocation</TableHead>
+                                    <TableHead className="text-gray-400 text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {paginatedTeams.map((team) => (
+                                    <React.Fragment key={team.teamId}>
+                                        <TableRow
+                                            className="cursor-pointer hover:bg-white/5"
+                                            onClick={() => toggleTeam(team.teamId)}
+                                        >
+                                            <TableCell className="font-mono text-xs text-brand-primary">{team.teamId}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className="text-[10px]">
+                                                    {team.teamSize} member{team.teamSize > 1 ? 's' : ''}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px]">
+                                                    {team.type}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-xs">
+                                                {team.isAllocated ? (
+                                                    <div className="text-gray-400 space-y-1 text-[10px]">
+                                                        {team.members.find(m => m.assignedWorkshopLab)?.assignedWorkshopLab && <div>W: {team.members.find(m => m.assignedWorkshopLab)?.assignedWorkshopLab}</div>}
+                                                        {team.members.find(m => m.assignedHackathonLab)?.assignedHackathonLab && <div>H: {team.members.find(m => m.assignedHackathonLab)?.assignedHackathonLab}</div>}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-600 text-[10px]">Not allocated</span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex gap-1 justify-end items-center" onClick={(e) => e.stopPropagation()}>
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => handleResendEmail(team.teamId)} title="Resend email">
+                                                        <Mail className="w-3 h-3" />
+                                                    </Button>
+                                                    {team.hasPayment && (
+                                                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-green-400" onClick={() => team.members[0].paymentScreenshotUrl && window.open(team.members[0].paymentScreenshotUrl, '_blank')} title="View payment">
+                                                            <Eye className="w-3 h-3" />
+                                                        </Button>
+                                                    )}
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-blue-400" onClick={() => handleEditParticipant(team.members[0])} title="Edit team">
+                                                        <Edit className="w-3 h-3" />
+                                                    </Button>
+                                                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-400" onClick={() => { setDeleteModalTeam({ teamId: team.teamId, members: team.members }); setDeleteModalOpen(true); }} title="Delete team members">
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                        {expandedTeams.has(team.teamId) && (
+                                            <TableRow className="bg-white/2">
+                                                <TableCell colSpan={5} className="p-4">
+                                                    <div className="space-y-3">
+                                                        {team.members.map((member) => (
+                                                            <div key={member._id} className="bg-brand-dark p-4 rounded-lg border border-white/5">
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+                                                                    <div><span className="text-gray-500">Name:</span> <span className="text-white ml-1">{member.name}</span></div>
+                                                                    <div className="truncate"><span className="text-gray-500">Email:</span> <span className="text-gray-300 ml-1">{member.email}</span></div>
+                                                                    <div className="truncate"><span className="text-gray-500">College:</span> <span className="text-gray-300 ml-1" title={member.college}>{member.college}</span></div>
+                                                                    {member.assignedWorkshopLab && <div><span className="text-gray-500">Workshop Lab:</span> <span className="text-brand-primary ml-1">{member.assignedWorkshopLab}</span></div>}
+                                                                    {member.assignedHackathonLab && <div><span className="text-gray-500">Hackathon Lab:</span> <span className="text-brand-primary ml-1">{member.assignedHackathonLab}</span></div>}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+
+                    {/* Pagination */}
+                    <div className="flex items-center justify-between px-2">
+                        <div className="text-sm text-gray-400">
+                            Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredTeams.length)} of {filteredTeams.length} teams
+                        </div>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="border-white/10"
+                            >
+                                Previous
+                            </Button>
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                    <Button
+                                        key={page}
+                                        variant={page === currentPage ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => setCurrentPage(page)}
+                                        className={page === currentPage ? "bg-brand-primary text-brand-dark" : "border-white/10"}
+                                    >
+                                        {page}
+                                    </Button>
+                                ))}
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="border-white/10"
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
                 </TabsContent>
 
                 <TabsContent value="activity" className="mt-6 space-y-6">
@@ -644,14 +980,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                             <Button variant="outline" onClick={() => setIsAddLabOpen(true)} size="sm" className="border-white/10 bg-white/5">
                                 <Plus className="w-3 h-3 mr-2" /> Add Lab
                             </Button>
-                            <Button
-                                onClick={allocateLabs}
-                                size="sm"
-                                className="bg-brand-primary text-brand-dark hover:bg-white"
-                            >
-                                <Zap className="w-3 h-3 mr-2" />
-                                Allocate Participants
-                            </Button>
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button size="sm" className="bg-brand-primary text-brand-dark hover:bg-white">
+                                        <Zap className="w-3 h-3 mr-2" />
+                                        Allocate...
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="bg-brand-surface border-white/10">
+                                    <DropdownMenuItem onClick={() => handleAllocate('Workshop')}>
+                                        Allocate Workshop
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleAllocate('Hackathon')}>
+                                        Allocate Hackathon
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
 
@@ -676,6 +1021,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                                         value={newLab.name}
                                         onChange={e => setNewLab({ ...newLab, name: e.target.value })}
                                     />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Type</Label>
+                                    <Select
+                                        value={newLab.type}
+                                        onValueChange={(val: 'Workshop' | 'Hackathon') => setNewLab({ ...newLab, type: val })}
+                                    >
+                                        <SelectTrigger className="bg-brand-dark border-white/10">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-brand-surface border-white/10">
+                                            <SelectItem value="Workshop">Workshop</SelectItem>
+                                            <SelectItem value="Hackathon">Hackathon</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Room Number</Label>
@@ -717,6 +1077,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                                             value={editingLab.name}
                                             onChange={e => setEditingLab({ ...editingLab, name: e.target.value })}
                                         />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Type</Label>
+                                        <Select
+                                            value={editingLab.type}
+                                            onValueChange={(val: 'Workshop' | 'Hackathon') => setEditingLab({ ...editingLab, type: val })}
+                                        >
+                                            <SelectTrigger className="bg-brand-dark border-white/10">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-brand-surface border-white/10">
+                                                <SelectItem value="Workshop">Workshop</SelectItem>
+                                                <SelectItem value="Hackathon">Hackathon</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Room Number</Label>
@@ -770,17 +1145,45 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                             <RefreshCw className={`w-3 h-3 mr-2 ${isLoading ? 'animate-spin' : ''}`} /> Refresh Data
                         </Button>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Stats Cards Moved Here */}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        {[
+                            { label: 'Total Registrations', value: participants.length, icon: Users, color: 'text-blue-400' },
+                            { label: 'Total Revenue', value: `₹${revenueDisplay}`, icon: BarChart3, color: 'text-green-400' },
+                            { label: 'Coordinators', value: coordinators.length, icon: UserCog, color: 'text-purple-400' },
+                            { label: 'Activity Logs', value: logs.length, icon: FileText, color: 'text-orange-400' },
+                        ].map((stat, i) => (
+                            <Card key={i} className="bg-brand-surface border-white/5 hover:border-brand-primary/20 transition-all group">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-sm text-gray-400">{stat.label}</p>
+                                            <h3 className="text-2xl font-bold mt-1">{stat.value}</h3>
+                                        </div>
+                                        <div className={`p-3 rounded-xl bg-white/5 group-hover:scale-110 transition-transform ${stat.color}`}>
+                                            <stat.icon className="w-6 h-6" />
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <Card className="bg-brand-surface border-white/5 p-6">
                             <CardHeader className="px-0 pt-0">
-                                <CardTitle className="text-lg">Registration Distribution</CardTitle>
-                                <CardDescription>Breakdown by ticket types</CardDescription>
+                                <CardTitle className="text-xl">Ticket Distribution</CardTitle>
+                                <CardDescription>Participants by ticket type</CardDescription>
                             </CardHeader>
-                            <div className="h-[300px]">
+                            <CardContent className="px-0 h-[300px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
-                                            data={ticketDist}
+                                            data={[
+                                                { name: 'Combo', value: participants.filter(p => p.type.toLowerCase().includes('combo')).length },
+                                                { name: 'Workshop', value: participants.filter(p => p.type.toLowerCase().includes('workshop')).length },
+                                                { name: 'Hackathon', value: participants.filter(p => p.type.toLowerCase().includes('hackathon')).length },
+                                            ]}
                                             cx="50%"
                                             cy="50%"
                                             innerRadius={60}
@@ -788,37 +1191,62 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                                             paddingAngle={5}
                                             dataKey="value"
                                         >
-                                            {ticketDist.map((entry, index) => (
+                                            {[
+                                                { name: 'Combo', value: participants.filter(p => p.type.toLowerCase().includes('combo')).length },
+                                                { name: 'Workshop', value: participants.filter(p => p.type.toLowerCase().includes('workshop')).length },
+                                                { name: 'Hackathon', value: participants.filter(p => p.type.toLowerCase().includes('hackathon')).length },
+                                            ].map((_entry, index) => (
                                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                             ))}
                                         </Pie>
-                                        <Tooltip contentStyle={{ background: '#020617', border: '1px solid #1e293b' }} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#020202', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                                            itemStyle={{ color: '#fff' }}
+                                            labelStyle={{ color: '#fff' }}
+                                        />
                                         <Legend />
                                     </PieChart>
                                 </ResponsiveContainer>
-                            </div>
+                            </CardContent>
                         </Card>
 
                         <Card className="bg-brand-surface border-white/5 p-6">
                             <CardHeader className="px-0 pt-0">
-                                <CardTitle className="text-lg">Daily Attendance (Real-time)</CardTitle>
-                                <CardDescription>Check-ins based on system logs</CardDescription>
+                                <CardTitle className="text-xl">College Distribution</CardTitle>
+                                <CardDescription>Participants by college</CardDescription>
                             </CardHeader>
-                            <div className="h-[300px]">
+                            <CardContent className="px-0 h-[300px]">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={[
-                                        { day: 'Day 1', count: logs.filter(l => l.action.includes('ATTENDANCE_D1') || l.action.includes('ENTRY')).length },
-                                        { day: 'Day 2', count: logs.filter(l => l.action.includes('ATTENDANCE_D2')).length },
-                                        { day: 'Day 3', count: logs.filter(l => l.action.includes('ATTENDANCE_D3')).length },
-                                    ]}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                                        <XAxis dataKey="day" stroke="#94a3b8" />
-                                        <YAxis stroke="#94a3b8" />
-                                        <Tooltip contentStyle={{ background: '#020617', border: '1px solid #1e293b' }} />
-                                        <Bar dataKey="count" fill="#82d4fa" radius={[4, 4, 0, 0]} />
-                                    </BarChart>
+                                    <PieChart>
+                                        <Pie
+                                            data={Object.entries(participants.reduce((acc, p) => {
+                                                const college = p.college || 'Unknown';
+                                                acc[college] = (acc[college] || 0) + 1;
+                                                return acc;
+                                            }, {} as Record<string, number>))
+                                                .map(([name, value]) => ({ name, value }))
+                                                .sort((a, b) => b.value - a.value)
+                                                .slice(0, 5)}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={100}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            {participants.map((_entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#020202', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                                            itemStyle={{ color: '#fff' }}
+                                            labelStyle={{ color: '#fff' }}
+                                        />
+                                        <Legend />
+                                    </PieChart>
                                 </ResponsiveContainer>
-                            </div>
+                            </CardContent>
                         </Card>
                     </div>
                 </TabsContent>
@@ -837,7 +1265,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                     />
                 </TabsContent>
 
-                <TabsContent value="settings" className="mt-6 space-y-6">
+                <TabsContent value="system" className="mt-6 space-y-6">
                     <Card className="bg-brand-surface border-white/5 p-6">
                         <CardHeader className="px-0 pt-0">
                             <div className="flex items-center gap-3">
@@ -879,7 +1307,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                         </CardContent>
                     </Card>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <Card className="bg-brand-surface border-white/5 p-6">
                             <CardHeader className="px-0 pt-0">
                                 <div className="flex items-center gap-3">
@@ -938,6 +1366,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                             </CardContent>
                         </Card>
 
+                        <Card className="bg-brand-surface border-white/5 p-6">
+                            <CardHeader className="px-0 pt-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                                        <Globe className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-lg">Internships</CardTitle>
+                                        <CardDescription>Show internship opportunities</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="px-0 pt-6">
+                                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                                    <div>
+                                        <p className="font-medium">Feature Visibility</p>
+                                        <p className="text-xs text-gray-400">Currently {settings?.showInternships ? 'Visible' : 'Hidden'}</p>
+                                    </div>
+                                    <Button
+                                        onClick={() => updateSettings({ showInternships: !settings?.showInternships })}
+                                        variant={settings?.showInternships ? "destructive" : "outline"}
+                                        className={!settings?.showInternships ? "border-brand-primary/20 text-brand-primary" : ""}
+                                    >
+                                        {settings?.showInternships ? 'Hide Feature' : 'Show Feature'}
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                         <Card className="bg-brand-surface border-white/5 p-6 md:col-span-2">
                             <CardHeader className="px-0 pt-0">
                                 <div className="flex items-center gap-3">
@@ -1019,6 +1478,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                         </Card>
                     </div>
                 </TabsContent>
+
+                <TabsContent value="settings" className="mt-6">
+                    <SettingsTab user={user} />
+                </TabsContent>
                 <TabsContent value="coordinators" className="mt-6 space-y-4">
                     <div className="flex gap-2">
                         <Button onClick={fetchCoordinators} variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10">
@@ -1035,10 +1498,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                         placeholder="Search coordinators by name..."
                     />
                 </TabsContent>
-            </Tabs>
+            </Tabs >
 
             {/* Delete Confirmation Modal */}
-            <Dialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
+            < Dialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>
                 <DialogContent className="bg-brand-surface border-white/10 text-white">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-red-500">
@@ -1059,10 +1522,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                         </Button>
                     </DialogFooter>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* Add Participant Modal */}
-            <AddParticipantModal
+            < AddParticipantModal
                 isOpen={isAddParticipantOpen}
                 onClose={() => setIsAddParticipantOpen(false)}
                 onSuccess={() => fetchParticipants()}
@@ -1074,7 +1537,75 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
                 onClose={() => setIsAddCoordinatorOpen(false)}
                 onSuccess={() => fetchCoordinators()}
             />
-        </div >
+            {/* SOS Alert Dialog */}
+            <AlertDialog open={sosOpen} onOpenChange={setSosOpen}>
+                <AlertDialogContent className="bg-red-500/10 border-red-500/50 text-white">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2 text-red-500 text-2xl font-bold animate-pulse">
+                            <AlertTriangle className="w-8 h-8" />
+                            EMERGENCY SOS ALERT
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-200 text-lg">
+                            A team has requested IMMEDIATE assistance! Please check the Support Requests table.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={handleAcknowledge} className="bg-red-500 hover:bg-red-600 font-bold border-none">
+                            I Functionally Acknowledge
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Delete Team Modal */}
+            <DeleteTeamModal
+                isOpen={deleteModalOpen}
+                onClose={() => { setDeleteModalOpen(false); setDeleteModalTeam(null); }}
+                teamData={deleteModalTeam}
+                selectedMembers={deleteModalTeam ? (selectedMembers[deleteModalTeam.teamId] || new Set()) : new Set()}
+                onToggleMember={(memberId) => deleteModalTeam && toggleMemberSelection(deleteModalTeam.teamId, memberId)}
+                onDeleteSelected={() => deleteModalTeam && handleDeleteSelected(deleteModalTeam.teamId)}
+                onDeleteAll={() => deleteModalTeam && handleDeleteAll(deleteModalTeam.teamId, deleteModalTeam.members.map(m => m._id))}
+            />
+
+            {/* Edit Team Modal */}
+            <EditTeamModal
+                isOpen={editTeamModalOpen}
+                onClose={() => { setEditTeamModalOpen(false); setEditingTeamMembers([]); setEditingTeamUser(null); }}
+                teamMembers={editingTeamMembers}
+                teamUser={editingTeamUser}
+                onSave={async (updatedMembers, userUpdates) => {
+                    // Update user credentials
+                    if (editingTeamUser) {
+                        try {
+                            await fetch('/api/auth/user', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    _id: editingTeamUser._id,
+                                    email: userUpdates.email,
+                                    passkey: userUpdates.passkey
+                                })
+                            });
+                        } catch (error) {
+                            console.error('Failed to update user:', error);
+                        }
+                    }
+
+                    // Update each member
+                    for (const member of updatedMembers) {
+                        await updateParticipant(member);
+                    }
+
+                    toast.success('Team updated successfully');
+                    fetchParticipants();
+                    setEditTeamModalOpen(false);
+                    setEditingTeamMembers([]);
+                    setEditingTeamUser(null);
+                }}
+            />
+
+        </DashboardShell >
     );
 };
 

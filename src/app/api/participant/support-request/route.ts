@@ -15,15 +15,17 @@ export async function POST(request: NextRequest) {
 
         // Find the lab for this team
         const participant = await Participant.findOne({ teamId });
-        if (!participant || !participant.assignedLab) {
-            return NextResponse.json({ error: 'Team or assigned lab not found' }, { status: 404 });
+        if (!participant) {
+            return NextResponse.json({ error: 'Team not found' }, { status: 404 });
         }
+
+        const labName = participant.assignedLab || 'Unassigned';
 
         const supportRequest = await SupportRequest.create({
             type,
             teamId,
             message: message || '',
-            labName: participant.assignedLab,
+            labName,
             status: 'Open',
             timestamp: Date.now()
         });

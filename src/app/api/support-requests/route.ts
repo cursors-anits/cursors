@@ -7,9 +7,10 @@ export async function GET(request: NextRequest) {
         await dbConnect();
         const { searchParams } = new URL(request.url);
         const labName = searchParams.get('labName');
-        const status = searchParams.get('status') || 'Open';
+        const status = searchParams.get('status');
 
-        const query: any = { status };
+        const query: any = {};
+        if (status) query.status = status;
         if (labName) {
             query.labName = labName;
         }
@@ -25,13 +26,18 @@ export async function PATCH(request: NextRequest) {
     try {
         await dbConnect();
         const body = await request.json();
-        const { id, status } = body;
+        const { id, status, resolvedBy } = body;
 
         if (!id || !status) {
             return NextResponse.json({ error: 'ID and Status are required' }, { status: 400 });
         }
 
-        const supportRequest = await SupportRequest.findByIdAndUpdate(id, { status }, { new: true });
+        const updateData: any = { status };
+        if (resolvedBy) {
+            updateData.resolvedBy = resolvedBy;
+        }
+
+        const supportRequest = await SupportRequest.findByIdAndUpdate(id, updateData, { new: true });
         return NextResponse.json(supportRequest);
     } catch (error) {
         return NextResponse.json({ error: 'Failed to update request' }, { status: 500 });
