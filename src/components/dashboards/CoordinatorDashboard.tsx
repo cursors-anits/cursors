@@ -425,9 +425,6 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                                                     <Eye className="w-4 h-4" />
                                                 </Button>
                                             )}
-                                            <Badge variant={p.status === 'Paid' ? 'outline' : 'secondary'} className={p.status === 'Paid' ? 'border-green-500/50 text-green-400' : ''}>
-                                                {p.status}
-                                            </Badge>
                                         </div>
                                     </div>
                                 ))}

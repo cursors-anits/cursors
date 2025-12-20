@@ -216,11 +216,6 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
                                                 <TableCell className="font-medium text-white">{p.name}</TableCell>
                                                 <TableCell className="text-gray-400">{p.college}</TableCell>
                                                 <TableCell className="font-mono text-brand-primary">{p.teamId}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant="outline" className="text-[10px]">
-                                                        {p.status}
-                                                    </Badge>
-                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
