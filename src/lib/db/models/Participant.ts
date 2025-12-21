@@ -20,6 +20,9 @@ export interface IParticipant {
     assignedSeat?: string;
     paymentScreenshotUrl?: string;
     avatarUrl?: string;
+    eventChecklist?: string[];
+    problemAssignmentId?: mongoose.Types.ObjectId;
+    hasConfirmedProblem?: boolean;
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -92,6 +95,10 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
         },
         avatarUrl: {
             type: String,
+        },
+        eventChecklist: {
+            type: [String],
+            default: [],
         },
         transactionId: {
             type: String,

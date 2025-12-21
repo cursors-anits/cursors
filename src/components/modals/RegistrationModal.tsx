@@ -93,6 +93,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
     const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [sameAsLead, setSameAsLead] = useState<Record<number, boolean>>({});
     const router = useRouter();
     const { setCurrentUser, settings } = useData();
 
@@ -107,11 +108,9 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     } = useForm<IFormData>({
         resolver: zodResolver(RegistrationSchema),
         defaultValues: {
-            college: '',
-            city: '',
             ticketType: 'combo',
             teamSize: 1,
-            members: [{ fullName: '', email: '', department: '', whatsapp: '', year: '3rd Year' }],
+            members: [{ fullName: '', email: '', college: '', city: '', department: '', whatsapp: '', year: '3rd Year' }],
             transactionId: '',
         }
     });
@@ -153,7 +152,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
         const currentSize = fields.length;
         if (size > currentSize) {
             for (let i = currentSize; i < size; i++) {
-                append({ fullName: '', email: '', department: '', whatsapp: '', year: '3rd Year' });
+                append({ fullName: '', email: '', college: '', city: '', department: '', whatsapp: '', year: '3rd Year' });
             }
         } else {
             for (let i = currentSize - 1; i >= size; i--) {
@@ -178,13 +177,24 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
         };
     };
 
+    const handleSameAsLeadToggle = (index: number, checked: boolean) => {
+        if (checked && index > 0) {
+            const leader = watch('members.0');
+            setValue(`members.${index}.college`, leader.college || '');
+            setValue(`members.${index}.city`, leader.city || '');
+            setValue(`members.${index}.department`, leader.department || '');
+            setValue(`members.${index}.year`, leader.year || '');
+        }
+        setSameAsLead(prev => ({ ...prev, [index]: checked }));
+    };
+
     const nextStep = async () => {
         let fieldsToValidate: (keyof IFormData)[] = [];
         if (step === 1) {
             setStep(step + 1);
             return;
         }
-        if (step === 2) fieldsToValidate = ['college', 'city', 'ticketType', 'teamSize'];
+        if (step === 2) fieldsToValidate = ['ticketType', 'teamSize'];
         if (step === 3) fieldsToValidate = ['members'];
 
         const isValid = await trigger(fieldsToValidate);
@@ -273,7 +283,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                             <DialogTitle className="text-2xl font-bold">
                                 {isSuccess ? "Registration Success!" : (
                                     <>
-                                        {step === 1 && "Accommodation Policy"}
+                                        {step === 1 && "🎉 Get Ready for Vibe Coding 2026!"}
                                         {step === 2 && "Event Details"}
                                         {step === 3 && "Team Members"}
                                         {step === 4 && "Payment Verification"}
@@ -281,7 +291,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                 )}
                             </DialogTitle>
                             <p className="text-sm text-gray-400 mt-1">
-                                {isSuccess ? "Welcome to Vibe Coding 2026" : `Step ${step} of 4 • Registration`}
+                                {isSuccess ? "Welcome to Vibe Coding 2026" : step === 1 ? "Important Event Information" : `Step ${step - 1} of 3 • Registration`}
                             </p>
                         </div>
                     </div>
@@ -328,33 +338,79 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                             <div className="space-y-8">
                                 {step === 1 && (
                                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-                                        <div className="bg-brand-primary/10 border border-brand-primary/20 p-6 rounded-2xl">
+                                        <div className="bg-linear-to-br from-brand-primary/20 to-brand-secondary/20 border border-brand-primary/30 p-6 rounded-2xl">
                                             <div className="flex items-center gap-3 mb-4">
                                                 <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center text-brand-dark">
-                                                    <ShieldCheck className="w-6 h-6" />
+                                                    <Zap className="w-6 h-6" />
                                                 </div>
-                                                <h3 className="text-xl font-bold">Accommodation Policy</h3>
+                                                <h3 className="text-xl font-bold">What Awaits You!</h3>
                                             </div>
-                                            <div className="space-y-4 text-gray-300">
-                                                <p>Please note the following regarding stay arrangements:</p>
-                                                <ul className="list-disc list-inside space-y-2 text-sm italic">
-                                                    <li>Accommodation is <span className="text-red-400 font-bold">NOT provided</span> for the event.</li>
-                                                    <li>The only exception is the <span className="text-brand-primary font-bold">Hackathon night</span> for hackathon participants.</li>
-                                                    <li>For assistance with nearby hostels or accommodation info, please contact our coordinator.</li>
+
+                                            <div className="space-y-4 text-gray-200">
+                                                <p className="text-white font-semibold">✨ Everything You Get:</p>
+                                                <ul className="space-y-2 text-sm">
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-green-400 mt-0.5">✅</span>
+                                                        <span><strong className="text-white">Full Gen AI Workshop</strong> • Learn cutting-edge AI tools & techniques</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-green-400 mt-0.5">✅</span>
+                                                        <span><strong className="text-white">24-Hour Hackathon</strong> • Build real projects, solve challenges</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-green-400 mt-0.5">✅</span>
+                                                        <span><strong className="text-white">Snacks & Refreshments</strong> • Throughout the event</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-green-400 mt-0.5">✅</span>
+                                                        <span><strong className="text-white">Overnight Accommodation</strong> • For hackathon night participants</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-green-400 mt-0.5">✅</span>
+                                                        <span><strong className="text-white">High-Tech Labs</strong> • State-of-the-art workstations</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-green-400 mt-0.5">✅</span>
+                                                        <span><strong className="text-white">Mentorship</strong> • Guidance from industry experts</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-green-400 mt-0.5">✅</span>
+                                                        <span><strong className="text-white">60K+ Prize Pool</strong> • Win big! 🏆</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-green-400 mt-0.5">✅</span>
+                                                        <span><strong className="text-white">Network with 500+</strong> • Meet amazing coders</span>
+                                                    </li>
                                                 </ul>
-                                                <div className="bg-brand-dark p-4 rounded-xl border border-white/5 flex items-center justify-between mt-6">
+
+                                                <Separator className="bg-white/10 my-4" />
+
+                                                <p className="text-white font-semibold">📌 What to Arrange <span className="text-gray-400">(at your own cost)</span>:</p>
+                                                <ul className="space-y-2 text-sm">
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-blue-400 mt-0.5">🍽️</span>
+                                                        <span><strong>Dinner:</strong> Available at college canteen or via Swiggy/Zomato</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-blue-400 mt-0.5">🏨</span>
+                                                        <span><strong>Extra Accommodation:</strong> If needed beyond hackathon night, at nearby hostels</span>
+                                                    </li>
+                                                </ul>
+
+                                                <div className="bg-brand-dark p-4 rounded-xl border border-white/5 flex items-center justify-between mt-4">
                                                     <div>
-                                                        <p className="text-[10px] text-gray-500 uppercase tracking-widest">Contact Coordinator</p>
+                                                        <p className="text-[10px] text-gray-500 uppercase tracking-widest">Need Help?</p>
                                                         <p className="text-white font-bold font-mono">8897892720</p>
                                                     </div>
-                                                    <Button size="sm" variant="outline" className="text-[10px] border-gray-800" onClick={() => window.open('tel:8897892720')}>Call Now</Button>
+                                                    <Button size="sm" variant="outline" className="text-[10px] border-gray-800" onClick={() => window.open('tel:8897892720')}>Contact Us</Button>
                                                 </div>
                                             </div>
                                         </div>
-                                        <Alert className="bg-yellow-500/10 border-yellow-500/20 text-yellow-400">
-                                            <Info className="w-4 h-4" />
+
+                                        <Alert className="bg-brand-primary/10 border-brand-primary/30 text-brand-primary">
+                                            <Zap className="w-4 h-4" />
                                             <AlertDescription className="text-xs">
-                                                By clicking "I Agree", you acknowledge that you have read and agree to the accommodation policy.
+                                                <strong>Ready to vibe?</strong> Click "I Understand & Proceed" to start your registration! 🚀
                                             </AlertDescription>
                                         </Alert>
                                     </div>
@@ -362,42 +418,6 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
 
                                 {step === 2 && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-right-4">
-                                        <div className="space-y-4 md:col-span-2">
-                                            <Label>College / University</Label>
-                                            <Controller
-                                                name="college"
-                                                control={control}
-                                                render={({ field }) => (
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <SelectTrigger className={`bg-brand-dark border-gray-800 ${errors.college ? 'border-red-500' : ''}`}>
-                                                            <SelectValue placeholder="Select College" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {COLLEGES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
-                                                )}
-                                            />
-                                            {errors.college && <p className="text-xs text-red-500">{errors.college.message}</p>}
-                                        </div>
-                                        <div className="space-y-4">
-                                            <Label>City</Label>
-                                            <Controller
-                                                name="city"
-                                                control={control}
-                                                render={({ field }) => (
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <SelectTrigger className={`bg-brand-dark border-gray-800 ${errors.city ? 'border-red-500' : ''}`}>
-                                                            <SelectValue placeholder="Select City" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
-                                                )}
-                                            />
-                                            {errors.city && <p className="text-xs text-red-500">{errors.city.message}</p>}
-                                        </div>
                                         <div className="space-y-4">
                                             <Label>Ticket Type</Label>
                                             <Controller
@@ -463,7 +483,20 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
                                         {fields.map((field, i) => (
                                             <div key={field.id} className="p-4 bg-brand-dark/50 rounded-xl border border-white/5 space-y-4">
-                                                <p className="text-xs font-bold text-brand-primary uppercase">Member {i + 1} {i === 0 && "(Leader)"}</p>
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-xs font-bold text-brand-primary uppercase">Member {i + 1} {i === 0 && "(Leader)"}</p>
+                                                    {i > 0 && (
+                                                        <label className="flex items-center gap-2 text-xs text-gray-400 cursor-pointer">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={sameAsLead[i] || false}
+                                                                onChange={(e) => handleSameAsLeadToggle(i, e.target.checked)}
+                                                                className="w-4 h-4 rounded border-gray-600 text-brand-primary focus:ring-brand-primary focus:ring-offset-0"
+                                                            />
+                                                            Same as team lead
+                                                        </label>
+                                                    )}
+                                                </div>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div className="space-y-2">
                                                         <Input
@@ -471,6 +504,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                             className={`bg-brand-dark border-gray-800 ${errors.members?.[i]?.fullName ? 'border-red-500' : ''}`}
                                                             {...control.register(`members.${i}.fullName`)}
                                                         />
+                                                        {errors.members?.[i]?.fullName && <p className="text-xs text-red-400 mt-1">{errors.members?.[i]?.fullName?.message}</p>}
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Input
@@ -479,6 +513,41 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                             className={`bg-brand-dark border-gray-800 ${errors.members?.[i]?.email ? 'border-red-500' : ''}`}
                                                             {...control.register(`members.${i}.email`)}
                                                         />
+                                                        {errors.members?.[i]?.email && <p className="text-xs text-red-400 mt-1">{errors.members?.[i]?.email?.message}</p>}
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Controller
+                                                            name={`members.${i}.college`}
+                                                            control={control}
+                                                            render={({ field }) => (
+                                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                                    <SelectTrigger className={`bg-brand-dark border-gray-800 ${errors.members?.[i]?.college ? 'border-red-500' : ''}`}>
+                                                                        <SelectValue placeholder="College / University" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {COLLEGES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )}
+                                                        />
+                                                        {errors.members?.[i]?.college && <p className="text-xs text-red-400 mt-1">{errors.members?.[i]?.college?.message}</p>}
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Controller
+                                                            name={`members.${i}.city`}
+                                                            control={control}
+                                                            render={({ field }) => (
+                                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                                    <SelectTrigger className={`bg-brand-dark border-gray-800 ${errors.members?.[i]?.city ? 'border-red-500' : ''}`}>
+                                                                        <SelectValue placeholder="City" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            )}
+                                                        />
+                                                        {errors.members?.[i]?.city && <p className="text-xs text-red-400 mt-1">{errors.members?.[i]?.city?.message}</p>}
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Input
@@ -487,6 +556,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                             {...control.register(`members.${i}.whatsapp`)}
                                                             maxLength={10}
                                                         />
+                                                        {errors.members?.[i]?.whatsapp && <p className="text-xs text-red-400 mt-1">{errors.members?.[i]?.whatsapp?.message}</p>}
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Input
@@ -494,6 +564,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                             className={`bg-brand-dark border-gray-800 ${errors.members?.[i]?.department ? 'border-red-500' : ''}`}
                                                             {...control.register(`members.${i}.department`)}
                                                         />
+                                                        {errors.members?.[i]?.department && <p className="text-xs text-red-400 mt-1">{errors.members?.[i]?.department?.message}</p>}
                                                     </div>
                                                     <div className="space-y-2">
                                                         <Controller
@@ -501,8 +572,8 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                             control={control}
                                                             render={({ field }) => (
                                                                 <Select onValueChange={field.onChange} value={field.value}>
-                                                                    <SelectTrigger className="bg-brand-dark border-gray-800">
-                                                                        <SelectValue placeholder="Year" />
+                                                                    <SelectTrigger className={`bg-brand-dark border-gray-800 ${errors.members?.[i]?.year ? 'border-red-500' : ''}`}>
+                                                                        <SelectValue placeholder="Year *" />
                                                                     </SelectTrigger>
                                                                     <SelectContent>
                                                                         <SelectItem value="1st Year">1st Year</SelectItem>
@@ -513,6 +584,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                                 </Select>
                                                             )}
                                                         />
+                                                        {errors.members?.[i]?.year && <p className="text-xs text-red-400 mt-1">{errors.members?.[i]?.year?.message}</p>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -635,7 +707,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
                                     <>
-                                        {step === 4 ? "Complete Registration" : (step === 1 ? "I Agree" : "Next Step")}
+                                        {step === 4 ? "Complete Registration" : (step === 1 ? "I Understand & Proceed" : "Next Step")}
                                         <ArrowRight className="w-4 h-4 ml-2" />
                                     </>
                                 )}
@@ -644,7 +716,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                     )}
                 </div>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 };
 

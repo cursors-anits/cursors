@@ -142,11 +142,12 @@ export async function POST(request: NextRequest) {
         );
 
         // Send Email to all members PERSONAL emails
-        const emailMembers = createdParticipants.map(p => ({
-            name: p.name,
-            department: p.department,
-            year: p.year,
-            passkey: passkey
+        const emailMembers = members.map((m: any) => ({
+            name: m.fullName,
+            college: m.college || college,
+            department: m.department,
+            year: m.year,
+            passkey
         }));
 
         const personalEmails = members.map((m: any) => m.email);

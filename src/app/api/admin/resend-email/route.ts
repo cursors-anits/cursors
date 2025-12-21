@@ -31,15 +31,17 @@ export async function POST(request: NextRequest) {
         const teamEmail = teamUser.email;
         const sharedPasskey = teamUser.passkey || 'N/A';
 
+        // Define college here so it's available for emailMembers mapping
+        const college = participants[0].college;
+
         // Construct email members list from Participant records
         const emailMembers = participants.map(p => ({
             name: p.name,
-            department: p.department,
-            year: p.year,
-            passkey: sharedPasskey
+            college: p.college || college, // Use participant's college or fallback to team college
+            department: p.department || '',
+            year: p.year || '',
+            passkey: sharedPasskey // Team-level shared passkey
         }));
-
-        const college = participants[0].college;
 
         let ticketType: any = 'combo';
         const typeStr = participants[0].type?.toLowerCase();

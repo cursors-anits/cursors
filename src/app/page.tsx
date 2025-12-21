@@ -6,6 +6,11 @@ import Hero from '@/components/landing/Hero';
 import Sponsors from '@/components/landing/Sponsors';
 import Schedule from '@/components/landing/Schedule';
 import FeaturesRewards from '@/components/landing/FeaturesRewards';
+import PricingCalculator from '@/components/landing/PricingCalculator';
+import WhatToBring from '@/components/landing/WhatToBring';
+import HackathonSchedule from '@/components/landing/HackathonSchedule';
+import ProblemStatements from '@/components/landing/ProblemStatements';
+import WorkshopSyllabus from '@/components/landing/WorkshopSyllabus';
 import Footer from '@/components/landing/Footer';
 import RegistrationModal from '@/components/modals/RegistrationModal';
 import LoginModal from '@/components/modals/LoginModal';
@@ -82,6 +87,11 @@ export default function Home() {
       <main>
         <Hero onRegisterClick={() => setIsRegisterOpen(true)} />
         <Sponsors />
+        <PricingCalculator />
+        <WhatToBring />
+        <WorkshopSyllabus />
+        <HackathonSchedule />
+        <ProblemStatements />
         <Schedule />
         <FeaturesRewards />
       </main>

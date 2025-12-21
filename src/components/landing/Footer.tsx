@@ -21,6 +21,7 @@ const Footer: React.FC = () => {
                                     src="/sponsors/cursors.png"
                                     alt="Cursors Logo"
                                     fill
+                                    sizes='max-width: 768px'
                                     className="object-cover"
                                 />
                             </div>

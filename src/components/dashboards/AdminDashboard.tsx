@@ -86,6 +86,7 @@ import { toast } from 'sonner';
 import { AddParticipantModal } from '@/components/modals/Admin/AddParticipantModal';
 import { AddCoordinatorModal } from '@/components/modals/Admin/AddCoordinatorModal';
 import { SettingsTab } from '@/components/dashboards/SettingsTab';
+import ProblemAllocationTab from '@/components/admin/ProblemAllocationTab';
 import { DeleteTeamModal } from '@/components/modals/DeleteTeamModal';
 import { EditTeamModal } from '@/components/modals/EditTeamModal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -755,7 +756,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
     const navItems: NavItem[] = [
         { label: 'Participants', icon: Users, value: 'participants', group: 'Users' },
         { label: 'Coordinators', icon: UserCog, value: 'coordinators', group: 'Users' },
-        { label: 'Activity & Labs', icon: Zap, value: 'activity', group: 'Operations' },
+        { label: 'Lab Management', icon: Zap, value: 'lab', group: 'Operations' },
+        { label: 'Problem Statements', icon: FileText, value: 'problems', group: 'Operations' },
         { label: 'Support Requests', icon: AlertTriangle, value: 'support', group: 'Operations' },
         { label: 'Analytics', icon: BarChart3, value: 'analytics', group: 'Monitoring' },
         { label: 'System Logs', icon: FileText, value: 'logs', group: 'Monitoring' },
@@ -967,7 +969,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="activity" className="mt-6 space-y-6">
+                <TabsContent value="lab" className="mt-6 space-y-6">
                     <div className="flex flex-wrap gap-4 items-center justify-between">
                         <div>
                             <h3 className="text-xl font-bold">Lab Management</h3>
@@ -1118,6 +1120,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+                </TabsContent>
+
+                {/* Problem Allocation Tab */}
+                <TabsContent value="problems" className="mt-6 space-y-6">
+                    <ProblemAllocationTab adminEmail={user.email} />
                 </TabsContent>
 
                 <TabsContent value="support" className="mt-6 space-y-6">

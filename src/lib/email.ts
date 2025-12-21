@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import ScheduledEmail from '@/lib/db/models/ScheduledEmail';
 import connectDB from '@/lib/db/mongodb';
+import { getReportingTimeHTML } from '@/lib/utils/reportingTimes';
 
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -16,12 +17,23 @@ const transporter = nodemailer.createTransport({
 
 interface EmailMember {
     name: string;
+    college: string;
     department: string;
     year: string;
     passkey: string;
 }
 
 type TicketType = 'workshop' | 'hackathon' | 'combo';
+
+// Helper to convert ticket type to reporting time format
+function toReportingTimeType(type: TicketType): 'Workshop' | 'Hackathon' | 'Combo' {
+    const typeMap: Record<TicketType, 'Workshop' | 'Hackathon' | 'Combo'> = {
+        workshop: 'Workshop',
+        hackathon: 'Hackathon',
+        combo: 'Combo'
+    };
+    return typeMap[type];
+}
 
 function getTemplate(
     type: TicketType,
@@ -63,7 +75,8 @@ function getTemplate(
     const membersHtml = members.map(m => `
         <div style="background: rgba(255,255,255,0.03); padding: 12px; margin-bottom: 8px; border-radius: 8px; border: 1px solid #222;">
             <div style="font-weight: bold; font-size: 14px; color: #fff; margin-bottom: 4px;">${m.name}</div>
-            <div style="font-size: 11px; color: ${theme.primary}; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">${m.department} • ${m.year}</div>
+            <div style="font-size: 11px; color: ${theme.primary}; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">${m.college || 'College TBD'}</div>
+            <div style="font-size: 11px; color: #888; margin-top: 2px;">${m.department} • ${m.year}</div>
         </div>
     `).join('');
 
@@ -104,6 +117,13 @@ function getTemplate(
                 </tr>
             </table>
 
+            <!-- REPORTING TIME ALERT -->
+            <div style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(249, 115, 22, 0.2)); border: 2px solid rgba(249, 115, 22, 0.4); border-radius: 12px; padding: 20px; margin-bottom: 25px; text-align: center;">
+                <div style="font-size: 11px; text-transform: uppercase; color: #fb923c; letter-spacing: 2px; margin-bottom: 8px;">⚠️ IMPORTANT</div>
+                <div style="font-size: 20px; font-weight: bold; color: #fff; margin-bottom: 8px;">Reporting Time</div>
+                <div style="font-size: 13px; color: #fed7aa; line-height: 1.6;">${getReportingTimeHTML(toReportingTimeType(type))}</div>
+            </div>
+
             <!-- Team Card -->
             <div style="background-color: #151515; border: 1px solid #333; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 25px;">
                 <div style="font-size: 11px; color: #888; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;">Team Identification</div>
@@ -140,11 +160,14 @@ function getTemplate(
                 ${membersHtml}
             </div>
 
-            <!-- Accommodation Policy -->
+            <!-- Accommodation & Food Policy -->
             <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 12px; padding: 15px; margin-bottom: 30px;">
-                <h3 style="margin: 0 0 10px 0; font-size: 11px; text-transform: uppercase; color: #f59e0b; letter-spacing: 1px;">Stay & Accommodation</h3>
+                <h3 style="margin: 0 0 10px 0; font-size: 11px; text-transform: uppercase; color: #f59e0b; letter-spacing: 1px;">Stay & Food Information</h3>
                 <p style="margin: 0; font-size: 12px; color: #ccc; line-height: 1.5;">
-                    Please note that accommodation is <strong>NOT provided</strong> for the event, except for the <strong>Hackathon night</strong> (for hackathon participants).
+                    <strong>Accommodation:</strong> NOT provided for the event, except for the <strong>Hackathon night</strong> (for hackathon participants).
+                </p>
+                <p style="margin: 8px 0 0; font-size: 12px; color: #ccc; line-height: 1.5;">
+                    <strong>Food:</strong> Snacks will be provided. <strong>Dinner is NOT included</strong> - available at college canteen or via Swiggy/Zomato at your expense.
                 </p>
                 <p style="margin: 8px 0 0; font-size: 12px; color: #ccc;">
                     For accommodation info or nearby hostel contacts, reach out to <strong>8897892720</strong>.

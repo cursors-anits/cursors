@@ -7,8 +7,9 @@ async function main() {
     const testEmail = 'palikaomkar.22.cse@anits.edu.in';
     const testTeamIdBase = 'TEST-VIBE';
     const testMembers = [
-        { name: 'Omkar Palika', department: 'CSE', year: '3rd Year', passkey: 'OMKAR-123' },
-        { name: 'Test Member', department: 'ECE', year: '2nd Year', passkey: 'TEST-KEY' }
+        { name: 'John Doe', college: 'ANITS', department: 'CSE', year: '3rd Year', passkey: 'PASS123' },
+        { name: 'Jane Smith', college: 'GITAM', department: 'ECE', year: '2nd Year', passkey: 'PASS456' },
+        { name: 'Bob Johnson', college: 'ANITS', department: 'IT', year: '4th Year', passkey: 'PASS789' }
     ];
 
     const types: ('workshop' | 'hackathon' | 'combo')[] = ['workshop', 'hackathon', 'combo'];

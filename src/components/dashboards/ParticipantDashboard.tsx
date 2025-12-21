@@ -15,7 +15,8 @@ import {
     Users,
     Camera,
     Zap,
-    Loader2
+    Loader2,
+    Phone
 } from 'lucide-react';
 import { useData } from '@/lib/context/DataContext';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,9 @@ import { toast } from 'sonner';
 import { LayoutDashboard } from 'lucide-react';
 import { DashboardShell } from '@/components/dashboards/DashboardShell';
 import { NavItem } from '@/components/dashboards/DashboardNav';
+import EventChecklist from '@/components/dashboards/EventChecklist';
+import ProblemSelection from '@/components/dashboards/ProblemSelection';
+import Link from 'next/link';
 
 interface ParticipantDashboardProps {
     user: User;
@@ -325,21 +329,37 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                                 <AlertTriangle className="w-6 h-6 text-yellow-500" />
                             </div>
                             <div className="space-y-2">
-                                <h3 className="font-bold text-lg text-white">Accommodation Information</h3>
+                                <h3 className="font-bold text-lg text-white">Accommodation & Food Information</h3>
                                 <p className="text-gray-400 text-sm leading-relaxed">
                                     Accommodation is <span className="text-red-400 font-bold">NOT provided</span> for the event (except for Hackathon night for participants).
+                                    <br />
+                                    <br />
+                                    <span className="text-white font-semibold">Food:</span> Snacks will be provided. Dinner is NOT included - available at college canteen or via Swiggy/Zomato at your expense.
                                     <br />
                                     For nearby hostels and stay assistance, please contact:
                                 </p>
                                 <div className="flex items-center gap-3 pt-2">
                                     <Badge variant="outline" className="border-brand-primary text-brand-primary font-mono text-sm px-3 py-1">
-                                        8897892720
+                                        <Phone className="w-4 h-4 mr-1" /> <Link href="tel:8897892720">8897892720</Link>
                                     </Badge>
                                     <span className="text-xs text-gray-500 uppercase tracking-widest">Coordinator</span>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Event Preparation Checklist */}
+                    {participantData && (
+                        <EventChecklist
+                            participantId={participantData.participantId}
+                            initialCheckedItems={participantData.eventChecklist || []}
+                        />
+                    )}
+
+                    {/* Problem Statement Selection */}
+                    {participantData && (
+                        <ProblemSelection participantId={participantData.participantId} />
+                    )}
                 </div>
             </div>
 

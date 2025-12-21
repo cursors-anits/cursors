@@ -19,6 +19,10 @@ export interface ScheduleItem {
 export const TeamMemberSchema = z.object({
     fullName: z.string().min(2, 'Name is required'),
     email: z.email('Valid email is required'),
+    college: z.string().min(1, 'College is required'),
+    otherCollege: z.string().optional(),
+    city: z.string().min(1, 'City is required'),
+    otherCity: z.string().optional(),
     department: z.string().min(2, 'Department is required'),
     whatsapp: z.string().regex(/^\d{10}$/, 'Must be 10 digits'),
     year: z.string(),
@@ -26,10 +30,6 @@ export const TeamMemberSchema = z.object({
 });
 
 export const RegistrationSchema = z.object({
-    college: z.string().min(1, 'College is required'),
-    otherCollege: z.string().optional(),
-    city: z.string().min(1, 'City is required'),
-    otherCity: z.string().optional(),
     ticketType: z.enum(['workshop', 'hackathon', 'combo']),
     teamSize: z.number().min(1).max(5),
     members: z.array(TeamMemberSchema),
@@ -82,6 +82,9 @@ export interface Participant {
     paymentScreenshotUrl?: string;
     generatedEmail?: string;
     passkey?: string;
+    eventChecklist?: string[]; // Array of checked checklist item IDs
+    problemAssignmentId?: string; // Reference to ProblemAssignment
+    hasConfirmedProblem?: boolean;
     createdAt: string;
 }
 

@@ -115,6 +115,12 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                     Join the ultimate fusion of <span className="text-white font-medium">Gen AI Workshop</span> and a <span className="text-white font-medium">24-Hour Hackathon</span>. Build, innovate, and vibe with the best minds.
                 </p>
 
+                {/* Cross-College Collaboration Badge */}
+                <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-md">
+                    <span className="text-2xl">🤝</span>
+                    <span className="text-sm font-medium text-emerald-300">Cross-College Teams Welcome!</span>
+                </div>
+
                 {/* CTA Section */}
                 <div className="mt-12 flex flex-col sm:flex-row gap-6 items-center w-full justify-center">
                     <div className="flex flex-col items-center gap-4">
@@ -145,7 +151,7 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                         <div className="text-3xl font-bold text-white font-mono">
                             ₹199 <span className="text-lg text-gray-500 font-normal">/ person</span>
                         </div>
-                        
+
                         {!settings?.registrationClosed && (
                             <Badge className="bg-brand-primary/20 text-brand-primary border-brand-primary/30 animate-pulse">
                                 Group Discounts available!
