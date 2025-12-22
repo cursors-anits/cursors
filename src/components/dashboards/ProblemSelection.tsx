@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -39,10 +39,27 @@ export default function ProblemSelection({ participantId }: ProblemSelectionProp
     const [confirming, setConfirming] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
     const { toast } = useToast();
+    const abortControllerRef = useRef<AbortController | null>(null);
+    const lastFetchedIdRef = useRef<string | null>(null);
 
     const fetchAssignment = async () => {
+        // Prevent duplicate fetches for the same participantId
+        if (lastFetchedIdRef.current === participantId && assignment) {
+            return;
+        }
+
+        // Abort previous request if still pending
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        abortControllerRef.current = new AbortController();
+        lastFetchedIdRef.current = participantId;
+
         try {
-            const response = await fetch(`/api/participants/${participantId}/problem-assignment`);
+            const response = await fetch(`/api/participants/${participantId}/problem-assignment`, {
+                signal: abortControllerRef.current.signal
+            });
             const data = await response.json();
 
             if (response.ok) {
@@ -53,11 +70,15 @@ export default function ProblemSelection({ participantId }: ProblemSelectionProp
             } else {
                 throw new Error(data.error || 'Failed to fetch assignment');
             }
-        } catch (error) {
+        } catch (error: any) {
+            if (error.name === 'AbortError') {
+                console.log('Fetch aborted');
+                return;
+            }
             console.error('Error fetching assignment:', error);
             toast({
                 title: 'Error',
-                description: error instanceof Error ? error.message : 'Failed to load problem assignment',
+                description: error.message || 'Failed to load problem assignment',
                 variant: 'destructive'
             });
         } finally {
@@ -66,7 +87,16 @@ export default function ProblemSelection({ participantId }: ProblemSelectionProp
     };
 
     useEffect(() => {
-        fetchAssignment();
+        if (participantId) {
+            fetchAssignment();
+        }
+
+        // Cleanup: abort on unmount
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
     }, [participantId]);
 
     const handleRefresh = async () => {

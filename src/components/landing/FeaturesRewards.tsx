@@ -60,7 +60,7 @@ const FeaturesRewards: React.FC = () => {
                             <h2 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
                                 Win Big. <br />
                                 <span className="text-transparent bg-clip-text bg-linear-to-r from-brand-primary to-brand-secondary">
-                                    {settings?.prizePool || '₹40,000'} Prize Pool
+                                    {settings?.prizePool || '₹60,000'} Prize Pool
                                 </span>
                             </h2>
                             <p className="text-lg text-gray-300 mb-10 leading-relaxed">

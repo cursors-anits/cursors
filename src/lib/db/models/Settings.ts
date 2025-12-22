@@ -38,7 +38,7 @@ const SettingsSchema = new Schema<ISettings, SettingsModel>(
         },
         prizePool: {
             type: String,
-            default: '₹40,000',
+            default: '₹60,000',
         },
         showInternships: {
             type: Boolean,

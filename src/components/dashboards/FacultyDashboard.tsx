@@ -48,7 +48,15 @@ import {
 import { SettingsTab } from '@/components/dashboards/SettingsTab';
 import { DashboardShell } from '@/components/dashboards/DashboardShell';
 import { NavItem } from '@/components/dashboards/DashboardNav';
-import { Lock } from 'lucide-react';
+import { Lock, Eye, ChevronDown, ChevronRight } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 interface FacultyDashboardProps {
     user: User;
@@ -64,6 +72,15 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
     const pathname = usePathname();
 
     const activeTab = searchParams.get('tab') || 'overview';
+
+    // Participants table state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [typeFilter, setTypeFilter] = useState('all');
+    const [paymentFilter, setPaymentFilter] = useState('all');
+    const [allocationFilter, setAllocationFilter] = useState('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
+    const ITEMS_PER_PAGE = 10;
 
     const handleTabChange = (value: string) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -91,6 +108,35 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
         { label: 'Coordinators', icon: UserCog, value: 'coordinators', group: 'Management' },
         { label: 'Account', icon: Lock, value: 'settings', group: 'Profile' },
     ];
+
+    // Filter participants based on search
+    const filteredParticipants = React.useMemo(() => {
+        return participants.filter(p =>
+            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.teamId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.email.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [participants, searchQuery]);
+
+    // Reset pagination when filters/search change
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, typeFilter, paymentFilter, allocationFilter]);
+
+    // Export CSV utility
+    const exportCSV = (data: unknown[], filename: string) => {
+        if (!data || data.length === 0) return;
+        const headers = Object.keys(data[0] as object);
+        const rows = data.map(obj => headers.map((header) => JSON.stringify((obj as Record<string, unknown>)[header])).join(","));
+        const csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `${filename}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     if (isLoading && participants.length === 0) {
         return (
@@ -197,31 +243,262 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="participants">
+                <TabsContent value="participants" className="mt-8">
                     <Card className="bg-brand-surface border-white/5">
-                        <ScrollArea className="h-[500px]">
-                            <div className="p-6">
+                        <CardContent className="p-4">
+                            {/* Export Button */}
+                            <div className="flex justify-end mb-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => exportCSV(participants, 'participants')}
+                                    className="border-white/10 bg-white/5 hover:bg-white/10"
+                                    size="sm"
+                                >
+                                    <Download className="w-4 h-4 mr-2" /> Export CSV
+                                </Button>
+                            </div>
+
+                            {/* Filters */}
+                            <div className="flex flex-wrap gap-3 mb-4">
+                                <div className="flex-1 min-w-[200px]">
+                                    <Input
+                                        placeholder="🔍 Search by team ID, name, or email..."
+                                        className="max-w-sm bg-brand-dark border-white/10 text-white placeholder:text-gray-500"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                </div>
+                                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                                    <SelectTrigger className="w-[150px] bg-brand-dark border-white/10">
+                                        <SelectValue placeholder="All Types" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-brand-surface border-white/10">
+                                        <SelectItem value="all">All Types</SelectItem>
+                                        <SelectItem value="Workshop">Workshop</SelectItem>
+                                        <SelectItem value="Hackathon">Hackathon</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={allocationFilter} onValueChange={setAllocationFilter}>
+                                    <SelectTrigger className="w-[150px] bg-brand-dark border-white/10">
+                                        <SelectValue placeholder="Allocation" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-brand-surface border-white/10">
+                                        <SelectItem value="all">All</SelectItem>
+                                        <SelectItem value="allocated">Allocated</SelectItem>
+                                        <SelectItem value="not-allocated">Not Allocated</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Team Table */}
+                            <div className="rounded-lg border border-white/5 overflow-x-auto">
                                 <Table>
-                                    <TableHeader>
-                                        <TableRow className="border-white/10 hover:bg-transparent">
-                                            <TableHead className="text-xs text-gray-500 uppercase">Name</TableHead>
-                                            <TableHead className="text-xs text-gray-500 uppercase">College</TableHead>
-                                            <TableHead className="text-xs text-gray-500 uppercase">Team</TableHead>
-                                            <TableHead className="text-xs text-gray-500 uppercase">Status</TableHead>
+                                    <TableHeader className="bg-white/5">
+                                        <TableRow>
+                                            <TableHead className="text-gray-400">Team ID</TableHead>
+                                            <TableHead className="text-gray-400">Team Size</TableHead>
+                                            <TableHead className="text-gray-400">Type</TableHead>
+                                            <TableHead className="text-gray-400">Allocation</TableHead>
+                                            <TableHead className="text-gray-400">Payment</TableHead>
+                                            <TableHead className="text-gray-400 text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {participants.map(p => (
-                                            <TableRow key={p._id} className="border-white/5 hover:bg-white/5 transition-colors">
-                                                <TableCell className="font-medium text-white">{p.name}</TableCell>
-                                                <TableCell className="text-gray-400">{p.college}</TableCell>
-                                                <TableCell className="font-mono text-brand-primary">{p.teamId}</TableCell>
-                                            </TableRow>
-                                        ))}
+                                        {(() => {
+                                            // Apply filters
+                                            let filtered = filteredParticipants;
+
+                                            if (typeFilter !== 'all') {
+                                                filtered = filtered.filter(p => p.type === typeFilter);
+                                            }
+
+                                            if (allocationFilter !== 'all') {
+                                                if (allocationFilter === 'allocated') {
+                                                    filtered = filtered.filter(p => p.assignedWorkshopLab || p.assignedHackathonLab);
+                                                } else {
+                                                    filtered = filtered.filter(p => !p.assignedWorkshopLab && !p.assignedHackathonLab);
+                                                }
+                                            }
+
+                                            // Group by teams
+                                            const teams = Object.entries(
+                                                filtered.reduce((acc, p) => {
+                                                    if (!acc[p.teamId]) acc[p.teamId] = [];
+                                                    acc[p.teamId].push(p);
+                                                    return acc;
+                                                }, {} as Record<string, typeof participants>)
+                                            );
+
+                                            // Paginate teams
+                                            const totalPages = Math.ceil(teams.length / ITEMS_PER_PAGE);
+                                            const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+                                            const endIdx = startIdx + ITEMS_PER_PAGE;
+                                            const paginatedTeams = teams.slice(startIdx, endIdx);
+
+                                            return paginatedTeams.map(([teamId, members]) => {
+                                                const isExpanded = expandedTeams.has(teamId);
+                                                const hasPayment = members.some(m => m.paymentScreenshotUrl);
+                                                const paymentUrl = members.find(m => m.paymentScreenshotUrl)?.paymentScreenshotUrl;
+                                                const hasWorkshop = members.some(m => m.assignedWorkshopLab);
+                                                const hasHackathon = members.some(m => m.assignedHackathonLab);
+                                                const isAllocated = hasWorkshop || hasHackathon;
+
+                                                return (
+                                                    <React.Fragment key={teamId}>
+                                                        <TableRow
+                                                            className="cursor-pointer hover:bg-white/5"
+                                                            onClick={() => {
+                                                                const newExpanded = new Set(expandedTeams);
+                                                                if (isExpanded) {
+                                                                    newExpanded.delete(teamId);
+                                                                } else {
+                                                                    newExpanded.add(teamId);
+                                                                }
+                                                                setExpandedTeams(newExpanded);
+                                                            }}
+                                                        >
+                                                            <TableCell className="font-mono text-xs text-brand-primary">
+                                                                {isExpanded ? <ChevronDown className="w-4 h-4 inline mr-2" /> : <ChevronRight className="w-4 h-4 inline mr-2" />}
+                                                                {teamId}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Badge variant="outline" className="text-[10px]">
+                                                                    {members.length} member{members.length > 1 ? 's' : ''}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Badge variant="outline" className="bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px]">
+                                                                    {members[0].type}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell className="text-xs">
+                                                                {isAllocated ? (
+                                                                    <div className="text-gray-400 space-y-1 text-[10px]">
+                                                                        {members.find(m => m.assignedWorkshopLab)?.assignedWorkshopLab && <div>W: {members.find(m => m.assignedWorkshopLab)?.assignedWorkshopLab}</div>}
+                                                                        {members.find(m => m.assignedHackathonLab)?.assignedHackathonLab && <div>H: {members.find(m => m.assignedHackathonLab)?.assignedHackathonLab}</div>}
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-gray-600 text-[10px]">Not allocated</span>
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                {hasPayment ? (
+                                                                    <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px]">
+                                                                        Paid
+                                                                    </Badge>
+                                                                ) : (
+                                                                    <Badge variant="outline" className="text-gray-500 text-[10px]">
+                                                                        Unpaid
+                                                                    </Badge>
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex gap-1 justify-end items-center" onClick={(e) => e.stopPropagation()}>
+                                                                    {hasPayment && paymentUrl && (
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="ghost"
+                                                                            className="h-7 w-7 p-0 text-green-400"
+                                                                            onClick={() => window.open(paymentUrl, '_blank')}
+                                                                            title="View payment"
+                                                                        >
+                                                                            <Eye className="w-3 h-3" />
+                                                                        </Button>
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                        {isExpanded && (
+                                                            <TableRow className="bg-brand-dark/30">
+                                                                <TableCell colSpan={6} className="p-4">
+                                                                    <div className="space-y-3">
+                                                                        {members.map((member) => (
+                                                                            <div key={member._id} className="bg-brand-dark p-4 rounded-lg border border-white/5">
+                                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+                                                                                    <div><span className="text-gray-500">Name:</span> <span className="text-white ml-1">{member.name}</span></div>
+                                                                                    <div className="truncate"><span className="text-gray-500">Email:</span> <span className="text-gray-300 ml-1">{member.email}</span></div>
+                                                                                    <div className="truncate"><span className="text-gray-500">College:</span> <span className="text-gray-300 ml-1" title={member.college}>{member.college}</span></div>
+                                                                                    {member.assignedWorkshopLab && <div><span className="text-gray-500">Workshop Lab:</span> <span className="text-brand-primary ml-1">{member.assignedWorkshopLab}</span></div>}
+                                                                                    {member.assignedHackathonLab && <div><span className="text-gray-500">Hackathon Lab:</span> <span className="text-brand-primary ml-1">{member.assignedHackathonLab}</span></div>}
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        )}
+                                                    </React.Fragment>
+                                                );
+                                            });
+                                        })()}
                                     </TableBody>
                                 </Table>
                             </div>
-                        </ScrollArea>
+
+                            {/* Pagination Controls */}
+                            {(() => {
+                                let filtered = filteredParticipants;
+                                if (typeFilter !== 'all') {
+                                    filtered = filtered.filter(p => p.type === typeFilter);
+                                }
+                                if (paymentFilter !== 'all') {
+                                    if (paymentFilter === 'paid') {
+                                        filtered = filtered.filter(p => p.paymentScreenshotUrl);
+                                    } else {
+                                        filtered = filtered.filter(p => !p.paymentScreenshotUrl);
+                                    }
+                                }
+                                const teams = Object.keys(
+                                    filtered.reduce((acc, p) => {
+                                        if (!acc[p.teamId]) acc[p.teamId] = [];
+                                        acc[p.teamId].push(p);
+                                        return acc;
+                                    }, {} as Record<string, typeof participants>)
+                                );
+                                const totalPages = Math.ceil(teams.length / ITEMS_PER_PAGE);
+
+                                return totalPages > 1 ? (
+                                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
+                                        <p className="text-sm text-gray-400">
+                                            Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, teams.length)} of {teams.length} teams
+                                        </p>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                                disabled={currentPage === 1}
+                                                className="border-white/10"
+                                            >
+                                                Previous
+                                            </Button>
+                                            <div className="flex items-center gap-1">
+                                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                                                    <Button
+                                                        key={page}
+                                                        variant={page === currentPage ? "default" : "outline"}
+                                                        size="sm"
+                                                        onClick={() => setCurrentPage(page)}
+                                                        className={page === currentPage ? "bg-brand-primary text-brand-dark" : "border-white/10"}
+                                                    >
+                                                        {page}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                                disabled={currentPage === totalPages}
+                                                className="border-white/10"
+                                            >
+                                                Next
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : null;
+                            })()}
+                        </CardContent>
                     </Card>
                 </TabsContent>
 

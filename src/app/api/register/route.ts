@@ -117,7 +117,8 @@ export async function POST(request: NextRequest) {
             teamId,
             name: m.fullName,
             email: m.email,
-            college: college || 'Unknown',
+            college: m.college || 'Unknown', // Use member's college, not team-level
+            city: m.city || '',
             department: m.department,
             whatsapp: m.whatsapp,
             year: m.year,
@@ -144,16 +145,18 @@ export async function POST(request: NextRequest) {
         // Send Email to all members PERSONAL emails
         const emailMembers = members.map((m: any) => ({
             name: m.fullName,
-            college: m.college || college,
+            college: m.college || 'Unknown',
             department: m.department,
             year: m.year,
             passkey
         }));
 
         const personalEmails = members.map((m: any) => m.email);
+        // Use first member's college for email template
+        const collegeForEmail = members[0]?.college || 'Unknown';
 
         const results = await Promise.allSettled(personalEmails.map((email: string) =>
-            sendEventPassEmail(email, teamId, emailMembers, college, ticketType as any, teamEmail, passkey)
+            sendEventPassEmail(email, teamId, emailMembers, collegeForEmail, ticketType as any, teamEmail, passkey)
         ));
 
         const wasAnyEmailScheduled = results.some((r: any) => r.value?.scheduled);

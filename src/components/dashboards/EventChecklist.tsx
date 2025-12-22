@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -27,12 +27,39 @@ interface EventChecklistProps {
 export default function EventChecklist({ participantId, initialCheckedItems = [] }: EventChecklistProps) {
     const [checkedItems, setCheckedItems] = useState<string[]>(initialCheckedItems);
     const [isSaving, setIsSaving] = useState(false);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     const progress = (checkedItems.length / CHECKLIST_ITEMS.length) * 100;
     const mandatoryItems = CHECKLIST_ITEMS.filter(item => item.category === 'Mandatory');
     const mandatoryChecked = mandatoryItems.filter(item => checkedItems.includes(item.id)).length;
 
-    const handleCheck = async (itemId: string, checked: boolean) => {
+    // Debounced save function
+    const saveChecklist = useCallback(async (items: string[]) => {
+        // Abort previous request
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        abortControllerRef.current = new AbortController();
+
+        try {
+            const response = await fetch(`/api/participants/${participantId}/checklist`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ checklist: items }),
+                signal: abortControllerRef.current.signal
+            });
+
+            if (!response.ok) throw new Error('Failed to save checklist');
+        } catch (error: any) {
+            if (error.name === 'AbortError') return;
+            console.error('Error saving checklist:', error);
+            toast.error('Failed to save. Please try again.');
+        }
+    }, [participantId]);
+
+    const handleCheck = (itemId: string, checked: boolean) => {
         const newCheckedItems = checked
             ? [...checkedItems, itemId]
             : checkedItems.filter(id => id !== itemId);
@@ -40,26 +67,30 @@ export default function EventChecklist({ participantId, initialCheckedItems = []
         setCheckedItems(newCheckedItems);
         setIsSaving(true);
 
-        try {
-            const response = await fetch(`/api/participants/${participantId}/checklist`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ checklist: newCheckedItems })
-            });
-
-            if (!response.ok) throw new Error('Failed to save checklist');
-
-            toast.success(checked ? 'Item checked!' : 'Item unchecked', {
-                duration: 1000
-            });
-        } catch (error) {
-            console.error('Error saving checklist:', error);
-            setCheckedItems(checkedItems); // Revert on error
-            toast.error('Failed to save. Please try again.');
-        } finally {
-            setIsSaving(false);
+        // Clear previous timeout
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
         }
+
+        // Debounce save by 500ms
+        saveTimeoutRef.current = setTimeout(async () => {
+            await saveChecklist(newCheckedItems);
+            setIsSaving(false);
+            toast.success(checked ? 'Item checked!' : 'Item unchecked', { duration: 1000 });
+        }, 500);
     };
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+        };
+    }, []);
 
     const groupedItems = {
         Mandatory: CHECKLIST_ITEMS.filter(item => item.category === 'Mandatory'),
@@ -77,8 +108,8 @@ export default function EventChecklist({ participantId, initialCheckedItems = []
                             <h3 className="text-lg font-bold text-white">Event Preparation Checklist</h3>
                             <Badge
                                 className={`${progress === 100
-                                        ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                                        : 'bg-brand-primary/20 text-brand-primary border-brand-primary/30'
+                                    ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                    : 'bg-brand-primary/20 text-brand-primary border-brand-primary/30'
                                     }`}
                             >
                                 {checkedItems.length}/{CHECKLIST_ITEMS.length} Complete
@@ -97,8 +128,8 @@ export default function EventChecklist({ participantId, initialCheckedItems = []
                         {Object.entries(groupedItems).map(([category, items]) => (
                             <div key={category}>
                                 <h4 className={`text-sm font-semibold mb-3 ${category === 'Mandatory' ? 'text-red-400' :
-                                        category === 'Recommended' ? 'text-brand-primary' :
-                                            'text-blue-400'
+                                    category === 'Recommended' ? 'text-brand-primary' :
+                                        'text-blue-400'
                                     }`}>
                                     {category}
                                 </h4>
@@ -111,8 +142,8 @@ export default function EventChecklist({ participantId, initialCheckedItems = []
                                             <div
                                                 key={item.id}
                                                 className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${isChecked
-                                                        ? 'bg-green-500/10 border-green-500/30'
-                                                        : 'bg-white/5 border-white/10'
+                                                    ? 'bg-green-500/10 border-green-500/30'
+                                                    : 'bg-white/5 border-white/10'
                                                     }`}
                                             >
                                                 <Checkbox

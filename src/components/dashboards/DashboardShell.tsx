@@ -65,6 +65,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
                                             alt="Cursors Logo"
                                             width={32}
                                             height={32}
+                                            loading='eager'
                                             className="object-cover"
                                         />
                                         <div className="flex flex-col">

@@ -180,13 +180,13 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
         );
     }
 
-    const toggleMember = (id: string) => {
+    const toggleMember = useCallback((id: string) => {
         setSelectedMembers(prev =>
             prev.includes(id) ? prev.filter(mid => mid !== id) : [...prev, id]
         );
-    };
+    }, []);
 
-    const handleAction = async (all: boolean) => {
+    const handleAction = useCallback(async (all: boolean) => {
         if (!scannedTeam) return;
 
         const targets = all ? scannedTeam.members : scannedTeam.members.filter(m => selectedMembers.includes(m._id));
@@ -224,7 +224,7 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
         setScanInput('');
         setSelectedMembers([]);
         setIsAttendanceModalOpen(false);
-    };
+    }, [scannedTeam, mode, workshopDay, selectedMembers, addLog]);
 
     return (
         <DashboardShell

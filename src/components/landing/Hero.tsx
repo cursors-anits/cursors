@@ -179,7 +179,7 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                         <div className="h-10 flex items-center justify-center mb-1">
                             <span className="text-2xl font-bold text-white font-mono group-hover:text-brand-primary transition-colors">
                                 {(() => {
-                                    if (!settings?.prizePool) return '40K+';
+                                    if (!settings?.prizePool) return '60K+';
                                     const num = parseInt(settings.prizePool.replace(/[^0-9]/g, ''), 10);
                                     return !isNaN(num) && num >= 1000 ? `${Math.floor(num / 1000)}K+` : settings.prizePool;
                                 })()}

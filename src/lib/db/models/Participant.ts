@@ -23,6 +23,19 @@ export interface IParticipant {
     eventChecklist?: string[];
     problemAssignmentId?: mongoose.Types.ObjectId;
     hasConfirmedProblem?: boolean;
+
+    // Attendance Tracking
+    workshopDay1?: Date;
+    workshopDay2?: Date;
+    workshopDay3?: Date;
+    hackathonAttendance?: Date;
+    entryGateTimestamp?: Date;
+    exitGateTimestamp?: Date;
+    snacksDay1?: Date;
+    snacksDay2?: Date;
+    snacksDay3?: Date;
+    snacksHackathon?: Date;
+
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -104,6 +117,38 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
             type: String,
             required: true,
             index: true,
+        },
+
+        // Attendance Tracking Fields
+        workshopDay1: {
+            type: Date,
+        },
+        workshopDay2: {
+            type: Date,
+        },
+        workshopDay3: {
+            type: Date,
+        },
+        hackathonAttendance: {
+            type: Date,
+        },
+        entryGateTimestamp: {
+            type: Date,
+        },
+        exitGateTimestamp: {
+            type: Date,
+        },
+        snacksDay1: {
+            type: Date,
+        },
+        snacksDay2: {
+            type: Date,
+        },
+        snacksDay3: {
+            type: Date,
+        },
+        snacksHackathon: {
+            type: Date,
         },
     },
     {
