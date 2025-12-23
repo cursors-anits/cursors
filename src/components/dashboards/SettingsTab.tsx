@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Lock, Mail, UserCircle, Loader2, ShieldCheck } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Lock, Mail, UserCircle, Loader2, ShieldCheck, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { useData } from '@/lib/context/DataContext';
 
 interface SettingsTabProps {
     user: any;
@@ -12,6 +14,7 @@ interface SettingsTabProps {
 }
 
 export const SettingsTab: React.FC<SettingsTabProps> = ({ user, showPasswordSection = true }) => {
+    const { settings, updateSettings } = useData();
     const [isLoading, setIsLoading] = useState(false);
     const [passwordData, setPasswordData] = useState({
         oldPassword: '',
@@ -102,6 +105,8 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ user, showPasswordSect
                     </div>
                 </CardContent>
             </Card>
+
+
 
             {showPasswordSection && (
                 <Card className="bg-brand-surface border-white/5 overflow-hidden">

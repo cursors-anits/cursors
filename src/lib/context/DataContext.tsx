@@ -31,7 +31,7 @@ interface DataContextType {
     logout: () => void;
 
     // API Methods
-    fetchParticipants: () => Promise<void>;
+    fetchParticipants: (isBackground?: boolean) => Promise<void>;
     fetchCoordinators: () => Promise<void>;
     fetchLogs: () => Promise<void>;
 

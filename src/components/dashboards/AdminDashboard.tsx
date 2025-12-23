@@ -21,7 +21,8 @@ import {
     Eye,
     Loader2,
     LayoutGrid,
-    CheckCircle2
+    CheckCircle2,
+    Database
 } from 'lucide-react';
 import {
     Tooltip,
@@ -32,6 +33,7 @@ import {
     Cell
 } from 'recharts';
 import { Lab, SupportRequest, User } from '@/types';
+import DataManagementTab from '../admin/DataManagementTab';
 import { useData } from '@/lib/context/DataContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,6 +88,8 @@ import { EditTeamModal } from '@/components/modals/EditTeamModal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import ActivityLogTab from '@/components/admin/ActivityLogTab';
 import LabAllocationTab from '@/components/admin/LabAllocationTab';
+import SystemConfigTab from '@/components/admin/SystemConfigTab';
+import PendingRequestsTab from '@/components/admin/PendingRequestsTab';
 import { AnalyticsTab } from '@/components/admin/AnalyticsTab';
 import {
     DropdownMenu,
@@ -786,6 +790,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
 
     const navItems: NavItem[] = [
         { label: 'Participants', icon: Users, value: 'participants', group: 'Users' },
+        { label: 'Pending Approvals', icon: CheckCircle2, value: 'approvals', group: 'Users' },
         { label: 'Coordinators', icon: UserCog, value: 'coordinators', group: 'Users' },
         { label: 'Lab Management', icon: Zap, value: 'lab', group: 'Operations' },
         { label: 'Visual Allocation', icon: LayoutGrid, value: 'allocation', group: 'Operations' },
@@ -794,6 +799,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         { label: 'Analytics', icon: BarChart3, value: 'analytics', group: 'Monitoring' },
         { label: 'System Logs', icon: FileText, value: 'logs', group: 'Monitoring' },
         { label: 'System Config', icon: Globe, value: 'system', group: 'Settings' },
+        { label: 'Data Management', icon: Database, value: 'data', group: 'Settings' },
         { label: 'My Account', icon: Lock, value: 'settings', group: 'Settings' },
     ];
 
@@ -833,7 +839,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                 <TabsContent value="participants" className="mt-6 space-y-4">
                     <div className="flex flex-wrap gap-2 items-center justify-between">
                         <div className="flex gap-2">
-                            <Button onClick={fetchParticipants} variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10">
+                            <Button onClick={() => fetchParticipants(false)} variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10">
                                 <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
                             </Button>
                             <Button onClick={() => setIsAddParticipantOpen(true)} className="bg-brand-primary text-brand-dark hover:bg-white">
@@ -1391,226 +1397,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                     />
                 </TabsContent>
 
-                <TabsContent value="system" className="mt-6 space-y-6">
-                    <Card className="bg-brand-surface border-white/5 p-6">
-                        <CardHeader className="px-0 pt-0">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
-                                    <Globe className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <CardTitle className="text-lg">Event Configuration</CardTitle>
-                                    <CardDescription>Main event timing and details</CardDescription>
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="px-0 pt-6">
-                            <div className="space-y-4">
-                                <div className="flex flex-col gap-2">
-                                    <Label className="text-sm text-gray-400">Event Start Date</Label>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            type="datetime-local"
-                                            className="bg-brand-dark border-white/10"
-                                            defaultValue={settings?.eventDate ? new Date(settings.eventDate).toISOString().slice(0, 16) : ''}
-                                            onBlur={(e) => updateSettings({ eventDate: new Date(e.target.value) })}
-                                        />
-                                    </div>
-                                    <p className="text-[10px] text-gray-500 italic">This affects the landing page countdown.</p>
-                                </div>
+                <TabsContent value="system" className="mt-6">
+                    <SystemConfigTab />
+                </TabsContent>
 
-                                <div className="flex flex-col gap-2">
-                                    <Label className="text-sm text-gray-400">Total Prize Pool</Label>
-                                    <Input
-                                        defaultValue={settings?.prizePool}
-                                        onBlur={(e) => updateSettings({ prizePool: e.target.value })}
-                                        className="bg-brand-dark border-white/10"
-                                        placeholder="₹60,000"
-                                    />
-                                    <p className="text-[10px] text-gray-500 italic">Adjust this to update the prize money shown on the landing page.</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <Card className="bg-brand-surface border-white/5 p-6">
-                            <CardHeader className="px-0 pt-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
-                                        <AlertTriangle className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-lg">Event Registration</CardTitle>
-                                        <CardDescription>Control new participant signups</CardDescription>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="px-0 pt-6">
-                                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                                    <div>
-                                        <p className="font-medium">Registration Status</p>
-                                        <p className="text-xs text-gray-400">Currently {settings?.registrationClosed ? 'Closed' : 'Open'}</p>
-                                    </div>
-                                    <Button
-                                        onClick={() => updateSettings({ registrationClosed: !settings?.registrationClosed })}
-                                        variant={settings?.registrationClosed ? "destructive" : "outline"}
-                                        className={!settings?.registrationClosed ? "border-green-500/20 text-green-400" : ""}
-                                    >
-                                        {settings?.registrationClosed ? 'Open Registration' : 'Close Registration'}
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="bg-brand-surface border-white/5 p-6">
-                            <CardHeader className="px-0 pt-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-red-500/10 text-red-400">
-                                        <Lock className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-lg">Maintenance Mode</CardTitle>
-                                        <CardDescription>Restrict all public access</CardDescription>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="px-0 pt-6">
-                                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                                    <div>
-                                        <p className="font-medium">System State</p>
-                                        <p className="text-xs text-gray-400">Currently {settings?.maintenanceMode ? 'Active' : 'Disabled'}</p>
-                                    </div>
-                                    <Button
-                                        onClick={() => updateSettings({ maintenanceMode: !settings?.maintenanceMode })}
-                                        variant={settings?.maintenanceMode ? "destructive" : "outline"}
-                                        className={!settings?.maintenanceMode ? "border-blue-500/20 text-blue-400" : ""}
-                                    >
-                                        {settings?.maintenanceMode ? 'Disable Maintenance' : 'Enable Maintenance'}
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="bg-brand-surface border-white/5 p-6">
-                            <CardHeader className="px-0 pt-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
-                                        <Globe className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-lg">Internships</CardTitle>
-                                        <CardDescription>Show internship opportunities</CardDescription>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="px-0 pt-6">
-                                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                                    <div>
-                                        <p className="font-medium">Feature Visibility</p>
-                                        <p className="text-xs text-gray-400">Currently {settings?.showInternships ? 'Visible' : 'Hidden'}</p>
-                                    </div>
-                                    <Button
-                                        onClick={() => updateSettings({ showInternships: !settings?.showInternships })}
-                                        variant={settings?.showInternships ? "destructive" : "outline"}
-                                        className={!settings?.showInternships ? "border-brand-primary/20 text-brand-primary" : ""}
-                                    >
-                                        {settings?.showInternships ? 'Hide Feature' : 'Show Feature'}
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                        <Card className="bg-brand-surface border-white/5 p-6 md:col-span-2">
-                            <CardHeader className="px-0 pt-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-green-500/10 text-green-400">
-                                        <Zap className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-lg">Payment Configuration</CardTitle>
-                                        <CardDescription>Update UPI ID and QR Code for registration payments</CardDescription>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="px-0 pt-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label className="text-xs text-gray-400">Merchant UPI ID</Label>
-                                        <Input
-                                            defaultValue={settings?.upiId}
-                                            onBlur={(e) => updateSettings({ upiId: e.target.value })}
-                                            className="bg-brand-dark border-white/10"
-                                            placeholder="example@upi"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-xs text-gray-400">Payment QR Code URL (relative or absolute)</Label>
-                                        <Input
-                                            defaultValue={settings?.qrImageUrl}
-                                            onBlur={(e) => updateSettings({ qrImageUrl: e.target.value })}
-                                            className="bg-brand-dark border-white/10"
-                                            placeholder="/qr-payment.png"
-                                        />
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="bg-brand-surface border-white/5 p-6 md:col-span-2">
-                            <CardHeader className="px-0 pt-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-lg bg-orange-500/10 text-orange-400">
-                                        <Mail className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-lg">System Actions</CardTitle>
-                                        <CardDescription>Manual controls for background processes</CardDescription>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="px-0 pt-6 space-y-4">
-                                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                                    <div className="pr-4">
-                                        <p className="text-sm font-medium">Email Queue</p>
-                                        <p className="text-[10px] text-gray-400">Process any deferred emails that hit rate limits</p>
-                                    </div>
-                                    <Button
-                                        onClick={processEmailQueue}
-                                        variant="outline"
-                                        size="sm"
-                                        className="border-orange-500/20 text-orange-400 hover:bg-orange-500/10 shrink-0"
-                                    >
-                                        Process Now
-                                    </Button>
-                                </div>
-                                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                                    <div className="pr-4">
-                                        <p className="text-sm font-medium">Refresh Global Data</p>
-                                        <p className="text-[10px] text-gray-400">Force update all dashboard statistics</p>
-                                    </div>
-                                    <Button
-                                        onClick={handleRefresh}
-                                        variant="outline"
-                                        size="sm"
-                                        className="border-white/10 text-white shrink-0"
-                                    >
-                                        Refresh Data
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                <TabsContent value="data" className="mt-6">
+                    <DataManagementTab />
                 </TabsContent>
 
                 <TabsContent value="settings" className="mt-6">
                     <SettingsTab user={user} />
-                </TabsContent>
-
-                <TabsContent value="logs" className="mt-6">
-                    <ActivityLogTab logs={logs} />
                 </TabsContent>
 
                 <TabsContent value="allocation" className="mt-6">
@@ -1620,6 +1416,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                         onAllocate={handleDragAllocate}
                     />
                 </TabsContent>
+
+                <TabsContent value="approvals" className="mt-6">
+                    <PendingRequestsTab />
+                </TabsContent>
+
                 <TabsContent value="coordinators" className="mt-6 space-y-4">
                     <div className="flex gap-2">
                         <Button onClick={fetchCoordinators} variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10">
@@ -1636,7 +1437,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                         placeholder="Search coordinators by name..."
                     />
                 </TabsContent>
-            </Tabs >
+            </Tabs>
 
             {/* Delete Confirmation Modal */}
             < Dialog open={!!itemToDelete} onOpenChange={(open) => !open && setItemToDelete(null)}>

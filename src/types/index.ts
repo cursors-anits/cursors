@@ -70,6 +70,16 @@ export interface Participant {
     name: string;
     email: string;
     college: string;
+    city?: string;
+    members?: {
+        name: string;
+        email: string;
+        college: string;
+        city?: string;
+        department: string;
+        whatsapp: string;
+        year: string;
+    }[];
     department?: string;
     whatsapp?: string;
     year?: number;
@@ -85,6 +95,7 @@ export interface Participant {
     eventChecklist?: string[]; // Array of checked checklist item IDs
     problemAssignmentId?: string; // Reference to ProblemAssignment
     hasConfirmedProblem?: boolean;
+    status?: 'pending' | 'approved' | 'rejected';
     createdAt: string;
 }
 
@@ -134,4 +145,17 @@ export interface Settings {
     qrImageUrl: string;
     prizePool: string;
     showInternships: boolean;
+    fomoConfig?: {
+        workshopCount: number;
+        hackathonCount: number;
+        showFakeCounts: boolean;
+    };
+    bufferConfig?: {
+        workshopLimit: number;
+        hackathonLimit: number;
+        workshopBuffer: number;
+        hackathonBuffer: number;
+    };
+    colleges?: string[];
+    cities?: string[];
 }

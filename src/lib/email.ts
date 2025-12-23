@@ -81,7 +81,7 @@ function getTemplate(
     `).join('');
 
     const loginUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const whatsappLink = process.env.WHATSAPP_GROUP_LINK || '#';
+    // const whatsappLink = process.env.WHATSAPP_GROUP_LINK || '#'; // REMOVED: Using specific links inline
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${teamId}&color=${theme.primary.replace('#', '')}&bgcolor=1a1a1a&margin=10`;
 
     return `
@@ -177,7 +177,14 @@ function getTemplate(
             <!-- Actions -->
             <div style="text-align: center; margin-top: 30px;">
                 <a href="${loginUrl}" style="display: inline-block; background-color: ${theme.primary}; color: #fff; text-decoration: none; font-weight: bold; padding: 14px 30px; border-radius: 30px; margin: 0 5px 15px; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">LOGIN TO DASHBOARD</a>
-                <a href="${whatsappLink}" style="display: inline-block; background-color: #25D366; color: #fff; text-decoration: none; font-weight: bold; padding: 14px 30px; border-radius: 30px; margin: 0 5px 15px; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">JOIN WHATSAPP GROUP</a>
+                
+                ${(type === 'workshop' || type === 'combo') ? `
+                <a href="${process.env.WHATSAPP_WORKSHOP_LINK || '#'}" style="display: inline-block; background-color: #25D366; color: #fff; text-decoration: none; font-weight: bold; padding: 14px 30px; border-radius: 30px; margin: 0 5px 15px; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">JOIN WORKSHOP GROUP</a>
+                ` : ''}
+
+                ${(type === 'hackathon' || type === 'combo') ? `
+                <a href="${process.env.WHATSAPP_HACKATHON_LINK || '#'}" style="display: inline-block; background-color: #25D366; color: #fff; text-decoration: none; font-weight: bold; padding: 14px 30px; border-radius: 30px; margin: 0 5px 15px; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">JOIN HACKATHON GROUP</a>
+                ` : ''}
             </div>
         </div>
 

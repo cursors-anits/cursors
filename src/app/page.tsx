@@ -18,6 +18,8 @@ import { useData } from '@/lib/context/DataContext';
 import { User } from '@/types';
 import { Settings as SettingsIcon, AlertCircle } from 'lucide-react';
 
+import LiveSpotsBanner from '@/components/landing/LiveSpotsBanner';
+
 export default function Home() {
   const { currentUser, setCurrentUser, settings } = useData();
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);

@@ -21,7 +21,8 @@ import {
     Zap,
     LayoutDashboard,
     ShieldCheck,
-    AlertCircle
+    AlertCircle,
+    AlertTriangle
 } from 'lucide-react';
 import {
     Select,
@@ -30,6 +31,7 @@ import {
     SelectTrigger,
     SelectValue
 } from '@/components/ui/select';
+import { CreatableCombobox } from '@/components/ui/creatable-combobox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -44,41 +46,6 @@ interface RegistrationModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
-
-const COLLEGES = [
-    "Aditya Institute of Technology and Management [AITAM]",
-    "Andhra University College of Engineering [AUCE]",
-    "Andhra University College of Engineering for Women [AUCEW]",
-    "Anil Neerukonda Institute of Technology and Sciences [ANITS]",
-    "Avanthi Institute Of Engineering and Technology [AIET]",
-    "Baba Institute of Technology and Sciences [BITS]",
-    "Behara College of Engineering and Technology [BCET]",
-    "Centurion University of Technology and Management [CUTM]",
-    "Chaitanya Engineering College [CEC]",
-    "Dr. Lankapalli Bullayya College [LBCE]",
-    "Gandhi Institute of Technology and Management [GITAM]",
-    "Gayatri Vidya Parishad College for Degree & P.G. Courses [GVPCDPGC]",
-    "Gayatri Vidya Parishad College of Engineering [GVPCE]",
-    "Gayatri Vidya Parishad College of Engineering Women [GVPCEW]",
-    "GMR Institute of Technology [GMRIT]",
-    "Jawaharlal Nehru Technological University - Gurajada [JNTU-GV]",
-    "Lendi Institute of Engineering & Technology [LIET]",
-    "Maharaj Vijayaram Gajapathi Raj College of Engineering [MVGR]",
-    "Nadimpalli Satyanarayana Raju Institute of Technology [NSRIT]",
-    "N S Raju Institute of Engineering and Technology [NSRIET]",
-    "Pydah College of Engineering and Technology [PCET]",
-    "Raghu Engineering College (Autonomous) [REC]",
-    "Raghu Institute of Technology [RIT]",
-    "Sanketika Vidya Parishad Engineering College [SVPEC]",
-    "Vignan's Institute of Engineering for Women [VIEW]",
-    "Vignan's Institute of Information Technology [VIIT]",
-    "Visakha Institute of Engineering and Technology [VIET]",
-    "Other"
-];
-
-const CITIES = [
-    "Visakhapatnam", "Vizianagaram", "Srikakulam", "Tekkali", "Bhimavaram", "Rajahmundry", "Other"
-];
 
 const PRICES = {
     workshop: 199,
@@ -95,7 +62,50 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [sameAsLead, setSameAsLead] = useState<Record<number, boolean>>({});
     const router = useRouter();
-    const { setCurrentUser, settings } = useData();
+    const { setCurrentUser, settings, participants, updateSettings } = useData();
+
+    // Data Management (Local only for registration session)
+    const [localColleges, setLocalColleges] = useState<string[]>([]);
+    const [localCities, setLocalCities] = useState<string[]>([]);
+
+    useEffect(() => {
+        if (settings?.colleges) setLocalColleges(settings.colleges);
+    }, [settings?.colleges]);
+
+    useEffect(() => {
+        if (settings?.cities) setLocalCities(settings.cities);
+    }, [settings?.cities]);
+
+    const handleCreateCollege = (newCollege: string) => {
+        const normalizedNew = newCollege.trim();
+        if (!normalizedNew) return;
+
+        // Update local list for this session so other members can pick it
+        setLocalColleges(prev => {
+            if (prev.some(c => c.toLowerCase() === normalizedNew.toLowerCase())) return prev;
+            return [...prev, normalizedNew].sort((a, b) => a.localeCompare(b));
+        });
+        // We do NOT update global settings here to prevent 401 errors for guests
+    };
+
+    const handleCreateCity = (newCity: string) => {
+        const normalizedNew = newCity.trim();
+        if (!normalizedNew) return;
+
+        setLocalCities(prev => {
+            if (prev.some(c => c.toLowerCase() === normalizedNew.toLowerCase())) return prev;
+            return [...prev, normalizedNew].sort((a, b) => a.localeCompare(b));
+        });
+    };
+
+    // CRM/FOMO Logic
+    const [isBufferMode, setIsBufferMode] = useState(false);
+
+    // Calculate counts
+    const workshopCount = participants?.filter(p => p.type === 'Workshop' || p.type === 'Combo').length || 0;
+    const hackathonCount = participants?.filter(p => p.type === 'Hackathon' || p.type === 'Combo').length || 0;
+
+
 
     const {
         control,
@@ -106,7 +116,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
         formState: { errors, isSubmitting },
         reset
     } = useForm<IFormData>({
-        resolver: zodResolver(RegistrationSchema),
+        resolver: zodResolver(RegistrationSchema), // We will bypass for buffer mode in step validation
         defaultValues: {
             ticketType: 'combo',
             teamSize: 1,
@@ -122,6 +132,27 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
 
     const teamSize = watch('teamSize');
     const ticketType = watch('ticketType');
+
+    useEffect(() => {
+        if (!settings?.bufferConfig) return;
+        const limit = ticketType === 'hackathon' ? settings.bufferConfig.hackathonLimit : settings.bufferConfig.workshopLimit;
+        const current = ticketType === 'hackathon' ? hackathonCount : workshopCount;
+        if (current >= limit) setIsBufferMode(true);
+        else setIsBufferMode(false);
+    }, [ticketType, settings, participants, hackathonCount, workshopCount]);
+
+    useEffect(() => {
+        if (!settings?.bufferConfig) return;
+
+        const limit = ticketType === 'hackathon' ? settings.bufferConfig.hackathonLimit : settings.bufferConfig.workshopLimit;
+        const current = ticketType === 'hackathon' ? hackathonCount : workshopCount;
+
+        if (current >= limit) {
+            setIsBufferMode(true);
+        } else {
+            setIsBufferMode(false);
+        }
+    }, [ticketType, settings, participants, hackathonCount, workshopCount]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -198,18 +229,34 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
         if (step === 3) fieldsToValidate = ['members'];
 
         const isValid = await trigger(fieldsToValidate);
-        if (isValid) setStep(step + 1);
+        if (isValid) {
+            if (isBufferMode && step === 3) {
+                // Skip payment step for buffer mode
+                // We need to trigger submission here or set a flag? 
+                // The button in JSX handles submission.
+                // We'll update the button logic to call onSubmit if isBufferMode && step === 3.
+                return;
+            }
+            setStep(step + 1);
+        }
         else toast.error('Please correct the errors before proceeding');
     };
 
     const onSubmit = async (data: IFormData) => {
         try {
             const formData = new FormData();
-            // Remove heavy base64 from JSON data to maximize speed
-            const { screenshot, ...rest } = data;
-            formData.append('data', JSON.stringify(rest));
 
-            if (selectedFile) {
+            // Handle Buffer Mode - Bypass payment validation details
+            const finalData = { ...data };
+            if (isBufferMode) {
+                finalData.transactionId = "BUFFER-REQUEST";
+                finalData.screenshot = "BUFFER-REQUEST";
+            }
+
+            const { screenshot, ...rest } = finalData;
+            formData.append('data', JSON.stringify({ ...rest, status: isBufferMode ? 'pending' : 'approved' }));
+
+            if (selectedFile && !isBufferMode) {
                 formData.append('screenshot', selectedFile);
             }
 
@@ -338,6 +385,14 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                             <div className="space-y-8">
                                 {step === 1 && (
                                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                                        {isBufferMode && (
+                                            <Alert className="mb-6 bg-orange-500/10 border-orange-500/20 text-orange-400">
+                                                <AlertTriangle className="h-4 w-4" />
+                                                <AlertDescription className="text-xs">
+                                                    <strong>High Demand!</strong> We have reached our soft limit. You are submitting a <span className="underline">request for a spot</span>. Approvals are granted on a first-come, first-served basis.
+                                                </AlertDescription>
+                                            </Alert>
+                                        )}
                                         <div className="bg-linear-to-br from-brand-primary/20 to-brand-secondary/20 border border-brand-primary/30 p-6 rounded-2xl">
                                             <div className="flex items-center gap-3 mb-4">
                                                 <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center text-brand-dark">
@@ -520,14 +575,15 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                             name={`members.${i}.college`}
                                                             control={control}
                                                             render={({ field }) => (
-                                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                                    <SelectTrigger className={`bg-brand-dark border-gray-800 ${errors.members?.[i]?.college ? 'border-red-500' : ''}`}>
-                                                                        <SelectValue placeholder="College / University" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {COLLEGES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                                                    </SelectContent>
-                                                                </Select>
+                                                                <CreatableCombobox
+                                                                    options={localColleges}
+                                                                    value={field.value}
+                                                                    onChange={field.onChange}
+                                                                    onCreate={handleCreateCollege}
+                                                                    placeholder="Select or type College..."
+                                                                    emptyText="No college found."
+                                                                    className={errors.members?.[i]?.college ? 'border-red-500' : ''}
+                                                                />
                                                             )}
                                                         />
                                                         {errors.members?.[i]?.college && <p className="text-xs text-red-400 mt-1">{errors.members?.[i]?.college?.message}</p>}
@@ -537,14 +593,15 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                             name={`members.${i}.city`}
                                                             control={control}
                                                             render={({ field }) => (
-                                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                                    <SelectTrigger className={`bg-brand-dark border-gray-800 ${errors.members?.[i]?.city ? 'border-red-500' : ''}`}>
-                                                                        <SelectValue placeholder="City" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {CITIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                                                    </SelectContent>
-                                                                </Select>
+                                                                <CreatableCombobox
+                                                                    options={localCities}
+                                                                    value={field.value}
+                                                                    onChange={field.onChange}
+                                                                    onCreate={handleCreateCity}
+                                                                    placeholder="Select or type City..."
+                                                                    emptyText="No city found."
+                                                                    className={errors.members?.[i]?.city ? 'border-red-500' : ''}
+                                                                />
                                                             )}
                                                         />
                                                         {errors.members?.[i]?.city && <p className="text-xs text-red-400 mt-1">{errors.members?.[i]?.city?.message}</p>}
@@ -699,7 +756,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                             )}
 
                             <Button
-                                onClick={(e) => step === 4 ? handleSubmit(onSubmit)(e) : nextStep()}
+                                onClick={(e) => (step === 4 || (isBufferMode && step === 3)) ? handleSubmit(onSubmit)(e) : nextStep()}
                                 disabled={isSubmitting}
                                 className="bg-brand-primary text-brand-dark font-bold hover:bg-brand-secondary hover:text-white"
                             >
@@ -707,7 +764,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
                                     <>
-                                        {step === 4 ? "Complete Registration" : (step === 1 ? "I Understand & Proceed" : "Next Step")}
+                                        {(step === 4 || (isBufferMode && step === 3)) ? (isBufferMode ? "Submit Request" : "Complete Registration") : (step === 1 ? "I Understand & Proceed" : "Next Step")}
                                         <ArrowRight className="w-4 h-4 ml-2" />
                                     </>
                                 )}

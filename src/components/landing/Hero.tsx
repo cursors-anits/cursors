@@ -12,8 +12,114 @@ interface HeroProps {
     onRegisterClick: () => void;
 }
 
+const FAKE_ACTIVITIES = [
+    { count: 12, college: 'AITAM' },
+    { count: 8, college: 'ANITS' },
+    { count: 15, college: 'GITAM' },
+    { count: 6, college: 'AU College of Engg' },
+    { count: 9, college: 'Gayatri Vidya Parishad' },
+    { count: 5, college: 'Raghu Engg College' },
+    { count: 7, college: 'Vignan Institute' },
+    { count: 4, college: 'Lendi Institute' }
+];
+
+const RecentActivityBadge = () => {
+    const { participants } = useData();
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [activities, setActivities] = useState<{ count: number, college: string }[]>([]);
+
+    useEffect(() => {
+        // Process real participants to find recent teams
+        const teamsMap = new Map<string, { count: number, college: string, time: number }>();
+
+        if (participants) {
+            participants.forEach(p => {
+                const teamId = p.teamId || p._id;
+                if (!teamsMap.has(teamId)) {
+                    teamsMap.set(teamId, {
+                        count: 0,
+                        college: p.college || 'Unknown College',
+                        time: new Date(p.createdAt).getTime()
+                    });
+                }
+                const team = teamsMap.get(teamId)!;
+                team.count++;
+            });
+        }
+
+        const realActivities = Array.from(teamsMap.values())
+            .sort((a, b) => b.time - a.time)
+            .map(t => ({ count: t.count, college: t.college }));
+
+        // Mix Real + Fake (ensuring we always have activity)
+        let mixed = [...realActivities];
+        if (mixed.length < 8) {
+            // Interleave fake activities if we don't have enough real ones yet
+            mixed = [...mixed, ...FAKE_ACTIVITIES];
+        } else {
+            // Append a few fake ones to keep the cycle interesting
+            mixed = [...mixed, ...FAKE_ACTIVITIES.slice(0, 3)];
+        }
+
+        setActivities(mixed);
+    }, [participants]);
+
+    useEffect(() => {
+        if (activities.length === 0) return;
+        const interval = setInterval(() => {
+            setCurrentIndex(prev => (prev + 1) % activities.length);
+        }, 4000);
+        return () => clearInterval(interval);
+    }, [activities]);
+
+    if (activities.length === 0) return null;
+    const current = activities[currentIndex];
+
+    return (
+        <div key={currentIndex} className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-500 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/30 backdrop-blur-md">
+            <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+            </span>
+            <span className="text-sm font-medium text-blue-300">
+                {current.count} members joined from <span className="font-bold text-blue-200">{current.college}</span>
+            </span>
+        </div>
+    );
+};
+
 const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
-    const { settings, isLoading: dataLoading } = useData();
+    const { settings, participants, isLoading: dataLoading } = useData();
+
+    // CRM / FOMO Logic
+    const showFake = settings?.fomoConfig?.showFakeCounts ?? true;
+
+    // Limits (Real Hard Limits)
+    const workshopLimit = settings?.bufferConfig?.workshopLimit || 300;
+    const hackathonLimit = settings?.bufferConfig?.hackathonLimit || 500;
+
+    // Fake Bases (The "Starting" count for FOMO)
+    // If these are set to e.g. 284, and we have 5 real registrations, display will be 279.
+    const workshopFakeBase = settings?.fomoConfig?.workshopCount || 284;
+    const hackathonFakeBase = settings?.fomoConfig?.hackathonCount || 488;
+
+    // Real Counts
+    const workshopRealCount = participants?.filter(p => p.type === 'Workshop' || p.type === 'Combo').length || 0;
+    const hackathonRealCount = participants?.filter(p => p.type === 'Hackathon' || p.type === 'Combo').length || 0;
+
+    // Displayed "Spots Left" Calculation
+    // Logic: If Fake Mode -> (FakeBase - RealCount). If Real Mode -> (Limit - RealCount)
+    // We use Math.max(0, ...) to strictly prevent negative numbers.
+    const workshopLeft = Math.max(0, (showFake ? workshopFakeBase : workshopLimit) - workshopRealCount);
+    const hackathonLeft = Math.max(0, (showFake ? hackathonFakeBase : hackathonLimit) - hackathonRealCount);
+
+    // The minimum of the two is what we display in the "Only X Spots Left" badge
+    const minLeft = Math.min(workshopLeft, hackathonLeft);
+
+    // Buffer Logic relies on REAL counts vs REAL limits
+    // If we hit the real limit, we switch to "Request Slot" mode (Buffer Mode)
+    const isBuffer = settings?.registrationClosed === false && (workshopRealCount >= workshopLimit || hackathonRealCount >= hackathonLimit);
+
     const [timeLeft, setTimeLeft] = useState({
         days: 0,
         hours: 0,
@@ -121,9 +227,18 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                     <span className="text-sm font-medium text-emerald-300">Cross-College Teams Welcome!</span>
                 </div>
 
+                {/* Live Activity Badge */}
+                <RecentActivityBadge />
+
                 {/* CTA Section */}
                 <div className="mt-12 flex flex-col sm:flex-row gap-6 items-center w-full justify-center">
                     <div className="flex flex-col items-center gap-4">
+                        {!settings?.registrationClosed && (
+                            <div className={`px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${isBuffer ? 'bg-orange-500/10 border-orange-500 text-orange-400' : 'bg-green-500/10 border-green-500 text-green-400 animate-pulse'}`}>
+                                {isBuffer ? "High Demand • Request Slot" : `🔥 Only ${minLeft} Spots Left`}
+                            </div>
+                        )}
+
                         {!settings?.registrationClosed ? (
                             <Button
                                 onClick={onRegisterClick}

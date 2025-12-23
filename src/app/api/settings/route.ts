@@ -24,10 +24,89 @@ export async function GET() {
                 upiId: 'bmahesh498@okhdfcbank',
                 qrImageUrl: '/payment qr.jpg',
                 eventDate: new Date('2026-01-02T09:00:00'),
+                colleges: [
+                    "Aditya Institute of Technology and Management [AITAM]",
+                    "Andhra University College of Engineering [AUCE]",
+                    "Andhra University College of Engineering for Women [AUCEW]",
+                    "Anil Neerukonda Institute of Technology and Sciences [ANITS]",
+                    "Avanthi Institute Of Engineering and Technology [AIET]",
+                    "Baba Institute of Technology and Sciences [BITS]",
+                    "Behara College of Engineering and Technology [BCET]",
+                    "Centurion University of Technology and Management [CUTM]",
+                    "Chaitanya Engineering College [CEC]",
+                    "Dr. Lankapalli Bullayya College [LBCE]",
+                    "Gandhi Institute of Technology and Management [GITAM]",
+                    "Gayatri Vidya Parishad College for Degree & P.G. Courses [GVPCDPGC]",
+                    "Gayatri Vidya Parishad College of Engineering [GVPCE]",
+                    "Gayatri Vidya Parishad College of Engineering Women [GVPCEW]",
+                    "GMR Institute of Technology [GMRIT]",
+                    "Jawaharlal Nehru Technological University - Gurajada [JNTU-GV]",
+                    "Lendi Institute of Engineering & Technology [LIET]",
+                    "Maharaj Vijayaram Gajapathi Raj College of Engineering [MVGR]",
+                    "Nadimpalli Satyanarayana Raju Institute of Technology [NSRIT]",
+                    "N S Raju Institute of Engineering and Technology [NSRIET]",
+                    "Pydah College of Engineering and Technology [PCET]",
+                    "Raghu Engineering College (Autonomous) [REC]",
+                    "Raghu Institute of Technology [RIT]",
+                    "Sanketika Vidya Parishad Engineering College [SVPEC]",
+                    "Vignan's Institute of Engineering for Women [VIEW]",
+                    "Vignan's Institute of Information Technology [VIIT]",
+                    "Visakha Institute of Engineering and Technology [VIET]",
+                    "Other"
+                ],
+                cities: [
+                    "Visakhapatnam", "Vizianagaram", "Srikakulam", "Tekkali", "Bhimavaram", "Rajahmundry", "Other"
+                ]
             });
+            console.log('✅ Created initial settings with defaults');
         } else {
+            console.log('🔄 Checking settings migration...');
             // Migration: Ensure existing settings have the new fields
             let modified = false;
+
+            // Migrate Colleges
+            if (!settings.colleges || settings.colleges.length === 0) {
+                settings.colleges = [
+                    "Aditya Institute of Technology and Management [AITAM]",
+                    "Andhra University College of Engineering [AUCE]",
+                    "Andhra University College of Engineering for Women [AUCEW]",
+                    "Anil Neerukonda Institute of Technology and Sciences [ANITS]",
+                    "Avanthi Institute Of Engineering and Technology [AIET]",
+                    "Baba Institute of Technology and Sciences [BITS]",
+                    "Behara College of Engineering and Technology [BCET]",
+                    "Centurion University of Technology and Management [CUTM]",
+                    "Chaitanya Engineering College [CEC]",
+                    "Dr. Lankapalli Bullayya College [LBCE]",
+                    "Gandhi Institute of Technology and Management [GITAM]",
+                    "Gayatri Vidya Parishad College for Degree & P.G. Courses [GVPCDPGC]",
+                    "Gayatri Vidya Parishad College of Engineering [GVPCE]",
+                    "Gayatri Vidya Parishad College of Engineering Women [GVPCEW]",
+                    "GMR Institute of Technology [GMRIT]",
+                    "Jawaharlal Nehru Technological University - Gurajada [JNTU-GV]",
+                    "Lendi Institute of Engineering & Technology [LIET]",
+                    "Maharaj Vijayaram Gajapathi Raj College of Engineering [MVGR]",
+                    "Nadimpalli Satyanarayana Raju Institute of Technology [NSRIT]",
+                    "N S Raju Institute of Engineering and Technology [NSRIET]",
+                    "Pydah College of Engineering and Technology [PCET]",
+                    "Raghu Engineering College (Autonomous) [REC]",
+                    "Raghu Institute of Technology [RIT]",
+                    "Sanketika Vidya Parishad Engineering College [SVPEC]",
+                    "Vignan's Institute of Engineering for Women [VIEW]",
+                    "Vignan's Institute of Information Technology [VIIT]",
+                    "Visakha Institute of Engineering and Technology [VIET]",
+                    "Other"
+                ];
+                modified = true;
+                console.log('📝 Migrated colleges list');
+            }
+
+            // Migrate Cities
+            if (!settings.cities || settings.cities.length === 0) {
+                settings.cities = [
+                    "Visakhapatnam", "Vizianagaram", "Srikakulam", "Tekkali", "Bhimavaram", "Rajahmundry", "Other"
+                ];
+                modified = true;
+            }
             if (!settings.upiId) {
                 settings.upiId = 'bmahesh498@okhdfcbank';
                 modified = true;

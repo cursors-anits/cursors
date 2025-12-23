@@ -13,7 +13,7 @@ export interface IParticipant {
     linkedin?: string;
     transactionId: string;
     type: 'Workshop' | 'Hackathon' | 'Combo';
-    status: 'Pending' | 'Paid' | 'Confirmed';
+    status: 'pending' | 'approved' | 'rejected';
     assignedLab?: string;
     assignedWorkshopLab?: string;
     assignedHackathonLab?: string;
@@ -90,6 +90,11 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
             type: String,
             enum: ['Workshop', 'Hackathon', 'Combo'],
             required: true,
+        },
+        status: {
+            type: String,
+            enum: ['pending', 'approved', 'rejected'],
+            default: 'approved'
         },
         assignedLab: {
             type: String,
