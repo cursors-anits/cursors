@@ -14,6 +14,7 @@ const CHECKLIST_ITEMS = [
     { id: 'extension', name: 'Power extension board', icon: Zap, category: 'Recommended' },
     { id: 'charger', name: 'Mobile charger & headphones', icon: null, category: 'Recommended' },
     { id: 'notebook', name: 'Notebook and pen', icon: BookOpen, category: 'Recommended' },
+    { id: 'medications', name: 'Personal medications (if required)', icon: null, category: 'Recommended' },
     { id: 'hygiene', name: 'Personal hygiene items', icon: null, category: 'Overnight' },
     { id: 'bedding', name: 'Bedsheet and blanket', icon: BedDouble, category: 'Overnight' },
     { id: 'jacket', name: 'Jacket or sweater', icon: Wind, category: 'Overnight' }

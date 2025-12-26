@@ -19,7 +19,8 @@ const CHECKLIST_ITEMS = [
         items: [
             { name: 'Power extension board', icon: Zap },
             { name: 'Mobile charger & headphones', icon: null },
-            { name: 'Notebook and pen for brainstorming', icon: BookOpen }
+            { name: 'Notebook and pen for brainstorming', icon: BookOpen },
+            { name: 'Personal medications (if required)', icon: null }
         ]
     },
     {
@@ -61,10 +62,10 @@ export default function WhatToBring() {
                                 <CardContent className="p-6">
                                     <div className="flex items-center gap-3 mb-4">
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${section.category === 'Mandatory'
-                                                ? 'bg-red-500/10 text-red-400'
-                                                : section.category === 'Highly Recommended'
-                                                    ? 'bg-brand-primary/10 text-brand-primary'
-                                                    : 'bg-blue-500/10 text-blue-400'
+                                            ? 'bg-red-500/10 text-red-400'
+                                            : section.category === 'Highly Recommended'
+                                                ? 'bg-brand-primary/10 text-brand-primary'
+                                                : 'bg-blue-500/10 text-blue-400'
                                             }`}>
                                             <IconComponent className="w-5 h-5" />
                                         </div>

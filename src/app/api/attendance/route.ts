@@ -35,15 +35,7 @@ export async function POST(request: NextRequest) {
         const updateField: Record<string, Date> = {};
         const now = new Date();
 
-        if (mode === 'workshop') {
-            if (!day || !['1', '2', '3'].includes(day)) {
-                return NextResponse.json(
-                    { error: 'Valid day (1, 2, or 3) is required for workshop mode' },
-                    { status: 400 }
-                );
-            }
-            updateField[`workshopDay${day}`] = now;
-        } else if (mode === 'hackathon') {
+        if (mode === 'hackathon') {
             updateField.hackathonAttendance = now;
         } else if (mode === 'entry') {
             updateField.entryGateTimestamp = now;
@@ -60,7 +52,7 @@ export async function POST(request: NextRequest) {
             updateField[snacksField] = now;
         } else {
             return NextResponse.json(
-                { error: 'Invalid mode. Must be: workshop, hackathon, entry, exit, or snacks' },
+                { error: 'Invalid mode. Must be: hackathon, entry, exit, or snacks' },
                 { status: 400 }
             );
         }

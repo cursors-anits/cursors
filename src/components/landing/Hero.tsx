@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 
+import { useRouter } from 'next/navigation';
+
 interface HeroProps {
     onRegisterClick: () => void;
 }
@@ -29,37 +31,27 @@ const RecentActivityBadge = () => {
     const [activities, setActivities] = useState<{ count: number, college: string }[]>([]);
 
     useEffect(() => {
-        // Process real participants to find recent teams
-        const teamsMap = new Map<string, { count: number, college: string, time: number }>();
+        // Initialize map with FAKE activities to ensure baseline
+        const activityMap = new Map<string, { count: number, college: string }>();
+
+        FAKE_ACTIVITIES.forEach(a => {
+            activityMap.set(a.college, { ...a });
+        });
 
         if (participants) {
+            // Group real participants by college
             participants.forEach(p => {
-                const teamId = p.teamId || p._id;
-                if (!teamsMap.has(teamId)) {
-                    teamsMap.set(teamId, {
-                        count: 0,
-                        college: p.college || 'Unknown College',
-                        time: new Date(p.createdAt).getTime()
-                    });
+                const college = p.college || 'Unknown College';
+                if (!activityMap.has(college)) {
+                    activityMap.set(college, { count: 0, college });
                 }
-                const team = teamsMap.get(teamId)!;
-                team.count++;
+                const entry = activityMap.get(college)!;
+                entry.count += 1;
             });
         }
 
-        const realActivities = Array.from(teamsMap.values())
-            .sort((a, b) => b.time - a.time)
-            .map(t => ({ count: t.count, college: t.college }));
-
-        // Mix Real + Fake (ensuring we always have activity)
-        let mixed = [...realActivities];
-        if (mixed.length < 8) {
-            // Interleave fake activities if we don't have enough real ones yet
-            mixed = [...mixed, ...FAKE_ACTIVITIES];
-        } else {
-            // Append a few fake ones to keep the cycle interesting
-            mixed = [...mixed, ...FAKE_ACTIVITIES.slice(0, 3)];
-        }
+        const mixed = Array.from(activityMap.values())
+            .sort((a, b) => b.count - a.count);
 
         setActivities(mixed);
     }, [participants]);
@@ -89,36 +81,29 @@ const RecentActivityBadge = () => {
 };
 
 const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
-    const { settings, participants, isLoading: dataLoading } = useData();
+    const { settings, participants, isLoading: dataLoading, currentUser } = useData();
+    const router = useRouter();
 
     // CRM / FOMO Logic
     const showFake = settings?.fomoConfig?.showFakeCounts ?? true;
 
     // Limits (Real Hard Limits)
-    const workshopLimit = settings?.bufferConfig?.workshopLimit || 300;
     const hackathonLimit = settings?.bufferConfig?.hackathonLimit || 500;
 
     // Fake Bases (The "Starting" count for FOMO)
-    // If these are set to e.g. 284, and we have 5 real registrations, display will be 279.
-    const workshopFakeBase = settings?.fomoConfig?.workshopCount || 284;
     const hackathonFakeBase = settings?.fomoConfig?.hackathonCount || 488;
 
     // Real Counts
-    const workshopRealCount = participants?.filter(p => p.type === 'Workshop' || p.type === 'Combo').length || 0;
-    const hackathonRealCount = participants?.filter(p => p.type === 'Hackathon' || p.type === 'Combo').length || 0;
+    const hackathonReal = participants?.filter(p => p.type === 'Hackathon').length || 0;
 
     // Displayed "Spots Left" Calculation
-    // Logic: If Fake Mode -> (FakeBase - RealCount). If Real Mode -> (Limit - RealCount)
-    // We use Math.max(0, ...) to strictly prevent negative numbers.
-    const workshopLeft = Math.max(0, (showFake ? workshopFakeBase : workshopLimit) - workshopRealCount);
-    const hackathonLeft = Math.max(0, (showFake ? hackathonFakeBase : hackathonLimit) - hackathonRealCount);
+    const hackathonLeft = Math.max(0, (showFake ? hackathonFakeBase : hackathonLimit) - hackathonReal);
 
-    // The minimum of the two is what we display in the "Only X Spots Left" badge
-    const minLeft = Math.min(workshopLeft, hackathonLeft);
+    // The minimum is now just hackathonLeft
+    const minLeft = hackathonLeft;
 
-    // Buffer Logic relies on REAL counts vs REAL limits
-    // If we hit the real limit, we switch to "Request Slot" mode (Buffer Mode)
-    const isBuffer = settings?.registrationClosed === false && (workshopRealCount >= workshopLimit || hackathonRealCount >= hackathonLimit);
+    // Buffer Logic
+    const isBuffer = settings?.registrationClosed === false && (hackathonReal >= hackathonLimit);
 
     const [timeLeft, setTimeLeft] = useState({
         days: 0,
@@ -172,7 +157,7 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-md hover:bg-white/10 transition-colors cursor-default">
                         <Flame className="w-4 h-4 text-brand-primary" />
                         <span className="text-sm font-medium text-gray-200 tracking-wide">
-                            {settings?.eventDate ? new Date(settings.eventDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Jan 2nd'} - 6th, 2026
+                            {settings?.eventDate ? new Date(settings.eventDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Jan 5th'} - 6th, 2026
                         </span>
                         <div className="w-1 h-1 rounded-full bg-gray-500"></div>
                         <span className="text-sm font-medium text-gray-400">ANITS</span>
@@ -218,8 +203,22 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
 
                 {/* Subheadline */}
                 <p className="mt-2 text-xl md:text-2xl text-gray-400 max-w-2xl mx-auto leading-relaxed font-light">
-                    Join the ultimate fusion of <span className="text-white font-medium">Gen AI Workshop</span> and a <span className="text-white font-medium">24-Hour Hackathon</span>. Build, innovate, and vibe with the best minds.
+                    Join the ultimate <span className="text-white font-medium">24-Hour Hackathon</span>. Build, innovate, and vibe with the best minds.
                 </p>
+
+                {/* Workshop Cancellation Notice */}
+                <div className="mt-6 mx-auto max-w-2xl p-4 rounded-xl bg-yellow-500/10 border-2 border-yellow-500/30 backdrop-blur-md">
+                    <div className="flex items-start gap-3">
+                        <span className="text-2xl shrink-0">⚠️</span>
+                        <div>
+                            <h4 className="text-yellow-400 font-bold text-sm mb-1">Important Update</h4>
+                            <p className="text-gray-300 text-sm">
+                                The Gen AI Workshop component has been <strong className="text-yellow-300">cancelled</strong>.
+                                This event is now exclusively a <strong className="text-brand-primary">24-Hour Hackathon</strong> on Jan 5-6, 2026.
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
                 {/* Cross-College Collaboration Badge */}
                 <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-md">
@@ -230,25 +229,47 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                 {/* Live Activity Badge */}
                 <RecentActivityBadge />
 
+                {/* Registration Deadline Banner */}
+                <div className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-red-500/10 border-2 border-red-500/30 backdrop-blur-md">
+                    <span className="text-lg">⏰</span>
+                    <div className="flex flex-col">
+                        <span className="text-xs font-bold text-red-400 uppercase tracking-wider">Registration Closes</span>
+                        <span className="text-sm font-bold text-white">Dec 31st, 2025</span>
+                    </div>
+                </div>
+
                 {/* CTA Section */}
                 <div className="mt-12 flex flex-col sm:flex-row gap-6 items-center w-full justify-center">
                     <div className="flex flex-col items-center gap-4">
                         {!settings?.registrationClosed && (
                             <div className={`px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${isBuffer ? 'bg-orange-500/10 border-orange-500 text-orange-400' : 'bg-green-500/10 border-green-500 text-green-400 animate-pulse'}`}>
-                                {isBuffer ? "High Demand • Request Slot" : `🔥 Only ${minLeft} Spots Left`}
+                                {isBuffer ? "High Demand • Request Slot" : `🔥 Only ${Math.max(5, Math.min(287, minLeft))} Spots Left`}
                             </div>
                         )}
 
+
                         {!settings?.registrationClosed ? (
-                            <Button
-                                onClick={onRegisterClick}
-                                className="group relative h-14 px-8 rounded-full bg-white text-brand-dark font-bold text-lg overflow-hidden transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(130,212,250,0.3)] border-none"
-                            >
-                                <div className="absolute inset-0 bg-linear-to-r from-brand-primary to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                <span className="relative flex items-center gap-3">
-                                    Register Now <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                </span>
-                            </Button>
+                            currentUser ? (
+                                <Button
+                                    onClick={() => router.push(`/dashboard/${currentUser.role.toLowerCase()}`)}
+                                    className="group relative h-14 px-8 rounded-full bg-white text-brand-dark font-bold text-lg overflow-hidden transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(130,212,250,0.3)] border-none"
+                                >
+                                    <div className="absolute inset-0 bg-linear-to-r from-brand-primary to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    <span className="relative flex items-center gap-3">
+                                        Go to Dashboard <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    </span>
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={onRegisterClick}
+                                    className="group relative h-14 px-8 rounded-full bg-white text-brand-dark font-bold text-lg overflow-hidden transition-all hover:scale-105 hover:shadow-[0_0_40px_rgba(130,212,250,0.3)] border-none"
+                                >
+                                    <div className="absolute inset-0 bg-linear-to-r from-brand-primary to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    <span className="relative flex items-center gap-3">
+                                        Register Now <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    </span>
+                                </Button>
+                            )
                         ) : (
                             <Button
                                 disabled
@@ -264,7 +285,7 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                             Starts From
                         </div>
                         <div className="text-3xl font-bold text-white font-mono">
-                            ₹199 <span className="text-lg text-gray-500 font-normal">/ person</span>
+                            ₹309 <span className="text-lg text-gray-500 font-normal">/ person</span>
                         </div>
 
                         {!settings?.registrationClosed && (
@@ -276,14 +297,8 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                 </div>
 
                 {/* Features Grid Mini */}
-                <div className={`mt-20 grid ${settings?.showInternships ? 'grid-cols-2 md:grid-cols-5' : 'grid-cols-2 md:grid-cols-4'} gap-6 md:gap-10 w-full max-w-5xl pt-10 relative`}>
+                <div className={`mt-20 grid ${settings?.showInternships ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2 md:grid-cols-3'} gap-6 md:gap-10 w-full max-w-5xl pt-10 relative`}>
                     <Separator className="bg-white/10 absolute top-0 left-0 w-full" />
-                    <div className="flex flex-col items-center text-center group">
-                        <div className="h-10 flex items-center justify-center mb-1">
-                            <Terminal className="w-6 h-6 text-brand-primary group-hover:scale-110 transition-transform" />
-                        </div>
-                        <span className="text-sm font-medium text-gray-300">Gen AI Workshop</span>
-                    </div>
                     <div className="flex flex-col items-center text-center group">
                         <div className="h-10 flex items-center justify-center mb-1">
                             <Cpu className="w-6 h-6 text-brand-secondary group-hover:scale-110 transition-transform" />

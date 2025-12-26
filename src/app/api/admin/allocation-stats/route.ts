@@ -7,10 +7,8 @@ export async function GET(request: NextRequest) {
     try {
         await dbConnect();
 
-        // Get total participants with assigned seats
-        const totalWithSeats = await Participant.countDocuments({
-            assignedSeat: { $exists: true, $ne: null }
-        });
+        // Get total participants (eligible for allocation)
+        const totalWithSeats = await Participant.countDocuments({});
 
         // Get allocated count
         const allocatedCount = await ProblemAssignment.countDocuments();

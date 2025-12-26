@@ -14,7 +14,8 @@ const PROBLEM_STATEMENTS = [
             'Develop a chatbot for college student support (admissions, exams, placements)',
             'Create a model to predict student dropout risk using historical data',
             'Design an AI agent for resume screening and skill-gap analysis',
-            'Build a fake news detection platform for regional languages'
+            'Build a fake news detection platform for regional languages',
+            'AI agents for daily automation'
         ]
     },
     {
@@ -62,7 +63,8 @@ const PROBLEM_STATEMENTS = [
             'Virtual lab for engineering experiments',
             'LMS with analytics for faculty performance tracking',
             'Skill assessment & certification platform for colleges',
-            'Peer-to-peer doubt solving app for students'
+            'Peer-to-peer doubt solving app for students',
+            'Tools improving campus life or student productivity'
         ]
     },
     {
@@ -122,7 +124,8 @@ const PROBLEM_STATEMENTS = [
             'Missing person identification using AI',
             'Donation & NGO transparency platform',
             'Women safety app with real-time alerts',
-            'Accessibility tool for visually/hearing impaired users'
+            'Accessibility tool for visually/hearing impaired users',
+            'Apps supporting local community needs'
         ]
     },
     {
@@ -142,10 +145,7 @@ const PROBLEM_STATEMENTS = [
         icon: Lightbulb,
         color: 'amber',
         problems: [
-            'Any innovative solution addressing a real-world problem',
-            'Tools improving campus life or student productivity',
-            'AI agents for daily automation',
-            'Apps supporting local community needs'
+            'Any innovative solution addressing a real-world problem'
         ]
     }
 ];
@@ -184,7 +184,7 @@ export default function ProblemStatements() {
                     {/* Allocation Note */}
                     <div className="max-w-2xl mx-auto mt-6 p-4 bg-brand-primary/10 border border-brand-primary/30 rounded-lg">
                         <p className="text-sm text-brand-primary font-medium">
-                            ℹ️ Problem statements will be allocated at the venue. Each participant will receive 3 options to choose from.
+                            ℹ️ Participants can either choose a preferrred domain or work on their own Open Innovation problem statement at the venue.
                         </p>
                     </div>
                 </div>
@@ -194,6 +194,7 @@ export default function ProblemStatements() {
                     {PROBLEM_STATEMENTS.map((domain, index) => {
                         const IconComponent = domain.icon;
                         const colors = COLOR_MAPS[domain.color];
+                        const isOpenInnovation = domain.domain.startsWith('Open Innovation');
 
                         return (
                             <Card key={index} className="bg-brand-surface/50 backdrop-blur-xl border-white/10 overflow-hidden hover:border-brand-primary/30 transition-all">
@@ -204,7 +205,11 @@ export default function ProblemStatements() {
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <h3 className="font-bold text-white text-lg flex-1 min-w-0 whitespace-normal overflow-wrap-break-word">{domain.domain}</h3>
-                                            <p className="text-xs text-gray-400 mt-1">{domain.problems.length} problem statements</p>
+                                            {isOpenInnovation ? (
+                                                <p className="text-xs text-gray-400 mt-1 whitespace-normal text-wrap">Any innovative solution addressing a real-world problem</p>
+                                            ) : (
+                                                <p className="text-xs text-gray-400 mt-1">{domain.problems.length} problem statements</p>
+                                            )}
                                         </div>
                                     </div>
                                 </CardContent>

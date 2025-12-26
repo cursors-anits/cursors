@@ -43,10 +43,8 @@ export async function POST(request: NextRequest) {
             passkey: sharedPasskey // Team-level shared passkey
         }));
 
-        let ticketType: any = 'combo';
-        const typeStr = participants[0].type?.toLowerCase();
-        if (typeStr?.includes('workshop')) ticketType = 'workshop';
-        else if (typeStr?.includes('hackathon')) ticketType = 'hackathon';
+        let ticketType: any = 'hackathon';
+        // All participants are hackathon type now
 
         // Resend to ALL members' personal emails
         const personalEmails = participants.map(p => p.email);

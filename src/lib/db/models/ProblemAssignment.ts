@@ -44,14 +44,14 @@ const OfferedProblemSchema = new Schema({
     domainIndex: {
         type: Number,
         required: true,
-        min: 0,
-        max: 11 // 12 domains (0-11)
+        min: -1,
+        max: 11 // 12 domains (0-11), -1 for custom
     },
     problemIndex: {
         type: Number,
         required: true,
-        min: 0,
-        max: 4 // 5 problems per domain (0-4)
+        min: -1,
+        max: 10 // Increased max to handle domains with more problems (e.g. 6+), -1 for custom
     },
     domain: {
         type: String,
@@ -93,9 +93,9 @@ const ProblemAssignmentSchema = new Schema<IProblemAssignment, ProblemAssignment
             required: true,
             validate: {
                 validator: function (v: IOfferedProblem[]) {
-                    return v.length >= 1 && v.length <= 3;
+                    return v.length >= 0 && v.length <= 3;
                 },
-                message: 'Must have between 1 and 3 offered problems'
+                message: 'Must have between 0 and 3 offered problems'
             }
         },
         selectedProblem: {

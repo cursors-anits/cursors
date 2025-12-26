@@ -13,6 +13,7 @@ import {
     FileCheck
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { PROBLEM_STATEMENTS } from '@/lib/data/problemStatements';
 
 interface AllocationStats {
     total: number;
@@ -205,7 +206,7 @@ export default function ProblemAllocationTab({ adminEmail }: ProblemAllocationTa
                 </CardContent>
             </Card>
 
-            {/* Instructions */}
+            {/* Instructions - How It Works */}
             <Card className="bg-brand-surface/50 backdrop-blur-xl border-white/10">
                 <CardContent className="p-6">
                     <h3 className="text-lg font-bold text-white mb-3">How It Works</h3>
@@ -230,6 +231,28 @@ export default function ProblemAllocationTab({ adminEmail }: ProblemAllocationTa
                             <span className="text-brand-primary font-bold">5.</span>
                             <p>Each participant gets 2 refreshes to get new options</p>
                         </div>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Problem Statements Display */}
+            <Card className="bg-brand-surface/50 backdrop-blur-xl border-white/10">
+                <CardContent className="p-6">
+                    <h3 className="text-lg font-bold text-white mb-4">All Problem Statements</h3>
+                    <div className="space-y-4">
+                        {PROBLEM_STATEMENTS.map((domain, domainIdx) => (
+                            <div key={domainIdx} className="border border-white/10 rounded-lg p-4 bg-white/5">
+                                <h4 className="font-semibold text-brand-primary mb-3">{domain.domain}</h4>
+                                <div className="space-y-2">
+                                    {domain.problems.map((problem, problemIdx) => (
+                                        <div key={problemIdx} className="text-sm text-gray-300 pl-4 py-1">
+                                            <span className="text-gray-500 mr-2">{domainIdx + 1}.{problemIdx + 1}</span>
+                                            {problem}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </CardContent>
             </Card>

@@ -70,13 +70,8 @@ export async function POST(request: NextRequest) {
         const teamEmail = `${String(nextTeamNum).padStart(3, '0')}@vibe.com`;
         const passkey = generatePasskey();
 
-        // Determine ticket type
-        const typeMap: { [key: string]: 'Workshop' | 'Hackathon' | 'Combo' } = {
-            workshop: 'Workshop',
-            hackathon: 'Hackathon',
-            combo: 'Combo',
-        };
-        const mappedType = typeMap[ticketType] || 'Combo';
+        // Determine ticket type - Default to Hackathon
+        const mappedType = 'Hackathon';
 
         // 1. Check for Duplicate Transaction ID
         const existingTransaction = await Participant.findOne({ transactionId });
@@ -156,7 +151,8 @@ export async function POST(request: NextRequest) {
         const collegeForEmail = members[0]?.college || 'Unknown';
 
         const results = await Promise.allSettled(personalEmails.map((email: string) =>
-            sendEventPassEmail(email, teamId, emailMembers, collegeForEmail, ticketType as any, teamEmail, passkey)
+            // Force 'hackathon' as the ticket type for email purposes
+            sendEventPassEmail(email, teamId, emailMembers, collegeForEmail, 'hackathon', teamEmail, passkey)
         ));
 
         const wasAnyEmailScheduled = results.some((r: any) => r.value?.scheduled);

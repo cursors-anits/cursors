@@ -87,18 +87,10 @@ export default function HackathonSchedule() {
                                 <AlertCircle className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h3 className="font-bold text-white text-xl mb-1">Important: Reporting Times</h3>
-                                <div className="space-y-2 text-orange-300 text-sm">
-                                    <p>
-                                        <span className="font-bold text-orange-400">Workshop-only:</span> 8:30 AM on Friday, January 2, 2026
-                                    </p>
-                                    <p>
-                                        <span className="font-bold text-orange-400">Hackathon-only:</span> 12:30 PM on Monday, January 5, 2026
-                                    </p>
-                                    <p>
-                                        <span className="font-bold text-orange-400">Combo pass:</span> 8:30 AM on Friday, January 2, 2026 (Hackathon time will be announced at the end of the workshop)
-                                    </p>
-                                </div>
+                                <h3 className="font-bold text-white text-xl mb-1">Important: Reporting Time</h3>
+                                <p className="text-orange-300 text-sm">
+                                    <span className="font-bold text-orange-400">All participants:</span> 12:30 PM on Monday, January 5, 2026
+                                </p>
                                 <div className="flex items-center gap-4 mt-3 text-sm text-gray-400">
                                     <div className="flex items-center gap-1">
                                         <Calendar className="w-4 h-4" />

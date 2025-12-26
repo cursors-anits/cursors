@@ -8,16 +8,14 @@ import { Separator } from '@/components/ui/separator';
 import { Info } from 'lucide-react';
 
 const PRICES = {
-    workshop: 199,
-    hackathon: 349,
-    combo: 499
+    hackathon: 349
 };
 
-type TicketType = 'workshop' | 'hackathon' | 'combo';
+type TicketType = 'hackathon';
 
 export default function PricingCalculator() {
     const [teamSize, setTeamSize] = useState(1);
-    const [ticketType, setTicketType] = useState<TicketType>('combo');
+    const [ticketType, setTicketType] = useState<TicketType>('hackathon');
 
     const calculatePricing = () => {
         const basePrice = PRICES[ticketType];
@@ -35,7 +33,7 @@ export default function PricingCalculator() {
     const pricing = calculatePricing();
 
     return (
-        <section className="py-20 px-6 relative overflow-hidden">
+        <section id="pricing" className="py-20 px-6 relative overflow-hidden">
             {/* Background Effects */}
             <div className="absolute inset-0 bg-linear-to-b from-brand-dark via-brand-surface/20 to-brand-dark" />
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-primary/5 rounded-full blur-[120px]" />
@@ -62,17 +60,11 @@ export default function PricingCalculator() {
                                     <label className="text-sm font-semibold text-gray-400 mb-3 block">Select Ticket Type</label>
                                     <div className="grid grid-cols-1 gap-3">
                                         {[
-                                            { type: 'workshop' as TicketType, name: 'Workshop Pass', price: 199, desc: 'Gen AI Workshop Only' },
-                                            { type: 'hackathon' as TicketType, name: 'Hackathon Pass', price: 349, desc: '24H Hackathon Only' },
-                                            { type: 'combo' as TicketType, name: 'Combo Pass', price: 499, desc: 'Workshop + Hackathon' }
+                                            { type: 'hackathon' as TicketType, name: 'Hackathon Pass', price: 349, desc: '24H Hackathon Only' }
                                         ].map(ticket => (
                                             <button
                                                 key={ticket.type}
-                                                onClick={() => setTicketType(ticket.type)}
-                                                className={`p-4 rounded-xl border-2 transition-all text-left ${ticketType === ticket.type
-                                                        ? 'border-brand-primary bg-brand-primary/10'
-                                                        : 'border-white/10 bg-white/5 hover:border-white/20'
-                                                    }`}
+                                                className={`p-4 rounded-xl border-2 transition-all text-left border-brand-primary bg-brand-primary/10 cursor-default`}
                                             >
                                                 <div className="flex justify-between items-start">
                                                     <div>

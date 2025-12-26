@@ -30,7 +30,7 @@ export const TeamMemberSchema = z.object({
 });
 
 export const RegistrationSchema = z.object({
-    ticketType: z.enum(['workshop', 'hackathon', 'combo']),
+    ticketType: z.enum(['hackathon']),
     teamSize: z.number().min(1).max(5),
     members: z.array(TeamMemberSchema),
     transactionId: z.string().min(12, 'UTR must be 12 digits'),
@@ -85,7 +85,6 @@ export interface Participant {
     year?: number;
     type: string;
     assignedLab?: string;
-    assignedWorkshopLab?: string;
     assignedHackathonLab?: string;
     assignedSeat?: string;
     avatarUrl?: string;
@@ -95,6 +94,32 @@ export interface Participant {
     eventChecklist?: string[]; // Array of checked checklist item IDs
     problemAssignmentId?: string; // Reference to ProblemAssignment
     hasConfirmedProblem?: boolean;
+    projectRepo?: string;
+    projectRepoSubmittedAt?: Date | string;
+    projectRepoLocked?: boolean;
+    codingPlatform?: string; // Initial platform selection
+    extendedSubmissionData?: {
+        codingPlatforms?: string[]; // Multiple platforms used
+        filesUploaded?: {
+            envFile?: string;
+            requirementsFile?: string;
+            documentFile?: string;
+            otherFiles?: string[];
+        };
+        submittedAt?: Date | string;
+        folderPath?: string; // e.g., "/submissions/team123/"
+        totalFileSize?: number; // in bytes
+    };
+    submissionFlags?: {
+        isFlagged: boolean;
+        flags: string[];
+        flaggedAt?: Date | string;
+        reviewedBy?: string;
+        reviewStatus?: 'pending' | 'approved' | 'rejected';
+        reviewNotes?: string;
+    };
+    submissionStatus?: 'pending' | 'verified' | 'flagged';
+    submissionTime?: Date | string;
     status?: 'pending' | 'approved' | 'rejected';
     createdAt: string;
 }
@@ -114,7 +139,7 @@ export interface Lab {
     roomNumber: string;
     capacity: number;
     currentCount: number;
-    type: 'Workshop' | 'Hackathon';
+    type: 'Hackathon';
 }
 
 export interface SupportRequest {
@@ -146,16 +171,17 @@ export interface Settings {
     prizePool: string;
     showInternships: boolean;
     fomoConfig?: {
-        workshopCount: number;
         hackathonCount: number;
         showFakeCounts: boolean;
     };
     bufferConfig?: {
-        workshopLimit: number;
         hackathonLimit: number;
-        workshopBuffer: number;
         hackathonBuffer: number;
     };
     colleges?: string[];
     cities?: string[];
+    hackathonStartDate?: Date | string;
+    hackathonEndDate?: Date | string;
+    submissionWindowOpen?: boolean;
+    submissionWindowStartTime?: Date | string;
 }

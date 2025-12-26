@@ -314,9 +314,9 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
 
                                             if (allocationFilter !== 'all') {
                                                 if (allocationFilter === 'allocated') {
-                                                    filtered = filtered.filter(p => p.assignedWorkshopLab || p.assignedHackathonLab);
+                                                    filtered = filtered.filter(p => p.assignedHackathonLab);
                                                 } else {
-                                                    filtered = filtered.filter(p => !p.assignedWorkshopLab && !p.assignedHackathonLab);
+                                                    filtered = filtered.filter(p => !p.assignedHackathonLab);
                                                 }
                                             }
 
@@ -339,9 +339,8 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
                                                 const isExpanded = expandedTeams.has(teamId);
                                                 const hasPayment = members.some(m => m.paymentScreenshotUrl);
                                                 const paymentUrl = members.find(m => m.paymentScreenshotUrl)?.paymentScreenshotUrl;
-                                                const hasWorkshop = members.some(m => m.assignedWorkshopLab);
                                                 const hasHackathon = members.some(m => m.assignedHackathonLab);
-                                                const isAllocated = hasWorkshop || hasHackathon;
+                                                const isAllocated = hasHackathon;
 
                                                 return (
                                                     <React.Fragment key={teamId}>
@@ -374,7 +373,6 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
                                                             <TableCell className="text-xs">
                                                                 {isAllocated ? (
                                                                     <div className="text-gray-400 space-y-1 text-[10px]">
-                                                                        {members.find(m => m.assignedWorkshopLab)?.assignedWorkshopLab && <div>W: {members.find(m => m.assignedWorkshopLab)?.assignedWorkshopLab}</div>}
                                                                         {members.find(m => m.assignedHackathonLab)?.assignedHackathonLab && <div>H: {members.find(m => m.assignedHackathonLab)?.assignedHackathonLab}</div>}
                                                                     </div>
                                                                 ) : (
@@ -418,7 +416,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
                                                                                     <div><span className="text-gray-500">Name:</span> <span className="text-white ml-1">{member.name}</span></div>
                                                                                     <div className="truncate"><span className="text-gray-500">Email:</span> <span className="text-gray-300 ml-1">{member.email}</span></div>
                                                                                     <div className="truncate"><span className="text-gray-500">College:</span> <span className="text-gray-300 ml-1" title={member.college}>{member.college}</span></div>
-                                                                                    {member.assignedWorkshopLab && <div><span className="text-gray-500">Workshop Lab:</span> <span className="text-brand-primary ml-1">{member.assignedWorkshopLab}</span></div>}
+
                                                                                     {member.assignedHackathonLab && <div><span className="text-gray-500">Hackathon Lab:</span> <span className="text-brand-primary ml-1">{member.assignedHackathonLab}</span></div>}
                                                                                 </div>
                                                                             </div>

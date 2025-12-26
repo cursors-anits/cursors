@@ -48,9 +48,7 @@ interface RegistrationModalProps {
 }
 
 const PRICES = {
-    workshop: 199,
-    hackathon: 349,
-    combo: 499
+    hackathon: 349
 };
 
 const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }) => {
@@ -102,7 +100,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     const [isBufferMode, setIsBufferMode] = useState(false);
 
     // Calculate counts
-    const workshopCount = participants?.filter(p => p.type === 'Workshop' || p.type === 'Combo').length || 0;
+    // All participants are hackathon type now
     const hackathonCount = participants?.filter(p => p.type === 'Hackathon' || p.type === 'Combo').length || 0;
 
 
@@ -118,7 +116,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     } = useForm<IFormData>({
         resolver: zodResolver(RegistrationSchema), // We will bypass for buffer mode in step validation
         defaultValues: {
-            ticketType: 'combo',
+            ticketType: 'hackathon',
             teamSize: 1,
             members: [{ fullName: '', email: '', college: '', city: '', department: '', whatsapp: '', year: '3rd Year' }],
             transactionId: '',
@@ -135,24 +133,24 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
 
     useEffect(() => {
         if (!settings?.bufferConfig) return;
-        const limit = ticketType === 'hackathon' ? settings.bufferConfig.hackathonLimit : settings.bufferConfig.workshopLimit;
-        const current = ticketType === 'hackathon' ? hackathonCount : workshopCount;
+        const limit = settings.bufferConfig.hackathonLimit;
+        const current = hackathonCount;
         if (current >= limit) setIsBufferMode(true);
         else setIsBufferMode(false);
-    }, [ticketType, settings, participants, hackathonCount, workshopCount]);
+    }, [ticketType, settings, participants, hackathonCount]);
 
     useEffect(() => {
         if (!settings?.bufferConfig) return;
 
-        const limit = ticketType === 'hackathon' ? settings.bufferConfig.hackathonLimit : settings.bufferConfig.workshopLimit;
-        const current = ticketType === 'hackathon' ? hackathonCount : workshopCount;
+        const limit = settings.bufferConfig.hackathonLimit;
+        const current = hackathonCount;
 
         if (current >= limit) {
             setIsBufferMode(true);
         } else {
             setIsBufferMode(false);
         }
-    }, [ticketType, settings, participants, hackathonCount, workshopCount]);
+    }, [ticketType, settings, participants, hackathonCount]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -406,10 +404,6 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                 <ul className="space-y-2 text-sm">
                                                     <li className="flex items-start gap-2">
                                                         <span className="text-green-400 mt-0.5">✅</span>
-                                                        <span><strong className="text-white">Full Gen AI Workshop</strong> • Learn cutting-edge AI tools & techniques</span>
-                                                    </li>
-                                                    <li className="flex items-start gap-2">
-                                                        <span className="text-green-400 mt-0.5">✅</span>
                                                         <span><strong className="text-white">24-Hour Hackathon</strong> • Build real projects, solve challenges</span>
                                                     </li>
                                                     <li className="flex items-start gap-2">
@@ -473,25 +467,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
 
                                 {step === 2 && (
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-right-4">
-                                        <div className="space-y-4">
-                                            <Label>Ticket Type</Label>
-                                            <Controller
-                                                name="ticketType"
-                                                control={control}
-                                                render={({ field }) => (
-                                                    <Select onValueChange={field.onChange} value={field.value}>
-                                                        <SelectTrigger className="bg-brand-dark border-gray-800">
-                                                            <SelectValue placeholder="Select Pass" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            <SelectItem value="workshop">Workshop (₹199)</SelectItem>
-                                                            <SelectItem value="hackathon">Hackathon (₹349)</SelectItem>
-                                                            <SelectItem value="combo">Combo Pass (₹499)</SelectItem>
-                                                        </SelectContent>
-                                                    </Select>
-                                                )}
-                                            />
-                                        </div>
+
                                         <div className="md:col-span-2 space-y-4">
                                             <Label>Team Size (1-5)</Label>
                                             <div className="flex gap-2">

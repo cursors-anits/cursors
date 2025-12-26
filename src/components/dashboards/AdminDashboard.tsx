@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -21,7 +21,7 @@ import {
     Eye,
     Loader2,
     LayoutGrid,
-    CheckCircle2,
+    CheckCircle2, FileCode2, Clock, Upload, Ban,
     Database
 } from 'lucide-react';
 import {
@@ -30,7 +30,12 @@ import {
     ResponsiveContainer,
     PieChart,
     Pie,
-    Cell
+    Cell,
+    BarChart,
+    CartesianGrid,
+    Bar,
+    XAxis,
+    YAxis
 } from 'recharts';
 import { Lab, SupportRequest, User } from '@/types';
 import DataManagementTab from '../admin/DataManagementTab';
@@ -83,20 +88,14 @@ import { AddParticipantModal } from '@/components/modals/Admin/AddParticipantMod
 import { AddCoordinatorModal } from '@/components/modals/Admin/AddCoordinatorModal';
 import { SettingsTab } from '@/components/dashboards/SettingsTab';
 import ProblemAllocationTab from '@/components/admin/ProblemAllocationTab';
+import { AnalyticsTab } from '@/components/admin/AnalyticsTab';
+import { SubmissionsTab } from '@/components/admin/SubmissionsTab';
 import { DeleteTeamModal } from '@/components/modals/DeleteTeamModal';
 import { EditTeamModal } from '@/components/modals/EditTeamModal';
+import { EditCoordinatorModal } from '@/components/modals/Admin/EditCoordinatorModal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import ActivityLogTab from '@/components/admin/ActivityLogTab';
-import LabAllocationTab from '@/components/admin/LabAllocationTab';
 import SystemConfigTab from '@/components/admin/SystemConfigTab';
 import PendingRequestsTab from '@/components/admin/PendingRequestsTab';
-import { AnalyticsTab } from '@/components/admin/AnalyticsTab';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { DashboardShell } from '@/components/dashboards/DashboardShell';
 import { NavItem } from '@/components/dashboards/DashboardNav';
 
@@ -111,12 +110,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         participants,
         coordinators,
         logs,
-        settings,
         isLoading,
         fetchParticipants,
         fetchCoordinators,
         fetchLogs,
-        updateSettings,
         deleteParticipant,
         deleteCoordinator,
         updateCoordinator,
@@ -128,12 +125,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         deleteLab,
         fetchLabs,
         fetchSupportRequests,
-        updateSupportRequest,
-        processEmailQueue
-    } = useData();
+        updateSupportRequest } = useData();
 
     // Column Definitions
-
     const coordinatorColumns: ColumnDef<Coordinator>[] = [
         {
             accessorKey: "name",
@@ -182,7 +176,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
             id: "actions",
             header: () => <div className="text-right w-full">Actions</div>,
             cell: ({ row }) => (
-                <div className="text-right">
+                <div className="text-right flex gap-1 justify-end">
+                    <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-blue-400 hover:text-blue-300 h-8 w-8"
+                        onClick={() => {
+                            setEditingCoordinator(row.original);
+                            setEditCoordinatorModalOpen(true);
+                        }}
+                    >
+                        <Edit className="w-4 h-4" />
+                    </Button>
                     <Button size="icon" variant="ghost" className="text-red-400 h-8 w-8" onClick={() => handleDelete(row.original._id, 'coordinator')}>
                         <Trash2 className="w-4 h-4" />
                     </Button>
@@ -226,7 +231,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         {
             accessorKey: "type",
             header: "Type",
-            cell: ({ row }) => <Badge variant="outline" className="text-[10px]">{row.original.type || 'Workshop'}</Badge>
+            cell: ({ row }) => <Badge variant="outline" className="text-[10px]">{row.original.type || 'Hackathon'}</Badge>
         },
         {
             accessorKey: "roomNumber",
@@ -258,7 +263,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                         variant="ghost"
                         className="text-blue-400 h-8 w-8"
                         onClick={() => {
-                            setEditingLab({ ...row.original, type: row.original.type || 'Workshop' });
+                            setEditingLab({ ...row.original, type: row.original.type || 'Hackathon' });
                             setIsEditLabOpen(true);
                         }}
                     >
@@ -363,7 +368,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
     const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'participant' | 'coordinator' | 'lab' } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isAllocating, setIsAllocating] = useState(false);
-    const [newLab, setNewLab] = useState<{ name: string, roomNumber: string, capacity: number, type: 'Workshop' | 'Hackathon' }>({ name: '', roomNumber: '', capacity: 0, type: 'Workshop' });
+    const [newLab, setNewLab] = useState<{ name: string, roomNumber: string, capacity: number, type: 'Hackathon' }>({ name: '', roomNumber: '', capacity: 0, type: 'Hackathon' });
     const [sosOpen, setSosOpen] = useState(false);
     const [acknowledgedSOSIds, setAcknowledgedSOSIds] = useState<string[]>([]);
 
@@ -456,7 +461,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         }
     };
 
-    const handleAllocate = async (eventType: 'Workshop' | 'Hackathon') => {
+    const handleAllocate = async (eventType: 'Hackathon') => {
         setIsAllocating(true);
         try {
             const res = await fetch(`/api/admin/allocate?type=${eventType}`, { method: 'POST' });
@@ -471,27 +476,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         }
     };
 
-    const handleRevertAllocation = async (participantId: string, eventType: 'workshop' | 'hackathon' | 'both') => {
-        const participant = participants.find(p => p._id === participantId);
-        if (!participant) return;
-
-        const updates: Partial<Participant> = { _id: participantId };
-
-        if (eventType === 'workshop' || eventType === 'both') {
-            updates.assignedWorkshopLab = undefined;
-        }
-        if (eventType === 'hackathon' || eventType === 'both') {
-            updates.assignedHackathonLab = undefined;
-        }
-
-        try {
-            await updateParticipant(updates as Participant);
-            toast.success(`Allocation reverted successfully`);
-            fetchParticipants();
-        } catch {
-            toast.error('Failed to revert allocation');
-        }
-    };
 
     const handleAddLab = async () => {
         if (!newLab.name || !newLab.capacity) {
@@ -502,7 +486,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         try {
             await addLab(newLab as any); // Cast because we know type is present or defaults
             toast.success('Lab added successfully');
-            setNewLab({ name: '', roomNumber: '', capacity: 0, type: 'Workshop' });
+            setNewLab({ name: '', roomNumber: '', capacity: 0, type: 'Hackathon' });
             setIsAddLabOpen(false);
         } catch {
             toast.error('Failed to add lab');
@@ -551,7 +535,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
     const filteredParticipants = participants.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.teamId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.email?.toLowerCase().includes(searchQuery.toLowerCase())
+        p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.whatsapp?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     // Group participants by teamId
@@ -571,8 +556,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
             type: members[0].type,
             college: members[0].college,
             hasPayment: members.some(m => m.paymentScreenshotUrl),
-            isAllocated: members.some(m => m.assignedWorkshopLab || m.assignedHackathonLab),
-            assignedWorkshopLab: members.find(m => m.assignedWorkshopLab)?.assignedWorkshopLab,
+            isAllocated: members.some(m => m.assignedHackathonLab),
             assignedHackathonLab: members.find(m => m.assignedHackathonLab)?.assignedHackathonLab,
         }));
     }, [filteredParticipants]);
@@ -586,6 +570,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [deleteModalTeam, setDeleteModalTeam] = useState<{ teamId: string, members: Participant[] } | null>(null);
     const [editTeamModalOpen, setEditTeamModalOpen] = useState(false);
+    const [editCoordinatorModalOpen, setEditCoordinatorModalOpen] = useState(false);
+    const [editingCoordinator, setEditingCoordinator] = useState<Coordinator | null>(null);
     const [editingTeamMembers, setEditingTeamMembers] = useState<Participant[]>([]);
     const [editingTeamUser, setEditingTeamUser] = useState<User | null>(null);
     const ITEMS_PER_PAGE = 10;
@@ -683,48 +669,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         setSelectedTeams(new Set());
     };
 
-    const handleDragAllocate = async (teamId: string, labName: string) => {
-        // Optimistic update would require local state management complexity
-        // For now we rely on the backend update and re-fetch
-        // In a production app, we'd update 'teamGroups' immediately
-        try {
-            // Find the lab ID from the name (since our DnD uses name based on legacy logic in component)
-            // Ideally should use ID everywhere. 
-            // Existing logic uses assignedWorkshopLab name string.
-            // We'll simulate the API call
 
-            // We need to find the participant ID to update, but we are allocating a TEAM.
-            // So we update all members of the team.
-            const team = teamGroups.find(t => t.teamId === teamId);
-            if (!team) return;
-
-            // Determine if it's workshop or hackathon based on team type
-            // or just update both if ambiguous? Usually type decides.
-            const isHackathon = team.type.toLowerCase().includes('hackathon');
-            const targetField = isHackathon ? 'assignedHackathonLab' : 'assignedWorkshopLab';
-
-            // Simulate API call for each member (or bulk if API existed)
-            // handleAllocate does this logic usually via Dropdown
-            // We'll mimic the update effect
-            // Real implementation: POST /api/admin/allocate-team { teamId, labId }
-
-            // For this demo/quick-win, we'll just show success as we don't have the full API
-            // But we should try to actually update if possible
-            // Re-using the logic from handleAllocate might be best if we can adapt it
-
-            // Let's assume we just trigger a toast for the Quick Win demo
-            console.log(`Allocating ${teamId} to ${labName}`);
-
-            // Force refresh to simulate update if we could
-            /* 
-            await fetch('/api/admin/allocate', { method: 'POST', body: ... })
-            fetchParticipants(); 
-            */
-        } catch (error) {
-            console.error('Allocation failed', error);
-            throw error;
-        }
-    };
 
     const handleDeleteAll = async (teamId: string, memberIds: string[]) => {
         for (const memberId of memberIds) {
@@ -762,7 +707,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
 
 
     // Pagination
-    const totalPages = Math.ceil(filteredTeams.length / ITEMS_PER_PAGE);
 
     const paginatedTeamsData = React.useMemo(() => {
         const start = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -778,12 +722,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         setCurrentPage(1);
     }, [typeFilter, allocationFilter, searchQuery]);
 
-    const totalRevenue = participants.reduce<number>((acc, p) => {
-        const type = p.type.toLowerCase();
-        if (type.includes('combo')) return acc + 499;
-        if (type.includes('hackathon')) return acc + 349;
-        if (type.includes('workshop')) return acc + 199;
-        return acc + 499; // Default
+    const totalRevenue = participants.reduce<number>((acc) => {
+        return acc + 349; // Hackathon pass price
     }, 0);
 
     const revenueDisplay = (totalRevenue / 1000).toFixed(3) + 'k';
@@ -793,7 +733,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         { label: 'Pending Approvals', icon: CheckCircle2, value: 'approvals', group: 'Users' },
         { label: 'Coordinators', icon: UserCog, value: 'coordinators', group: 'Users' },
         { label: 'Lab Management', icon: Zap, value: 'lab', group: 'Operations' },
-        { label: 'Visual Allocation', icon: LayoutGrid, value: 'allocation', group: 'Operations' },
         { label: 'Problem Statements', icon: FileText, value: 'problems', group: 'Operations' },
         { label: 'Support Requests', icon: AlertTriangle, value: 'support', group: 'Operations' },
         { label: 'Analytics', icon: BarChart3, value: 'analytics', group: 'Monitoring' },
@@ -802,6 +741,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         { label: 'Data Management', icon: Database, value: 'data', group: 'Settings' },
         { label: 'My Account', icon: Lock, value: 'settings', group: 'Settings' },
     ];
+
+    // Team Size Distribution
+    const teamSizeData = useMemo(() => {
+        const sizeCount: Record<number, number> = {};
+        const teams = new Map<string, number>();
+
+        participants.forEach(p => {
+            const teamId = p.teamId || p._id;
+            teams.set(teamId, (teams.get(teamId) || 0) + 1);
+        });
+
+        teams.forEach(size => {
+            sizeCount[size] = (sizeCount[size] || 0) + 1;
+        });
+
+        return Object.entries(sizeCount)
+            .map(([size, count]) => ({
+                size: `${size} ${parseInt(size) === 1 ? 'Member' : 'Members'}`,
+                count
+            }))
+            .sort((a, b) => parseInt(a.size) - parseInt(b.size));
+    }, [participants]);
 
     if (isLoading && participants.length === 0) {
         return (
@@ -898,9 +859,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                             </SelectTrigger>
                             <SelectContent className="bg-brand-surface border-white/10">
                                 <SelectItem value="all">All Types</SelectItem>
-                                <SelectItem value="Workshop">Workshop</SelectItem>
                                 <SelectItem value="Hackathon">Hackathon</SelectItem>
-                                <SelectItem value="Combo">Combo</SelectItem>
                             </SelectContent>
                         </Select>
                         <Select value={allocationFilter} onValueChange={setAllocationFilter}>
@@ -945,9 +904,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
 
                                     if (allocationFilter !== 'all') {
                                         if (allocationFilter === 'allocated') {
-                                            filtered = filtered.filter(p => p.assignedWorkshopLab || p.assignedHackathonLab);
-                                        } else {
-                                            filtered = filtered.filter(p => !p.assignedWorkshopLab && !p.assignedHackathonLab);
+                                            filtered = filtered.filter(p => p.assignedHackathonLab);
+                                        } else if (allocationFilter === 'not-allocated') {
+                                            filtered = filtered.filter(p => !p.assignedHackathonLab);
                                         }
                                     }
 
@@ -963,8 +922,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                                         members,
                                         teamSize: members.length,
                                         type: members[0].type,
-                                        isAllocated: members.some(m => m.assignedWorkshopLab || m.assignedHackathonLab),
-                                        assignedWorkshopLab: members[0].assignedWorkshopLab,
+                                        isAllocated: members.some(m => m.assignedHackathonLab),
                                         assignedHackathonLab: members[0].assignedHackathonLab,
                                         hasPayment: members.some(m => m.paymentScreenshotUrl)
                                     }));
@@ -1001,7 +959,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                                                 <TableCell className="text-xs">
                                                     {team.isAllocated ? (
                                                         <div className="text-gray-400 space-y-1 text-[10px]">
-                                                            {team.members.find(m => m.assignedWorkshopLab)?.assignedWorkshopLab && <div>W: {team.members.find(m => m.assignedWorkshopLab)?.assignedWorkshopLab}</div>}
+
                                                             {team.members.find(m => m.assignedHackathonLab)?.assignedHackathonLab && <div>H: {team.members.find(m => m.assignedHackathonLab)?.assignedHackathonLab}</div>}
                                                         </div>
                                                     ) : (
@@ -1030,18 +988,42 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                                             {expandedTeams.has(team.teamId) && (
                                                 <TableRow className="bg-white/2">
                                                     <TableCell colSpan={5} className="p-4">
-                                                        <div className="space-y-3">
-                                                            {team.members.map((member) => (
-                                                                <div key={member._id} className="bg-brand-dark p-4 rounded-lg border border-white/5">
-                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
-                                                                        <div><span className="text-gray-500">Name:</span> <span className="text-white ml-1">{member.name}</span></div>
-                                                                        <div className="truncate"><span className="text-gray-500">Email:</span> <span className="text-gray-300 ml-1">{member.email}</span></div>
-                                                                        <div className="truncate"><span className="text-gray-500">College:</span> <span className="text-gray-300 ml-1" title={member.college}>{member.college}</span></div>
-                                                                        {member.assignedWorkshopLab && <div><span className="text-gray-500">Workshop Lab:</span> <span className="text-brand-primary ml-1">{member.assignedWorkshopLab}</span></div>}
-                                                                        {member.assignedHackathonLab && <div><span className="text-gray-500">Hackathon Lab:</span> <span className="text-brand-primary ml-1">{member.assignedHackathonLab}</span></div>}
+                                                        <div className="space-y-4">
+                                                            {/* Project Submission Section */}
+                                                            <div className="bg-brand-dark/50 p-3 rounded-lg border border-white/5 flex items-center justify-between">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="p-2 bg-brand-primary/10 rounded-md text-brand-primary">
+                                                                        <Globe className="w-4 h-4" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Project Repository</div>
+                                                                        {team.members[0].projectRepo ? (
+                                                                            <a href={team.members[0].projectRepo} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:underline font-mono flex items-center gap-1">
+                                                                                {team.members[0].projectRepo}
+                                                                                <Globe className="w-3 h-3" />
+                                                                            </a>
+                                                                        ) : (
+                                                                            <span className="text-sm text-gray-500 italic">No repo submitted yet</span>
+                                                                        )}
                                                                     </div>
                                                                 </div>
-                                                            ))}
+                                                            </div>
+
+                                                            {/* Member Cards */}
+                                                            <div className="grid gap-3">
+                                                                {team.members.map((member) => (
+                                                                    <div key={member._id} className="bg-brand-dark p-4 rounded-lg border border-white/5">
+                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
+                                                                            <div><span className="text-gray-500">Name:</span> <span className="text-white ml-1">{member.name}</span></div>
+                                                                            <div className="truncate"><span className="text-gray-500">Email:</span> <span className="text-gray-300 ml-1">{member.email}</span></div>
+                                                                            <div className="truncate"><span className="text-gray-500">Mobile:</span> <span className="text-gray-300 ml-1">{member.whatsapp}</span></div>
+                                                                            <div className="truncate"><span className="text-gray-500">College:</span> <span className="text-gray-300 ml-1" title={member.college}>{member.college}</span></div>
+
+                                                                            {member.assignedHackathonLab && <div><span className="text-gray-500">Hackathon Lab:</span> <span className="text-brand-primary ml-1">{member.assignedHackathonLab}</span></div>}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
                                                         </div>
                                                     </TableCell>
                                                 </TableRow>
@@ -1108,22 +1090,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                                 <Plus className="w-3 h-3 mr-2" /> Add Lab
                             </Button>
 
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button size="sm" className="bg-brand-primary text-brand-dark hover:bg-white">
-                                        <Zap className="w-3 h-3 mr-2" />
-                                        Allocate...
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="bg-brand-surface border-white/10">
-                                    <DropdownMenuItem onClick={() => handleAllocate('Workshop')}>
-                                        Allocate Workshop
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleAllocate('Hackathon')}>
-                                        Allocate Hackathon
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                            <Button
+                                size="sm"
+                                className="bg-brand-primary text-brand-dark hover:bg-white"
+                                onClick={() => handleAllocate('Hackathon')}
+                            >
+                                <Zap className="w-3 h-3 mr-2" />
+                                Allocate Labs
+                            </Button>
                         </div>
                     </div>
 
@@ -1153,13 +1127,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                                     <Label>Type</Label>
                                     <Select
                                         value={newLab.type}
-                                        onValueChange={(val: 'Workshop' | 'Hackathon') => setNewLab({ ...newLab, type: val })}
+                                        onValueChange={(val: 'Hackathon') => setNewLab({ ...newLab, type: val })}
                                     >
                                         <SelectTrigger className="bg-brand-dark border-white/10">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent className="bg-brand-surface border-white/10">
-                                            <SelectItem value="Workshop">Workshop</SelectItem>
                                             <SelectItem value="Hackathon">Hackathon</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -1209,13 +1182,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                                         <Label>Type</Label>
                                         <Select
                                             value={editingLab.type}
-                                            onValueChange={(val: 'Workshop' | 'Hackathon') => setEditingLab({ ...editingLab, type: val })}
+                                            onValueChange={(val: 'Hackathon') => setEditingLab({ ...editingLab, type: val })}
                                         >
                                             <SelectTrigger className="bg-brand-dark border-white/10">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent className="bg-brand-surface border-white/10">
-                                                <SelectItem value="Workshop">Workshop</SelectItem>
                                                 <SelectItem value="Hackathon">Hackathon</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -1302,42 +1274,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <Card className="bg-brand-surface border-white/5 p-6">
-                            <CardHeader className="px-0 pt-0">
-                                <CardTitle className="text-xl">Ticket Distribution</CardTitle>
-                                <CardDescription>Participants by ticket type</CardDescription>
+
+                        {/* Team Size Distribution */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Team Size Distribution</CardTitle>
+                                <CardDescription>Breakdown by team member count</CardDescription>
                             </CardHeader>
-                            <CardContent className="px-0 h-[300px]">
+                            <CardContent className="h-[300px]">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={[
-                                                { name: 'Combo', value: participants.filter(p => p.type.toLowerCase().includes('combo')).length },
-                                                { name: 'Workshop', value: participants.filter(p => p.type.toLowerCase().includes('workshop')).length },
-                                                { name: 'Hackathon', value: participants.filter(p => p.type.toLowerCase().includes('hackathon')).length },
-                                            ]}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={100}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                        >
-                                            {[
-                                                { name: 'Combo', value: participants.filter(p => p.type.toLowerCase().includes('combo')).length },
-                                                { name: 'Workshop', value: participants.filter(p => p.type.toLowerCase().includes('workshop')).length },
-                                                { name: 'Hackathon', value: participants.filter(p => p.type.toLowerCase().includes('hackathon')).length },
-                                            ].map((_entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
+                                    <BarChart data={teamSizeData}>
+                                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                                        <XAxis dataKey="size" fontSize={12} />
+                                        <YAxis fontSize={12} />
                                         <Tooltip
-                                            contentStyle={{ backgroundColor: '#020202', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
-                                            itemStyle={{ color: '#fff' }}
-                                            labelStyle={{ color: '#fff' }}
+                                            contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
+                                            cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
                                         />
-                                        <Legend />
-                                    </PieChart>
+                                        <Bar dataKey="count" fill="#10b981" name="Teams" radius={[4, 4, 0, 0]} />
+                                    </BarChart>
                                 </ResponsiveContainer>
                             </CardContent>
                         </Card>
@@ -1375,12 +1330,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                                             itemStyle={{ color: '#fff' }}
                                             labelStyle={{ color: '#fff' }}
                                         />
-                                        <Legend />
+                                        {/* <Legend /> */}
                                     </PieChart>
                                 </ResponsiveContainer>
                             </CardContent>
                         </Card>
                     </div>
+                </TabsContent>
+
+                <TabsContent value="submissions" className="mt-6 space-y-4">
+                    <SubmissionsTab participants={participants} loading={isLoading} />
                 </TabsContent>
 
                 <TabsContent value="logs" className="mt-6 space-y-4">
@@ -1397,6 +1356,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                     />
                 </TabsContent>
 
+                <TabsContent value="analytics" className="mt-6">
+                    <AnalyticsTab />
+                </TabsContent>
+
                 <TabsContent value="system" className="mt-6">
                     <SystemConfigTab />
                 </TabsContent>
@@ -1407,14 +1370,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
 
                 <TabsContent value="settings" className="mt-6">
                     <SettingsTab user={user} />
-                </TabsContent>
-
-                <TabsContent value="allocation" className="mt-6">
-                    <LabAllocationTab
-                        labs={labs}
-                        teams={teamGroups}
-                        onAllocate={handleDragAllocate}
-                    />
                 </TabsContent>
 
                 <TabsContent value="approvals" className="mt-6">
@@ -1513,6 +1468,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                 onClose={() => { setEditTeamModalOpen(false); setEditingTeamMembers([]); setEditingTeamUser(null); }}
                 teamMembers={editingTeamMembers}
                 teamUser={editingTeamUser}
+                labs={labs}
                 onSave={async (updatedMembers, userUpdates) => {
                     // Update user credentials
                     if (editingTeamUser) {
@@ -1541,6 +1497,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                     setEditTeamModalOpen(false);
                     setEditingTeamMembers([]);
                     setEditingTeamUser(null);
+                }}
+            />
+
+            {/* Edit Coordinator Modal */}
+            <EditCoordinatorModal
+                isOpen={editCoordinatorModalOpen}
+                onClose={() => {
+                    setEditCoordinatorModalOpen(false);
+                    setEditingCoordinator(null);
+                }}
+                coordinator={editingCoordinator}
+                onSave={async (updates) => {
+                    await updateCoordinator(updates as Coordinator);
+                    toast.success('Coordinator updated successfully');
+                    setEditCoordinatorModalOpen(false);
+                    setEditingCoordinator(null);
                 }}
             />
 

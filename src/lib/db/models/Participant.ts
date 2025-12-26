@@ -11,11 +11,12 @@ export interface IParticipant {
     whatsapp: string;
     year: string;
     linkedin?: string;
+    domain?: string;
     transactionId: string;
-    type: 'Workshop' | 'Hackathon' | 'Combo';
+    type: 'Hackathon';
     status: 'pending' | 'approved' | 'rejected';
     assignedLab?: string;
-    assignedWorkshopLab?: string;
+
     assignedHackathonLab?: string;
     assignedSeat?: string;
     paymentScreenshotUrl?: string;
@@ -23,11 +24,37 @@ export interface IParticipant {
     eventChecklist?: string[];
     problemAssignmentId?: mongoose.Types.ObjectId;
     hasConfirmedProblem?: boolean;
+    projectRepo?: string;
+    submissionStatus?: 'pending' | 'verified' | 'flagged';
+    submissionTime?: Date;
+
+    // Extended Submission Fields
+    projectRepoLocked?: boolean;
+    projectRepoSubmittedAt?: Date;
+    codingPlatform?: string;
+    extendedSubmissionData?: {
+        codingPlatforms?: string[];
+        filesUploaded?: {
+            envFile?: string;
+            requirementsFile?: string;
+            documentFile?: string;
+            otherFiles?: string[];
+        };
+        submittedAt?: Date;
+        folderPath?: string;
+        totalFileSize?: number;
+    };
+    submissionFlags?: {
+        isFlagged: boolean;
+        flags: string[];
+        flaggedAt?: Date;
+        reviewedBy?: string;
+        reviewStatus?: 'pending' | 'approved' | 'rejected';
+        reviewNotes?: string;
+    };
 
     // Attendance Tracking
-    workshopDay1?: Date;
-    workshopDay2?: Date;
-    workshopDay3?: Date;
+
     hackathonAttendance?: Date;
     entryGateTimestamp?: Date;
     exitGateTimestamp?: Date;
@@ -88,21 +115,21 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
         },
         type: {
             type: String,
-            enum: ['Workshop', 'Hackathon', 'Combo'],
+            enum: ['Hackathon'],
             required: true,
         },
         status: {
             type: String,
-            enum: ['pending', 'approved', 'rejected'],
+            enum: ['pending', 'approved', 'rejected', 'Pending', 'Approved', 'Rejected'],
             default: 'approved'
         },
         assignedLab: {
             type: String,
         },
-        assignedWorkshopLab: {
+        assignedHackathonLab: {
             type: String,
         },
-        assignedHackathonLab: {
+        domain: {
             type: String,
         },
         assignedSeat: {
@@ -123,17 +150,63 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
             required: true,
             index: true,
         },
+        problemAssignmentId: {
+            type: Schema.Types.ObjectId,
+            ref: 'ProblemAssignment'
+        },
+        hasConfirmedProblem: {
+            type: Boolean,
+            default: false
+        },
+        projectRepo: {
+            type: String,
+        },
+        submissionStatus: {
+            type: String,
+            enum: ['pending', 'verified', 'flagged'],
+            default: 'pending'
+        },
+        submissionTime: {
+            type: Date,
+        },
+        // Extended Submission Fields
+        projectRepoLocked: {
+            type: Boolean,
+            default: false
+        },
+        projectRepoSubmittedAt: {
+            type: Date
+        },
+        codingPlatform: {
+            type: String
+        },
+        extendedSubmissionData: {
+            codingPlatforms: [String],
+            filesUploaded: {
+                envFile: String,
+                requirementsFile: String,
+                documentFile: String,
+                otherFiles: [String]
+            },
+            submittedAt: Date,
+            folderPath: String, // Google Drive folder ID or link
+            totalFileSize: Number
+        },
+        submissionFlags: {
+            isFlagged: { type: Boolean, default: false },
+            flags: [String],
+            flaggedAt: Date,
+            reviewedBy: String,
+            reviewStatus: {
+                type: String,
+                enum: ['pending', 'approved', 'rejected'],
+                default: 'pending'
+            },
+            reviewNotes: String
+        },
+
 
         // Attendance Tracking Fields
-        workshopDay1: {
-            type: Date,
-        },
-        workshopDay2: {
-            type: Date,
-        },
-        workshopDay3: {
-            type: Date,
-        },
         hackathonAttendance: {
             type: Date,
         },

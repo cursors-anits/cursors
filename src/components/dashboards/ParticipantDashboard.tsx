@@ -225,20 +225,6 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                             </div>
 
                             <div className="mt-8 space-y-3">
-                                {/* Workshop Allocation */}
-                                {participantData?.assignedWorkshopLab && (
-                                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-between text-left">
-                                        <div className="flex items-center gap-4">
-                                            <MapPin className="w-6 h-6 text-blue-400" />
-                                            <div>
-                                                <p className="text-xs text-blue-300 font-bold uppercase">Workshop Station</p>
-                                                <p className="text-white font-bold">{participantData.assignedWorkshopLab} • {participantData.assignedSeat || 'Gen Seat'}</p>
-                                            </div>
-                                        </div>
-                                        <Badge className="bg-blue-500 text-white">Day 1-2</Badge>
-                                    </div>
-                                )}
-
                                 {/* Hackathon Allocation */}
                                 {participantData?.assignedHackathonLab && (
                                     <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-2xl flex items-center justify-between text-left">
@@ -254,7 +240,7 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                                 )}
 
                                 {/* Legacy/Generic Allocation (Fallback) */}
-                                {!participantData?.assignedWorkshopLab && !participantData?.assignedHackathonLab && participantData?.assignedLab && (
+                                {!participantData?.assignedHackathonLab && participantData?.assignedLab && (
                                     <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-between text-left">
                                         <div className="flex items-center gap-4">
                                             <MapPin className="w-6 h-6 text-green-400" />
@@ -268,7 +254,7 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                                 )}
 
                                 {/* Pending State */}
-                                {!participantData?.assignedWorkshopLab && !participantData?.assignedHackathonLab && !participantData?.assignedLab && (
+                                {!participantData?.assignedHackathonLab && !participantData?.assignedLab && (
                                     <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-3">
                                         <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
                                         <p className="text-sm text-gray-400">Lab allocation in progress...</p>

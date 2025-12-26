@@ -10,15 +10,8 @@ export async function POST(
     try {
         await dbConnect();
 
-        const { selectedProblemIndex } = await request.json();
+        const { selectedProblemIndex, type, customProblem } = await request.json();
         const { id } = await params;
-
-        if (selectedProblemIndex === undefined || selectedProblemIndex < 0 || selectedProblemIndex > 2) {
-            return NextResponse.json(
-                { error: 'Invalid problem selection. Must be 0, 1, or 2' },
-                { status: 400 }
-            );
-        }
 
         // Get assignment
         const assignment = await ProblemAssignment.findOne({
@@ -43,13 +36,35 @@ export async function POST(
             );
         }
 
-        // Get selected problem
-        const selectedProblem = assignment.offeredProblems[selectedProblemIndex];
-        if (!selectedProblem) {
-            return NextResponse.json(
-                { error: 'Selected problem not found in offered problems' },
-                { status: 400 }
-            );
+        let selectedProblem;
+
+        if (type === 'custom') {
+            if (!customProblem || typeof customProblem !== 'string' || customProblem.trim().length < 10) {
+                return NextResponse.json(
+                    { error: 'Invalid custom problem statement. Must be at least 10 characters.' },
+                    { status: 400 }
+                );
+            }
+            selectedProblem = {
+                domainIndex: -1,
+                problemIndex: -1,
+                domain: 'Open Innovation',
+                problem: customProblem.trim()
+            };
+        } else {
+            if (selectedProblemIndex === undefined || selectedProblemIndex < 0 || selectedProblemIndex > 2) {
+                return NextResponse.json(
+                    { error: 'Invalid problem selection. Must be 0, 1, or 2' },
+                    { status: 400 }
+                );
+            }
+            selectedProblem = assignment.offeredProblems[selectedProblemIndex];
+            if (!selectedProblem) {
+                return NextResponse.json(
+                    { error: 'Selected problem not found in offered problems' },
+                    { status: 400 }
+                );
+            }
         }
 
         // Update assignment
@@ -60,10 +75,13 @@ export async function POST(
 
         await assignment.save();
 
-        // Update participant
+        // Update participant domain and status
         await Participant.updateOne(
             { participantId: id },
-            { hasConfirmedProblem: true }
+            {
+                hasConfirmedProblem: true,
+                domain: selectedProblem.domain // Update domain to match selection
+            }
         );
 
         return NextResponse.json({

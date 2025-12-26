@@ -11,7 +11,7 @@ export function AnalyticsTab() {
 
     // Key Metrics
     const totalParticipants = participants.length;
-    const allocatedParticipants = participants.filter(p => p.assignedWorkshopLab || p.assignedHackathonLab).length;
+    const allocatedParticipants = participants.filter(p => p.assignedHackathonLab).length;
     const unallocatedParticipants = totalParticipants - allocatedParticipants;
     const allocationRate = totalParticipants > 0 ? Math.round((allocatedParticipants / totalParticipants) * 100) : 0;
 
@@ -19,7 +19,7 @@ export function AnalyticsTab() {
     const labData = useMemo(() => {
         return labs.map(lab => ({
             name: lab.name,
-            count: participants.filter(p => p.assignedWorkshopLab === lab.name || p.assignedHackathonLab === lab.name).length,
+            count: participants.filter(p => p.assignedHackathonLab === lab.name).length,
             capacity: lab.capacity
         }));
     }, [labs, participants]);
@@ -47,7 +47,7 @@ export function AnalyticsTab() {
             <h2 className="text-2xl font-bold tracking-tight">Analytics Overview</h2>
 
             {/* KPI Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-3">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Registrations</CardTitle>
@@ -55,7 +55,7 @@ export function AnalyticsTab() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{totalParticipants}</div>
-                        <p className="text-xs text-muted-foreground">+ from last month</p>
+                        <p className="text-xs text-muted-foreground">Participants registered</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -65,7 +65,7 @@ export function AnalyticsTab() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{allocationRate}%</div>
-                        <p className="text-xs text-muted-foreground">{allocatedParticipants} allocated</p>
+                        <p className="text-xs text-muted-foreground">{allocatedParticipants} of {totalParticipants} allocated</p>
                     </CardContent>
                 </Card>
                 <Card>
@@ -75,17 +75,7 @@ export function AnalyticsTab() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{labs.length}</div>
-                        <p className="text-xs text-muted-foreground">Total Capacity: {labs.reduce((acc, l) => acc + l.capacity, 0)}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Pending Issues</CardTitle>
-                        <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{0}</div>
-                        <p className="text-xs text-muted-foreground">Support requests</p>
+                        <p className="text-xs text-muted-foreground">Capacity: {labs.reduce((acc, l) => acc + l.capacity, 0)} seats</p>
                     </CardContent>
                 </Card>
             </div>
@@ -138,6 +128,8 @@ export function AnalyticsTab() {
                                 </Pie>
                                 <Tooltip
                                     contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }}
+                                    itemStyle={{ color: '#fff' }}
+                                    labelStyle={{ color: '#fff' }}
                                 />
                                 <Legend />
                             </PieChart>

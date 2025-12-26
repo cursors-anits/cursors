@@ -37,9 +37,9 @@ export const AddParticipantModal: React.FC<AddParticipantModalProps> = ({ isOpen
         department: '',
         whatsapp: '',
         year: '1',
-        type: 'Workshop',
+        type: 'Hackathon',
         status: 'Confirmed',
-        transactionId: 'ADMIN_ADDED'
+        transactionId: 'PARTICIPANT_ADDED'
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -165,9 +165,7 @@ export const AddParticipantModal: React.FC<AddParticipantModalProps> = ({ isOpen
                                     <SelectValue placeholder="Select Type" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-brand-dark border-white/10 text-white">
-                                    <SelectItem value="Workshop">Workshop</SelectItem>
                                     <SelectItem value="Hackathon">Hackathon</SelectItem>
-                                    <SelectItem value="Combo">Combo</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

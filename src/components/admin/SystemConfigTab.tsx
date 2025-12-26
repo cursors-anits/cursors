@@ -9,27 +9,22 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
-import { Lock, Globe, Zap, AlertTriangle, Settings2, ShieldAlert, Info, Calendar, Trophy, CreditCard, Server, Power } from 'lucide-react';
+import { Lock, Globe, Zap, AlertTriangle, Settings2, ShieldAlert, Info, Calendar, Trophy, CreditCard, Server, Power, Clock, AlertCircle } from 'lucide-react';
 
 export default function SystemConfigTab() {
     const { settings, updateSettings, allocateLabs, processEmailQueue } = useData();
     const [config, setConfig] = useState({
-        workshopLimit: settings?.bufferConfig?.workshopLimit || 300,
         hackathonLimit: settings?.bufferConfig?.hackathonLimit || 500,
-        workshopBuffer: settings?.bufferConfig?.workshopBuffer || 50,
         hackathonBuffer: settings?.bufferConfig?.hackathonBuffer || 100,
-        workshopCount: settings?.fomoConfig?.workshopCount || 284,
-        hackathonCount: settings?.fomoConfig?.hackathonCount || 488
+        hackathonCount: settings?.fomoConfig?.hackathonCount || 488,
     });
 
     const handleSaveBuffer = async () => {
         try {
             await updateSettings({
                 bufferConfig: {
-                    workshopLimit: Number(config.workshopLimit),
                     hackathonLimit: Number(config.hackathonLimit),
-                    workshopBuffer: Number(config.workshopBuffer),
-                    hackathonBuffer: Number(config.hackathonBuffer)
+                    hackathonBuffer: Number(config.hackathonBuffer),
                 }
             });
             toast.success('Buffer limits updated');
@@ -42,7 +37,6 @@ export default function SystemConfigTab() {
         try {
             await updateSettings({
                 fomoConfig: {
-                    workshopCount: Number(config.workshopCount),
                     hackathonCount: Number(config.hackathonCount),
                     showFakeCounts: settings?.fomoConfig?.showFakeCounts ?? true
                 }
@@ -86,34 +80,6 @@ export default function SystemConfigTab() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-brand-surface border-white/5 p-6">
-                    <CardHeader className="px-0 pt-0">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
-                                <Globe className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <CardTitle className="text-lg">Internships</CardTitle>
-                                <CardDescription>Show internship opportunities</CardDescription>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="px-0 pt-6">
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                            <div>
-                                <p className="font-medium">Feature Visibility</p>
-                                <p className="text-xs text-gray-400">Currently {settings?.showInternships ? 'Visible' : 'Hidden'}</p>
-                            </div>
-                            <Button
-                                onClick={() => updateSettings({ showInternships: !settings?.showInternships })}
-                                variant={settings?.showInternships ? "destructive" : "outline"}
-                                className={!settings?.showInternships ? "border-brand-primary/20 text-brand-primary" : ""}
-                            >
-                                {settings?.showInternships ? 'Hide Feature' : 'Show Feature'}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
 
                 <Card className="bg-brand-surface border-white/5 p-6">
                     <CardHeader className="px-0 pt-0">
@@ -141,6 +107,80 @@ export default function SystemConfigTab() {
                         </div>
                     </CardContent>
                 </Card>
+                {/* Hackathon Timeline */}
+                <Card className="bg-brand-surface border-white/5 p-6">
+                    <CardHeader className="px-0 pt-0 border-b border-white/5 pb-4 mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-pink-500/10 text-pink-400">
+                                <Clock className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-lg">Hackathon Timeline</CardTitle>
+                                <CardDescription>Event duration and submission controls</CardDescription>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="px-0 space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-semibold text-brand-primary uppercase tracking-wider">Event Duration</h3>
+                                <div className="space-y-3">
+                                    <div className="space-y-1">
+                                        <Label className="flex items-center gap-2">Hackathon Start</Label>
+                                        <Input
+                                            type="datetime-local"
+                                            className="bg-brand-dark/50 border-white/10"
+                                            defaultValue={settings?.hackathonStartDate ? new Date(new Date(settings.hackathonStartDate).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''}
+                                            onBlur={(e) => updateSettings({ hackathonStartDate: new Date(e.target.value) })}
+                                        />
+                                        <p className="text-[10px] text-gray-500">Validation checks repo age against this date.</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="flex items-center gap-2">Hackathon End</Label>
+                                        <Input
+                                            type="datetime-local"
+                                            className="bg-brand-dark/50 border-white/10"
+                                            defaultValue={settings?.hackathonEndDate ? new Date(new Date(settings.hackathonEndDate).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''}
+                                            onBlur={(e) => updateSettings({ hackathonEndDate: new Date(e.target.value) })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h3 className="text-sm font-semibold text-brand-primary uppercase tracking-wider">Submission Window</h3>
+                                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                                    <div>
+                                        <p className="font-medium">Accepting Submissions</p>
+                                        <p className="text-xs text-gray-400">
+                                            {settings?.submissionWindowOpen ? 'Window Open (1 hour timer active)' : 'Window Closed'}
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={settings?.submissionWindowOpen}
+                                        onCheckedChange={(checked) => updateSettings({
+                                            submissionWindowOpen: checked,
+                                            submissionWindowStartTime: checked ? new Date() : undefined // Set start time when opened
+                                        })}
+                                        className="data-[state=checked]:bg-green-500"
+                                    />
+                                </div>
+                                {settings?.submissionWindowOpen && settings.submissionWindowStartTime && (
+                                    <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                                        <div className="flex items-center gap-2 text-yellow-400 mb-1">
+                                            <AlertCircle className="w-4 h-4" />
+                                            <span className="text-sm font-bold">Window Closes At</span>
+                                        </div>
+                                        <p className="text-sm text-yellow-200">
+                                            {new Date(new Date(settings.submissionWindowStartTime).getTime() + 60 * 60 * 1000).toLocaleString()}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
             </div>
 
             {/* Event Configuration */}
@@ -163,7 +203,7 @@ export default function SystemConfigTab() {
                             <Input
                                 type="datetime-local"
                                 className="bg-brand-dark/50 border-white/10"
-                                defaultValue={settings?.eventDate ? new Date(settings.eventDate).toISOString().slice(0, 16) : ''}
+                                defaultValue={settings?.eventDate ? new Date(new Date(settings.eventDate).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''}
                                 onBlur={(e) => updateSettings({ eventDate: new Date(e.target.value) })}
                             />
                             <p className="text-[10px] text-gray-500">Affects landing page countdown.</p>
@@ -233,47 +273,7 @@ export default function SystemConfigTab() {
                     </div>
                 </CardHeader>
                 <CardContent className="px-0 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* Workshop Config */}
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-semibold text-brand-primary uppercase tracking-wider">Workshop</h3>
-                            <div className="space-y-3">
-                                <div className="space-y-1">
-                                    <Label className="flex items-center gap-2">
-                                        Soft Limit (Open Reg)
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger>
-                                                    <Info className="w-3 h-3 text-gray-400" />
-                                                </TooltipTrigger>
-                                                <TooltipContent className="bg-black border border-white/10 text-white">
-                                                    <p>Registration remains fully open until this count.</p>
-                                                    <p>After this, it switches to 'Request' mode.</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    </Label>
-                                    <Input
-                                        type="number"
-                                        value={config.workshopLimit}
-                                        onChange={(e) => setConfig({ ...config, workshopLimit: Number(e.target.value) })}
-                                        className="bg-brand-dark/50 border-white/10"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label className="flex items-center gap-2">Buffer Size</Label>
-                                    <Input
-                                        type="number"
-                                        value={config.workshopBuffer}
-                                        onChange={(e) => setConfig({ ...config, workshopBuffer: Number(e.target.value) })}
-                                        className="bg-brand-dark/50 border-white/10"
-                                    />
-                                    <p className="text-[10px] text-gray-500">
-                                        Requests accepted up to {Number(config.workshopLimit) + Number(config.workshopBuffer)} total participants.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-1 gap-8">
 
                         {/* Hackathon Config */}
                         <div className="space-y-4">
@@ -345,7 +345,6 @@ export default function SystemConfigTab() {
                                 checked={settings?.fomoConfig?.showFakeCounts}
                                 onCheckedChange={(checked) => updateSettings({
                                     fomoConfig: {
-                                        workshopCount: settings?.fomoConfig?.workshopCount ?? 284,
                                         hackathonCount: settings?.fomoConfig?.hackathonCount ?? 488,
                                         showFakeCounts: checked
                                     }
@@ -356,15 +355,7 @@ export default function SystemConfigTab() {
                 </CardHeader>
                 <CardContent className="px-0 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-2">
-                            <Label>Workshop Fake Count</Label>
-                            <Input
-                                type="number"
-                                value={config.workshopCount}
-                                onChange={(e) => setConfig({ ...config, workshopCount: Number(e.target.value) })}
-                                className="bg-brand-dark/50 border-white/10"
-                            />
-                        </div>
+
                         <div className="space-y-2">
                             <Label>Hackathon Fake Count</Label>
                             <Input
@@ -398,19 +389,7 @@ export default function SystemConfigTab() {
                 </CardHeader>
                 <CardContent className="px-0">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Button
-                            onClick={() => allocateLabs('Workshop')}
-                            variant="outline"
-                            className="w-full justify-start h-auto p-4 border-white/5 hover:bg-white/5 hover:border-white/10"
-                        >
-                            <div className="flex flex-col items-start gap-1">
-                                <span className="font-medium flex items-center gap-2">
-                                    <Zap className="w-4 h-4 text-yellow-400" />
-                                    Allocate Workshops
-                                </span>
-                                <span className="text-xs text-gray-400">Run auto-allocation for workshop labs</span>
-                            </div>
-                        </Button>
+
 
                         <Button
                             onClick={() => processEmailQueue()}

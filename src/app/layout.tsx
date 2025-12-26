@@ -22,17 +22,17 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://cursors-anits.vercel.app'),
-  title: "Vibe Coding | Workshop & Hackathon",
-  description: "Join the ultimate fusion of Gen AI Workshop and a 24-Hour Hackathon at ANITS. Build, innovate, and vibe with the best minds.",
-  keywords: ["hackathon", "workshop", "coding", "ANITS", "Gen AI", "programming competition"],
+  title: "Vibe Coding | 24H Hackathon",
+  description: "Join the ultimate 24-Hour Hackathon at ANITS. Build, innovate, and vibe with the best minds.",
+  keywords: ["hackathon", "coding", "ANITS", "programming competition", "tech event"],
   authors: [{ name: "Vibe Coding Team" }],
   openGraph: {
-    title: "Vibe Coding | Workshop & Hackathon",
-    description: "Join the ultimate fusion of Gen AI Workshop and a 24-Hour Hackathon",
+    title: "Vibe Coding | 24H Hackathon",
+    description: "Join the ultimate 24-Hour Hackathon at ANITS",
     type: "website",
     locale: "en_US",
     images: [{
-      url: "/link preview.jpeg",
+      url: "/link preview.png",
       width: 1200,
       height: 630,
       alt: "Vibe Coding Event Preview"
@@ -40,9 +40,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Vibe Coding | Workshop & Hackathon",
-    description: "Join the ultimate fusion of Gen AI Workshop and a 24-Hour Hackathon",
-    images: ["/link preview.jpeg"],
+    title: "Vibe Coding | 24H Hackathon",
+    description: "Join the ultimate 24-Hour Hackathon at ANITS",
+    images: ["/link preview.png"],
   },
   manifest: "/manifest.json",
   icons: {

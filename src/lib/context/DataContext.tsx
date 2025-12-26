@@ -44,11 +44,11 @@ interface DataContextType {
     deleteCoordinator: (id: string) => Promise<void>;
 
     addLog: (action: string, details: string) => Promise<void>;
-    allocateLabs: (eventType: 'Workshop' | 'Hackathon') => Promise<void>;
+    allocateLabs: (eventType: 'Hackathon') => Promise<void>;
     processEmailQueue: () => Promise<void>;
     markAttendance: (
         target: string | string[],
-        mode: 'workshop' | 'hackathon' | 'hackathon_exit' | 'entry' | 'exit' | 'snacks',
+        mode: 'hackathon' | 'hackathon_exit' | 'entry' | 'exit' | 'snacks',
         status: 'present' | 'absent',
         day?: string
     ) => Promise<void>;
@@ -479,7 +479,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const allocateLabs = async (eventType: 'Workshop' | 'Hackathon') => {
+    const allocateLabs = async (eventType: 'Hackathon') => {
         await apiCall(async () => {
             const res = await fetch(`/api/admin/allocate?type=${eventType}`, {
                 method: 'POST',
@@ -516,7 +516,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const markAttendance = async (
         target: string | string[],
-        mode: 'workshop' | 'hackathon' | 'hackathon_exit' | 'entry' | 'exit' | 'snacks',
+        mode: 'hackathon' | 'hackathon_exit' | 'entry' | 'exit' | 'snacks',
         status: 'present' | 'absent',
         day?: string
     ) => {

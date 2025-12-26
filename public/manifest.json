@@ -1,7 +1,7 @@
 {
     "name": "Vibe Coding",
     "short_name": "VibeCoding",
-    "description": "Gen AI Workshop & 24H Hackathon",
+    "description": "24-Hour Hackathon Event",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#020617",

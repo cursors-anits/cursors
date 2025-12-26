@@ -12,8 +12,8 @@ import { LogOut, LayoutDashboard } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const navItems: NavItem[] = [
-    { label: 'Schedule', href: '#schedule' },
-    { label: 'About', href: '#about' },
+    { label: 'Pricing', href: '#pricing' },
+    { label: 'Problems', href: '#problems' },
     { label: 'Rewards', href: '#rewards' },
     { label: 'Contact', href: '#contact' },
 ];

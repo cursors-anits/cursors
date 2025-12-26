@@ -10,18 +10,19 @@ export interface ISettings {
     prizePool: string;
     showInternships: boolean;
     fomoConfig?: {
-        workshopCount: number;
         hackathonCount: number;
         showFakeCounts: boolean;
     };
     bufferConfig?: {
-        workshopLimit: number;
         hackathonLimit: number;
-        workshopBuffer: number;
         hackathonBuffer: number;
     };
     colleges?: string[];
     cities?: string[];
+    hackathonStartDate?: Date;
+    hackathonEndDate?: Date;
+    submissionWindowOpen?: boolean;
+    submissionWindowStartTime?: Date;
     updatedAt?: Date;
 }
 
@@ -39,7 +40,7 @@ const SettingsSchema = new Schema<ISettings, SettingsModel>(
         },
         eventDate: {
             type: Date,
-            default: () => new Date('2026-01-02T09:00:00'), // Default event date to Jan 2nd, 2026
+            default: () => new Date('2026-01-05T12:30:00'), // Default event date to Jan 5th, 2026
         },
         upiId: {
             type: String,
@@ -58,19 +59,31 @@ const SettingsSchema = new Schema<ISettings, SettingsModel>(
             default: false,
         },
         fomoConfig: {
-            workshopCount: { type: Number, default: 284 },
             hackathonCount: { type: Number, default: 488 },
             showFakeCounts: { type: Boolean, default: true },
         },
         bufferConfig: {
-            workshopLimit: { type: Number, default: 300 },
             hackathonLimit: { type: Number, default: 500 },
-            workshopBuffer: { type: Number, default: 50 },
             hackathonBuffer: { type: Number, default: 100 },
         },
         colleges: {
             type: [String],
             default: []
+        },
+        hackathonStartDate: {
+            type: Date,
+            default: () => new Date('2026-01-05T15:00:00'),
+        },
+        hackathonEndDate: {
+            type: Date,
+            default: () => new Date('2026-01-06T15:00:00'),
+        },
+        submissionWindowOpen: {
+            type: Boolean,
+            default: false,
+        },
+        submissionWindowStartTime: {
+            type: Date,
         },
         cities: {
             type: [String],

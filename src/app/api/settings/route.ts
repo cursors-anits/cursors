@@ -23,7 +23,7 @@ export async function GET() {
                 maintenanceMode: process.env.NEXT_PUBLIC_MAINTENANCE_MODE === 'true',
                 upiId: 'bmahesh498@okhdfcbank',
                 qrImageUrl: '/payment qr.jpg',
-                eventDate: new Date('2026-01-02T09:00:00'),
+                eventDate: new Date('2026-01-05T12:30:00'),
                 colleges: [
                     "Aditya Institute of Technology and Management [AITAM]",
                     "Andhra University College of Engineering [AUCE]",
@@ -52,10 +52,9 @@ export async function GET() {
                     "Vignan's Institute of Engineering for Women [VIEW]",
                     "Vignan's Institute of Information Technology [VIIT]",
                     "Visakha Institute of Engineering and Technology [VIET]",
-                    "Other"
                 ],
                 cities: [
-                    "Visakhapatnam", "Vizianagaram", "Srikakulam", "Tekkali", "Bhimavaram", "Rajahmundry", "Other"
+                    "Visakhapatnam", "Vizianagaram", "Srikakulam", "Tekkali", "Bhimavaram", "Rajahmundry"
                 ]
             });
             console.log('✅ Created initial settings with defaults');
@@ -94,7 +93,6 @@ export async function GET() {
                     "Vignan's Institute of Engineering for Women [VIEW]",
                     "Vignan's Institute of Information Technology [VIIT]",
                     "Visakha Institute of Engineering and Technology [VIET]",
-                    "Other"
                 ];
                 modified = true;
                 console.log('📝 Migrated colleges list');
@@ -103,7 +101,7 @@ export async function GET() {
             // Migrate Cities
             if (!settings.cities || settings.cities.length === 0) {
                 settings.cities = [
-                    "Visakhapatnam", "Vizianagaram", "Srikakulam", "Tekkali", "Bhimavaram", "Rajahmundry", "Other"
+                    "Visakhapatnam", "Vizianagaram", "Srikakulam", "Tekkali", "Bhimavaram", "Rajahmundry"
                 ];
                 modified = true;
             }
@@ -152,7 +150,8 @@ export async function PATCH(request: NextRequest) {
         await settings.save();
 
         return NextResponse.json(settings);
-    } catch {
+    } catch (error) {
+        console.error('Settings update failed:', error);
         return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
     }
 }

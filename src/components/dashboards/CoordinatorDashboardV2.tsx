@@ -71,7 +71,7 @@ interface CoordinatorDashboardProps {
     user: User;
 }
 
-type Mode = 'entry' | 'exit' | 'workshop' | 'hackathon' | 'snacks';
+type Mode = 'entry' | 'exit' | 'hackathon' | 'snacks';
 
 const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) => {
     const {
@@ -90,7 +90,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
     const pathname = usePathname();
 
     const view = (searchParams.get('view') as 'scan' | 'list' | 'participants' | 'requests' | 'settings') || 'scan';
-    const mode = (searchParams.get('mode') as Mode) || 'workshop';
+    const mode = (searchParams.get('mode') as Mode) || 'hackathon';
 
     const setView = (newView: string) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -104,7 +104,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
-    const [workshopDay, setWorkshopDay] = useState('1');
+    const [eventDay, setEventDay] = useState('1');
     const [searchQuery, setSearchQuery] = useState('');
     const [scanInput, setScanInput] = useState('');
     const [scannedTeam, setScannedTeam] = useState<{ id: string, members: Participant[] } | null>(null);
@@ -238,12 +238,9 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
         let actionType = '';
         let details = '';
 
-        if (mode === 'workshop') {
-            actionType = `WORKSHOP_D${workshopDay}`;
-            details = `Workshop Attendance Day ${workshopDay}`;
-        } else if (mode === 'snacks') {
-            const eventLabel = workshopDay === 'hackathon' ? 'Hackathon' : `Day ${workshopDay}`;
-            actionType = `SNACKS_${workshopDay.toUpperCase()}`;
+        if (mode === 'snacks') {
+            const eventLabel = eventDay === 'hackathon' ? 'Hackathon' : `Day ${eventDay}`;
+            actionType = `SNACKS_${eventDay.toUpperCase()}`;
             details = `Snacks Issued for ${eventLabel}`;
         } else if (mode === 'hackathon') {
             actionType = 'HACKATHON_ATTENDANCE';
@@ -263,7 +260,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                 participantIds,
                 mode,
                 'present',
-                workshopDay
+                eventDay
             );
         } catch (error) {
             console.error('Attendance error:', error);
@@ -284,7 +281,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
         setScanInput('');
         setSelectedMembers([]);
         setIsAttendanceModalOpen(false);
-    }, [scannedTeam, mode, workshopDay, selectedMembers, addLog]);
+    }, [scannedTeam, mode, eventDay, selectedMembers, addLog]);
 
     const navItems: NavItem[] = [
         { label: 'Scan ID', icon: Camera, value: 'scan', group: 'Actions' },
@@ -295,7 +292,6 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
     ];
 
     const modeConfig = [
-        { id: 'workshop', label: 'Workshop', icon: GraduationCap, color: 'blue', description: 'Mark workshop attendance' },
         { id: 'entry', label: 'Entry Gate', icon: LogIn, color: 'green', description: 'Check-in at entry' },
         { id: 'hackathon', label: 'Hackathon', icon: Zap, color: 'purple', description: 'Mark hackathon attendance' },
         { id: 'exit', label: 'Exit Gate', icon: LogOut, color: 'red', description: 'Check-out at exit' },
@@ -547,7 +543,6 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                     </SelectTrigger>
                                     <SelectContent className="bg-brand-surface border-white/10">
                                         <SelectItem value="all">All Types</SelectItem>
-                                        <SelectItem value="Workshop">Workshop</SelectItem>
                                         <SelectItem value="Hackathon">Hackathon</SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -585,9 +580,9 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
 
                                             if (allocationFilter !== 'all') {
                                                 if (allocationFilter === 'allocated') {
-                                                    filtered = filtered.filter(p => p.assignedWorkshopLab || p.assignedHackathonLab);
+                                                    filtered = filtered.filter(p => p.assignedHackathonLab);
                                                 } else {
-                                                    filtered = filtered.filter(p => !p.assignedWorkshopLab && !p.assignedHackathonLab);
+                                                    filtered = filtered.filter(p => !p.assignedHackathonLab);
                                                 }
                                             }
 
@@ -610,9 +605,8 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                                 const isExpanded = expandedTeams.has(teamId);
                                                 const hasPayment = members.some(m => m.paymentScreenshotUrl);
                                                 const paymentUrl = members.find(m => m.paymentScreenshotUrl)?.paymentScreenshotUrl;
-                                                const hasWorkshop = members.some(m => m.assignedWorkshopLab);
                                                 const hasHackathon = members.some(m => m.assignedHackathonLab);
-                                                const isAllocated = hasWorkshop || hasHackathon;
+                                                const isAllocated = hasHackathon;
 
                                                 return (
                                                     <React.Fragment key={teamId}>
@@ -642,7 +636,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                                             <TableCell className="text-xs">
                                                                 {isAllocated ? (
                                                                     <div className="text-gray-400 space-y-1 text-[10px]">
-                                                                        {members.find(m => m.assignedWorkshopLab)?.assignedWorkshopLab && <div>W: {members.find(m => m.assignedWorkshopLab)?.assignedWorkshopLab}</div>}
+
                                                                         {members.find(m => m.assignedHackathonLab)?.assignedHackathonLab && <div>H: {members.find(m => m.assignedHackathonLab)?.assignedHackathonLab}</div>}
                                                                     </div>
                                                                 ) : (
@@ -686,7 +680,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                                                                     <div><span className="text-gray-500">Name:</span> <span className="text-white ml-1">{member.name}</span></div>
                                                                                     <div className="truncate"><span className="text-gray-500">Email:</span> <span className="text-gray-300 ml-1">{member.email}</span></div>
                                                                                     <div className="truncate"><span className="text-gray-500">College:</span> <span className="text-gray-300 ml-1" title={member.college}>{member.college}</span></div>
-                                                                                    {member.assignedWorkshopLab && <div><span className="text-gray-500">Workshop Lab:</span> <span className="text-brand-primary ml-1">{member.assignedWorkshopLab}</span></div>}
+
                                                                                     {member.assignedHackathonLab && <div><span className="text-gray-500">Hackathon Lab:</span> <span className="text-brand-primary ml-1">{member.assignedHackathonLab}</span></div>}
                                                                                 </div>
                                                                             </div>
@@ -896,18 +890,18 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                     </DialogHeader>
 
                     <div className="space-y-4">
-                        {/* Day Selector for Workshop/Snacks */}
-                        {(mode === 'workshop' || mode === 'snacks') && (
+                        {/* Day Selector for Snacks */}
+                        {(mode === 'snacks') && (
                             <div className="bg-brand-dark rounded-xl p-4 border border-white/10">
                                 <Label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Select Day/Event</Label>
                                 <div className="grid grid-cols-3 gap-2">
                                     {['1', '2', '3', ...(mode === 'snacks' ? ['hackathon'] : [])].map((day) => (
                                         <Button
                                             key={day}
-                                            variant={workshopDay === day ? 'default' : 'outline'}
+                                            variant={eventDay === day ? 'default' : 'outline'}
                                             size="sm"
-                                            className={workshopDay === day ? 'bg-brand-primary text-white' : 'bg-white/5 border-white/10'}
-                                            onClick={() => setWorkshopDay(day)}
+                                            className={eventDay === day ? 'bg-brand-primary text-white' : 'bg-white/5 border-white/10'}
+                                            onClick={() => setEventDay(day)}
                                         >
                                             {day === 'hackathon' ? 'Hackathon' : `Day ${day}`}
                                         </Button>
@@ -982,9 +976,8 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                 <DialogContent className="bg-brand-surface border-white/10 text-white max-w-md">
                     <DialogHeader>
                         <DialogTitle className="text-2xl font-bold">
-                            {mode === 'workshop' ? `Day ${workshopDay} Workshop` :
-                                mode === 'snacks' ? `${workshopDay === 'hackathon' ? 'Hackathon' : `Day ${workshopDay}`} Snacks` :
-                                    mode === 'hackathon' ? 'Hackathon' : mode === 'entry' ? 'Gate Entry' : 'Gate Exit'}
+                            {mode === 'snacks' ? `${eventDay === 'hackathon' ? 'Hackathon' : `Day ${eventDay}`} Snacks` :
+                                mode === 'hackathon' ? 'Hackathon' : mode === 'entry' ? 'Gate Entry' : 'Gate Exit'}
                         </DialogTitle>
                         <DialogDescription className="text-sm text-gray-400">
                             Team {scannedTeam?.id || '...'}

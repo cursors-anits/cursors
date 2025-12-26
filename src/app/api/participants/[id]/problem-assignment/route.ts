@@ -21,6 +21,21 @@ export async function GET(
             );
         }
 
+        // Self-Healing: If assignment is confirmed but Participant might not be (due to schema bug), fix it.
+        // We do this check on read to ensure consistency without manual intervention.
+        if (assignment.isConfirmed) {
+            import('@/lib/db/models/Participant').then(async ({ default: Participant }) => {
+                await Participant.updateOne(
+                    { participantId: id, hasConfirmedProblem: { $ne: true } },
+                    {
+                        hasConfirmedProblem: true,
+                        domain: assignment.selectedProblem?.domain,
+                        problemAssignmentId: assignment._id
+                    }
+                ).catch(err => console.error('Self-healing failed:', err));
+            });
+        }
+
         return NextResponse.json({
             success: true,
             assignment: {

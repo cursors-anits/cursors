@@ -104,10 +104,18 @@ export async function DELETE(request: NextRequest) {
             return NextResponse.json({ error: 'ID is required' }, { status: 400 });
         }
 
-        const participant = await Participant.findByIdAndDelete(id);
+        const participant = await Participant.findById(id);
 
         if (!participant) {
             return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+        }
+
+        // Delete the participant
+        await Participant.findByIdAndDelete(id);
+
+        // Also delete the associated User document to prevent Team ID/Email collision
+        if (participant.teamId) {
+            await User.findOneAndDelete({ teamId: participant.teamId });
         }
 
         return NextResponse.json({ success: true });

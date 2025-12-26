@@ -6,7 +6,7 @@ export interface ILab {
     roomNumber: string;
     capacity: number;
     currentCount: number;
-    type: 'Workshop' | 'Hackathon';
+    type: 'Hackathon';
 }
 
 type LabModel = Model<ILab>;
@@ -34,9 +34,9 @@ const LabSchema = new Schema<ILab, LabModel>(
         },
         type: {
             type: String,
-            enum: ['Workshop', 'Hackathon'],
+            enum: ['Hackathon'],
             required: true,
-            default: 'Workshop'
+            default: 'Hackathon'
         }
     },
     {

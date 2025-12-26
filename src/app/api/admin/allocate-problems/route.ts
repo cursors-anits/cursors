@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/mongodb';
 import Participant from '@/lib/db/models/Participant';
 import ProblemAssignment from '@/lib/db/models/ProblemAssignment';
-import { allocateAllProblems } from '@/lib/algorithms/problemAllocation';
+
 
 export async function POST(request: NextRequest) {
     try {
@@ -49,19 +49,13 @@ export async function POST(request: NextRequest) {
             seat: p.assignedSeat || ''
         }));
 
-        // Run allocation algorithm
-        const allocations = allocateAllProblems(participantSeats);
-
-        // Save to database
+        // Initialize empty assignments for all participants to enable choices
         const assignments = [];
-        for (const [participantId, offeredProblems] of allocations.entries()) {
-            const participant = participants.find(p => p.participantId === participantId);
-            if (!participant) continue;
-
+        for (const participant of participants) {
             const assignment = new ProblemAssignment({
-                participantId,
+                participantId: participant.participantId,
                 teamId: participant.teamId,
-                offeredProblems,
+                offeredProblems: [], // Empty initially to trigger selection flow
                 isConfirmed: false,
                 refreshCount: 0,
                 maxRefreshes: 2,
@@ -74,7 +68,7 @@ export async function POST(request: NextRequest) {
 
             // Update participant reference
             await Participant.updateOne(
-                { participantId },
+                { participantId: participant.participantId },
                 {
                     problemAssignmentId: saved._id,
                     hasConfirmedProblem: false
@@ -82,9 +76,9 @@ export async function POST(request: NextRequest) {
             );
 
             assignments.push({
-                participantId,
+                participantId: participant.participantId,
                 teamId: participant.teamId,
-                assignedProblems: offeredProblems.length
+                assignedProblems: 0
             });
         }
 

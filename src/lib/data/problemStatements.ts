@@ -8,7 +8,8 @@ export const PROBLEM_STATEMENTS = [
             'Develop a chatbot for college student support (admissions, exams, placements)',
             'Create a model to predict student dropout risk using historical data',
             'Design an AI agent for resume screening and skill-gap analysis',
-            'Build a fake news detection platform for regional languages'
+            'Build a fake news detection platform for regional languages',
+            'AI agents for daily automation'
         ]
     },
     {
@@ -48,7 +49,8 @@ export const PROBLEM_STATEMENTS = [
             'Virtual lab for engineering experiments',
             'LMS with analytics for faculty performance tracking',
             'Skill assessment & certification platform for colleges',
-            'Peer-to-peer doubt solving app for students'
+            'Peer-to-peer doubt solving app for students',
+            'Tools improving campus life or student productivity'
         ]
     },
     {
@@ -98,7 +100,8 @@ export const PROBLEM_STATEMENTS = [
             'Missing person identification using AI',
             'Donation & NGO transparency platform',
             'Women safety app with real-time alerts',
-            'Accessibility tool for visually/hearing impaired users'
+            'Accessibility tool for visually/hearing impaired users',
+            'Apps supporting local community needs'
         ]
     },
     {
@@ -114,10 +117,7 @@ export const PROBLEM_STATEMENTS = [
     {
         domain: 'Open Innovation / Student Choice',
         problems: [
-            'Any innovative solution addressing a real-world problem',
-            'Tools improving campus life or student productivity',
-            'AI agents for daily automation',
-            'Apps supporting local community needs'
+            'Any innovative solution addressing a real-world problem'
         ]
     }
 ];

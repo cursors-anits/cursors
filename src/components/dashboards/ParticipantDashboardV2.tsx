@@ -21,7 +21,8 @@ import {
     ChevronRight,
     X,
     Lightbulb,
-    Download
+    Download,
+    Upload
 } from 'lucide-react';
 import { useData } from '@/lib/context/DataContext';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ import { NavItem } from '@/components/dashboards/DashboardNav';
 import EventChecklist from '@/components/dashboards/EventChecklist';
 import ProblemSelection from '@/components/dashboards/ProblemSelection';
 import Link from 'next/link';
+import ProjectSubmission from '@/components/dashboards/ProjectSubmission';
 
 interface ParticipantDashboardProps {
     user: User;
@@ -70,6 +72,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
     const [isAvatarUploading, setIsAvatarUploading] = useState(false);
     const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false);
     const [isProblemModalOpen, setIsProblemModalOpen] = useState(false);
+    const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
     const [isSupportMenuOpen, setIsSupportMenuOpen] = useState(false);
     const [showHintBanner, setShowHintBanner] = useState(() => {
         if (typeof window !== 'undefined') {
@@ -92,11 +95,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
     }, [user]);
 
     // Memoize lab details lookup for better performance
-    const workshopLabDetails = useMemo(() => {
-        return participantData?.assignedWorkshopLab
-            ? labs.find(l => l.name === participantData.assignedWorkshopLab)
-            : null;
-    }, [labs, participantData?.assignedWorkshopLab]);
+
 
     const hackathonLabDetails = useMemo(() => {
         return participantData?.assignedHackathonLab
@@ -177,7 +176,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    participantId: participantData?.participantId,
+                    teamId: user.teamId,
                     type: reportType,
                     message: reportMessage
                 })
@@ -283,7 +282,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                 <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Event Starts In</div>
                                 <div className="text-2xl font-bold text-brand-primary font-mono">
                                     {(() => {
-                                        const eventDate = new Date('2026-01-02T00:00:00');
+                                        const eventDate = new Date('2026-01-05T15:00:00');
                                         const now = new Date();
                                         const diff = eventDate.getTime() - now.getTime();
                                         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -320,7 +319,30 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                 )}
 
                 {/* Quick Actions Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                    {/* Digital Pass Card */}
+                    <Card
+                        className="bg-brand-surface border-green-500/20 hover:border-green-500/40 hover:scale-105 hover:shadow-xl hover:shadow-green-500/20 transition-all cursor-pointer group"
+                        onClick={() => setShowIdCard(true)}
+                    >
+                        <CardContent className="p-6">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="p-3 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
+                                    <QrCode className="w-6 h-6 text-green-400" />
+                                </div>
+                                <Badge className="bg-green-500/20 text-green-300">Ready</Badge>
+                            </div>
+                            <h3 className="font-bold text-white mb-1 flex items-center justify-between">
+                                Digital Pass
+                                <ChevronRight className="w-4 h-4 text-green-400 group-hover:translate-x-1 transition-transform" />
+                            </h3>
+                            <p className="text-xs text-gray-400 mb-3">View your ID card</p>
+                            <p className="text-xs text-green-400 font-medium flex items-center gap-1">
+                                Open <ChevronRight className="w-3 h-3" />
+                            </p>
+                        </CardContent>
+                    </Card>
+
                     {/* Event Checklist Card */}
                     <Card
                         className="bg-brand-surface border-blue-500/20 hover:border-blue-500/40 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/20 transition-all cursor-pointer group"
@@ -356,8 +378,8 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                 <div className="p-3 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
                                     <Zap className="w-6 h-6 text-purple-400" />
                                 </div>
-                                <Badge className={participantData?.hasConfirmedProblem ? "bg-green-500/20 text-green-300" : "bg-orange-500/20 text-orange-300"}>
-                                    {participantData?.hasConfirmedProblem ? '✓ Done' : 'Pending'}
+                                <Badge className={participantData?.hasConfirmedProblem ? "bg-green-500/20 text-green-300" : (participantData?.problemAssignmentId ? "bg-brand-primary/20 text-brand-primary animate-pulse" : "bg-orange-500/20 text-orange-300")}>
+                                    {participantData?.hasConfirmedProblem ? '✓ Done' : (participantData?.problemAssignmentId ? 'Action Needed' : 'Pending')}
                                 </Badge>
                             </div>
                             <h3 className="font-bold text-white mb-1 flex items-center justify-between">
@@ -371,28 +393,31 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                         </CardContent>
                     </Card>
 
-                    {/* Digital Pass Card */}
-                    <Card
-                        className="bg-brand-surface border-green-500/20 hover:border-green-500/40 hover:scale-105 hover:shadow-xl hover:shadow-green-500/20 transition-all cursor-pointer group"
-                        onClick={() => setShowIdCard(true)}
-                    >
-                        <CardContent className="p-6">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="p-3 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
-                                    <QrCode className="w-6 h-6 text-green-400" />
+                    {participantData && (
+                        <Card
+                            className="bg-brand-surface border-blue-500/20 hover:border-blue-500/40 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/20 transition-all cursor-pointer group"
+                            onClick={() => setIsSubmissionModalOpen(true)}
+                        >
+                            <CardContent className="p-6">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="p-3 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                                        <Upload className="w-6 h-6 text-blue-400" />
+                                    </div>
+                                    <Badge className={`${participantData?.projectRepo ? (participantData.submissionStatus === 'verified' ? "bg-green-500/20 text-green-300" : "bg-yellow-500/20 text-yellow-300") : "bg-blue-500/20 text-blue-300"}`}>
+                                        {participantData?.projectRepo ? (participantData.submissionStatus === 'verified' ? '✓ Verified' : '⚠ Flagged') : 'Submit'}
+                                    </Badge>
                                 </div>
-                                <Badge className="bg-green-500/20 text-green-300">Ready</Badge>
-                            </div>
-                            <h3 className="font-bold text-white mb-1 flex items-center justify-between">
-                                Digital Pass
-                                <ChevronRight className="w-4 h-4 text-green-400 group-hover:translate-x-1 transition-transform" />
-                            </h3>
-                            <p className="text-xs text-gray-400 mb-3">View your ID card</p>
-                            <p className="text-xs text-green-400 font-medium flex items-center gap-1">
-                                Open <ChevronRight className="w-3 h-3" />
-                            </p>
-                        </CardContent>
-                    </Card>
+                                <h3 className="font-bold text-white mb-1 flex items-center justify-between">
+                                    Project Submission
+                                    <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
+                                </h3>
+                                <p className="text-xs text-gray-400 mb-3">Submit your repository</p>
+                                <p className="text-xs text-blue-400 font-medium flex items-center gap-1">
+                                    Open <ChevronRight className="w-3 h-3" />
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Get Support Card */}
                     <Card
@@ -428,29 +453,10 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                 <h3 className="font-bold text-white">Lab Allocation</h3>
                             </div>
                             <div className="space-y-3">
-                                {/* Workshop Lab - Show for Workshop or Combo */}
-                                {(participantData?.type === 'Workshop' || participantData?.type === 'Combo') && (participantData?.assignedWorkshopLab ? (
-                                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs text-blue-300 font-semibold uppercase">Workshop</p>
-                                                <p className="text-white font-bold">{participantData.assignedWorkshopLab}</p>
-                                                {workshopLabDetails?.roomNumber && (
-                                                    <p className="text-xs text-gray-400">Room: {workshopLabDetails.roomNumber}</p>
-                                                )}
-                                                <p className="text-xs text-gray-400">Seat: {participantData.assignedSeat || 'TBD'}</p>
-                                            </div>
-                                            <Badge className="bg-blue-500 text-white">Day 1-2</Badge>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="p-3 bg-white/5 border border-white/10 rounded-lg">
-                                        <p className="text-sm text-gray-400">Workshop lab assignment pending...</p>
-                                    </div>
-                                ))}
 
-                                {/* Hackathon Lab - Show for Hackathon or Combo */}
-                                {(participantData?.type === 'Hackathon' || participantData?.type === 'Combo') && (participantData?.assignedHackathonLab ? (
+
+                                {/* Hackathon Lab */}
+                                {participantData?.assignedHackathonLab ? (
                                     <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                                         <div className="flex items-center justify-between">
                                             <div>
@@ -468,7 +474,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                     <div className="p-3 bg-white/5 border border-white/10 rounded-lg">
                                         <p className="text-sm text-gray-400">Hackathon lab assignment pending...</p>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -532,9 +538,9 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                 <div
                                     className="h-full bg-brand-primary transition-all"
                                     style={{
-                                        width: participantData?.hasConfirmedProblem ? '100%' :
-                                            participantData?.assignedLab ? '66%' :
-                                                (participantData?.eventChecklist?.length || 0) >= 4 ? '33%' : '16%'
+                                        width: participantData?.hasConfirmedProblem ? '80%' :
+                                            participantData?.assignedLab ? '60%' :
+                                                (participantData?.eventChecklist?.length || 0) >= 4 ? '40%' : '20%'
                                     }}
                                 />
                             </div>
@@ -582,21 +588,21 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                     <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                                 </div>
                                 <div className="flex-1 sm:flex-none text-left sm:text-center">
-                                    <Badge className={participantData?.hasConfirmedProblem ? "bg-green-500/20 text-green-300 mb-1" : "bg-blue-500/20 text-blue-300 mb-1"}>
-                                        {participantData?.hasConfirmedProblem ? '✓ Confirmed' : '📝 Select'}
+                                    <Badge className={participantData?.hasConfirmedProblem ? "bg-green-500/20 text-green-300 mb-1" : (participantData?.problemAssignmentId ? "bg-brand-primary/20 text-brand-primary mb-1 animate-pulse" : "bg-blue-500/20 text-blue-300 mb-1")}>
+                                        {participantData?.hasConfirmedProblem ? '✓ Confirmed' : (participantData?.problemAssignmentId ? 'Action Needed' : 'Wait')}
                                     </Badge>
                                     <span className="block text-xs text-gray-400">Problem</span>
                                 </div>
                             </div>
 
-                            {/* Stage 5: Event */}
+                            {/* Stage 5: Submission */}
                             <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
                                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                                    <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                                    <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                                 </div>
                                 <div className="flex-1 sm:flex-none text-left sm:text-center">
-                                    <Badge className="bg-blue-500/20 text-blue-300 mb-1">🎯 Soon</Badge>
-                                    <span className="block text-xs text-gray-400">Event Day</span>
+                                    <Badge className="bg-purple-500/20 text-purple-300 mb-1">🚀 Final</Badge>
+                                    <span className="block text-xs text-gray-400">Submission</span>
                                 </div>
                             </div>
                         </div>
@@ -622,6 +628,19 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                 </DialogContent>
             </Dialog>
 
+            {/* Project Submission Modal */}
+            <Dialog open={isSubmissionModalOpen} onOpenChange={setIsSubmissionModalOpen}>
+                <DialogContent className="max-w-2xl bg-brand-dark border-white/20">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Project Submission</DialogTitle>
+                        <DialogDescription>Submit your project repository</DialogDescription>
+                    </DialogHeader>
+                    {participantData && (
+                        <ProjectSubmission participantId={participantData.participantId} />
+                    )}
+                </DialogContent>
+            </Dialog>
+
             {/* Problem Selection Modal */}
             <Dialog open={isProblemModalOpen} onOpenChange={setIsProblemModalOpen}>
                 <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-brand-dark border-white/20">
@@ -632,7 +651,15 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                         </DialogDescription>
                     </DialogHeader>
                     {participantData && (
-                        <ProblemSelection participantId={participantData.participantId} />
+                        <ProblemSelection
+                            participantId={participantData.participantId}
+                            onSuccess={() => {
+                                fetchParticipants(true);
+                                // Optional: Close modal if desired? Or let them see confirmation?
+                                // "Problem Statement Card ... should update".
+                                // Keeping modal open lets them see "Confirmed!" message inside too.
+                            }}
+                        />
                     )}
                 </DialogContent>
             </Dialog>
@@ -752,7 +779,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                                 alt="Avatar"
                                                 fill
                                                 sizes="96px"
-                                                loading="eager"
+                                                priority
                                                 className="object-cover"
                                             />
                                         ) : (
@@ -790,8 +817,22 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                 <p className="text-xs text-gray-500 mb-4">{participantData.department} • {participantData.year}</p>
 
                                 <div className="bg-white p-4 rounded-2xl mb-4">
-                                    <div className="bg-white flex items-center justify-center">
-                                        <QrCode className="w-32 h-32 text-brand-dark" />
+                                    <div className="bg-white flex items-center justify-center h-32 w-32 mx-auto">
+                                        {participantData?.participantId ? (
+                                            <Image
+                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${participantData.participantId}&color=020617&bgcolor=ffffff`}
+                                                alt="QR Code"
+                                                width={128}
+                                                height={128}
+                                                className="w-full h-full"
+                                                unoptimized
+                                            />
+                                        ) : (
+                                            <div className="text-center text-brand-dark">
+                                                <QrCode className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                                <span className="text-[10px] font-bold">GENERATING...</span>
+                                            </div>
+                                        )}
                                     </div>
                                     <p className="text-xs text-brand-dark font-mono font-bold mt-2">{user.teamId}</p>
                                 </div>

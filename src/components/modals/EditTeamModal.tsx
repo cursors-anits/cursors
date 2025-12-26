@@ -9,12 +9,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+import { Lab } from '@/types';
+
 interface EditTeamModalProps {
     isOpen: boolean;
     onClose: () => void;
     teamMembers: Participant[];
     teamUser: User | null;
     onSave: (members: Participant[], userUpdates: { email: string, passkey: string }) => Promise<void>;
+    labs?: Lab[]; // Optional labs for room allocation
 }
 
 const COLLEGES = [
@@ -66,6 +69,7 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
     teamMembers,
     teamUser,
     onSave,
+    labs = [], // Default to empty array
 }) => {
     const [members, setMembers] = useState<Participant[]>([]);
     const [generatedEmail, setGeneratedEmail] = useState('');
@@ -172,6 +176,26 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
                         </div>
                     </div>
 
+                    {/* Team Project Repo */}
+                    <div className="mb-6 p-4 bg-brand-dark rounded-lg border border-white/10">
+                        <h3 className="text-sm font-semibold mb-3 text-brand-primary">Project Submission</h3>
+                        <div className="space-y-2">
+                            <Label htmlFor="projectRepo">GitHub Repository URL</Label>
+                            <Input
+                                id="projectRepo"
+                                value={members[0]?.projectRepo || ''}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    // Update all members locally
+                                    setMembers(prev => prev.map(m => ({ ...m, projectRepo: val })));
+                                }}
+                                className="bg-brand-surface border-white/10 font-mono text-sm"
+                                placeholder="https://github.com/..."
+                            />
+                            <p className="text-[10px] text-gray-400">Updating this will sync for all team members.</p>
+                        </div>
+                    </div>
+
                     {/* Members */}
                     <div className="space-y-4">
                         <h3 className="text-sm font-semibold text-white">Team Members</h3>
@@ -235,6 +259,34 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
                                                 </SelectContent>
                                             </Select>
                                         </div>
+
+                                        {/* Room Allocation */}
+                                        <div className="space-y-2">
+                                            <Label>Hackathon Lab</Label>
+                                            <Select
+                                                value={member.assignedHackathonLab || ''}
+                                                onValueChange={(v) => updateMember(index, 'assignedHackathonLab', v || undefined)}
+                                            >
+                                                <SelectTrigger className="bg-brand-surface border-white/10">
+                                                    <SelectValue placeholder="Select lab" />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-brand-surface border-white/10">
+                                                    <SelectItem value="">None</SelectItem>
+                                                    {labs.map(lab => (
+                                                        <SelectItem key={lab._id} value={lab.name}>{lab.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Seat Number</Label>
+                                            <Input
+                                                value={member.assignedSeat || ''}
+                                                onChange={(e) => updateMember(index, 'assignedSeat', e.target.value || undefined)}
+                                                className="bg-brand-surface border-white/10"
+                                                placeholder="e.g., A12"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -249,6 +301,6 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
                     </Button>
                 </div>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 };

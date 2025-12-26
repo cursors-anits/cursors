@@ -5,11 +5,17 @@ import { AlertTriangle, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LiveSpotsBanner() {
-    const { settings } = useData();
+    const { participants, settings } = useData();
 
     if (!settings?.fomoConfig?.showFakeCounts) return null;
 
-    const { workshopCount, hackathonCount } = settings.fomoConfig;
+    const { hackathonCount: hackathonBase } = settings.fomoConfig;
+
+    // Real Counts
+    const hackathonReal = participants.filter(p => p.type === 'Hackathon').length;
+
+    // Calculate Dynamic Left (Base - Real)
+    const hackathonLeft = Math.max(5, hackathonBase - hackathonReal);
 
     return (
         <AnimatePresence>
@@ -23,9 +29,7 @@ export default function LiveSpotsBanner() {
                     <TrendingUp className="w-4 h-4 animate-pulse" />
                     <span className="flex items-center gap-2">
                         <span>🔥 High Demand:</span>
-                        <span className="bg-brand-dark/10 px-2 py-0.5 rounded-full">Only {workshopCount} Workshop</span>
-                        <span>&</span>
-                        <span className="bg-brand-dark/10 px-2 py-0.5 rounded-full">{hackathonCount} Hackathon</span>
+                        <span className="bg-brand-dark/10 px-2 py-0.5 rounded-full">Only {hackathonLeft} Hackathon</span>
                         <span>slots left!</span>
                     </span>
                 </div>

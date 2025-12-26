@@ -23,14 +23,12 @@ interface EmailMember {
     passkey: string;
 }
 
-type TicketType = 'workshop' | 'hackathon' | 'combo';
+type TicketType = 'hackathon';
 
 // Helper to convert ticket type to reporting time format
-function toReportingTimeType(type: TicketType): 'Workshop' | 'Hackathon' | 'Combo' {
-    const typeMap: Record<TicketType, 'Workshop' | 'Hackathon' | 'Combo'> = {
-        workshop: 'Workshop',
-        hackathon: 'Hackathon',
-        combo: 'Combo'
+function toReportingTimeType(type: TicketType): 'Hackathon' {
+    const typeMap: Record<TicketType, 'Hackathon'> = {
+        hackathon: 'Hackathon'
     };
     return typeMap[type];
 }
@@ -44,32 +42,18 @@ function getTemplate(
     teamPasskey: string
 ): string {
     const colors = {
-        workshop: {
-            primary: '#3b82f6', // blue-500
-            secondary: '#1e40af', // blue-800
-            bg: '#eff6ff', // blue-50
-            border: '#93c5fd'
-        },
         hackathon: {
             primary: '#a855f7', // purple-500
             secondary: '#6b21a8', // purple-800
             bg: '#faf5ff', // purple-50
             border: '#d8b4fe'
-        },
-        combo: {
-            primary: '#f59e0b', // amber-500
-            secondary: '#92400e', // amber-800
-            bg: '#fffbeb', // amber-50
-            border: '#fcd34d'
         }
     };
 
-    const theme = colors[type] || colors.combo;
+    const theme = colors[type];
 
     const titleMap = {
-        workshop: 'GEN AI WORKSHOP PASS',
-        hackathon: '24H HACKATHON PASS',
-        combo: 'ALL ACCESS VIP PASS'
+        hackathon: '24H HACKATHON PASS'
     };
 
     const membersHtml = members.map(m => `
@@ -108,7 +92,7 @@ function getTemplate(
                 <tr>
                     <td align="left" width="50%">
                         <div style="font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 1px; margin-bottom: 4px;">Event Date</div>
-                        <div style="font-weight: bold; font-size: 15px; color: #fff;">Jan 2-3, 2026</div>
+                        <div style="font-weight: bold; font-size: 15px; color: #fff;">Jan 5-6, 2026</div>
                     </td>
                     <td align="right" width="50%">
                         <div style="font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 1px; margin-bottom: 4px;">Venue</div>
@@ -178,11 +162,7 @@ function getTemplate(
             <div style="text-align: center; margin-top: 30px;">
                 <a href="${loginUrl}" style="display: inline-block; background-color: ${theme.primary}; color: #fff; text-decoration: none; font-weight: bold; padding: 14px 30px; border-radius: 30px; margin: 0 5px 15px; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">LOGIN TO DASHBOARD</a>
                 
-                ${(type === 'workshop' || type === 'combo') ? `
-                <a href="${process.env.WHATSAPP_WORKSHOP_LINK || '#'}" style="display: inline-block; background-color: #25D366; color: #fff; text-decoration: none; font-weight: bold; padding: 14px 30px; border-radius: 30px; margin: 0 5px 15px; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">JOIN WORKSHOP GROUP</a>
-                ` : ''}
-
-                ${(type === 'hackathon' || type === 'combo') ? `
+                ${(type === 'hackathon') ? `
                 <a href="${process.env.WHATSAPP_HACKATHON_LINK || '#'}" style="display: inline-block; background-color: #25D366; color: #fff; text-decoration: none; font-weight: bold; padding: 14px 30px; border-radius: 30px; margin: 0 5px 15px; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">JOIN HACKATHON GROUP</a>
                 ` : ''}
             </div>

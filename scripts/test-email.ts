@@ -12,7 +12,7 @@ async function main() {
         { name: 'Bob Johnson', college: 'ANITS', department: 'IT', year: '4th Year', passkey: 'PASS789' }
     ];
 
-    const types: ('workshop' | 'hackathon' | 'combo')[] = ['workshop', 'hackathon', 'combo'];
+    const types: ('hackathon')[] = ['hackathon'];
 
     for (const type of types) {
         process.stdout.write(`Sending ${type} pass to ${testEmail}... `);

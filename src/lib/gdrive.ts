@@ -147,7 +147,7 @@ export async function ensureFolderExists(folderName: string, parentId: string = 
 /**
  * Uploads a file to a specific parent folder
  */
-export async function uploadToFolder(source: string | Buffer, fileName: string, parentId: string): Promise<string> {
+export async function uploadToFolder(source: string | Buffer, fileName: string, parentId: string, mimeType: string = 'application/octet-stream'): Promise<string> {
     try {
         let buffer: Buffer;
         if (Buffer.isBuffer(source)) {
@@ -165,12 +165,12 @@ export async function uploadToFolder(source: string | Buffer, fileName: string, 
 
         const response = await drive.files.create({
             requestBody: {
-                name: `${fileName}.jpg`,
+                name: fileName, // fileName should now include extension
                 parents: [parentId],
-                mimeType: 'image/jpeg',
+                mimeType: mimeType,
             },
             media: {
-                mimeType: 'image/jpeg',
+                mimeType: mimeType,
                 body: bufferStream,
             },
             fields: 'id, webViewLink, webContentLink',

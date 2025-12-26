@@ -8,10 +8,10 @@ export async function POST(request: NextRequest) {
         await dbConnect();
 
         const { searchParams } = new URL(request.url);
-        const eventType = searchParams.get('type') as 'Workshop' | 'Hackathon' | null;
+        const eventType = searchParams.get('type');
 
-        if (!eventType || !['Workshop', 'Hackathon'].includes(eventType)) {
-            return NextResponse.json({ error: 'Valid type (Workshop or Hackathon) is required' }, { status: 400 });
+        if (eventType !== 'Hackathon') {
+            return NextResponse.json({ error: 'Only Hackathon allocation is supported.' }, { status: 400 });
         }
 
         console.log(`[ALLOCATION] Starting allocation for ${eventType}...`);
@@ -26,11 +26,7 @@ export async function POST(request: NextRequest) {
         await Lab.updateMany({ type: eventType }, { currentCount: 0 });
 
         // 2. Get relevant participants
-        // Workshop: Workshop + Combo
-        // Hackathon: Hackathon + Combo
-        const participantQuery = eventType === 'Workshop'
-            ? { type: { $in: ['Workshop', 'Combo'] } }
-            : { type: { $in: ['Hackathon', 'Combo'] } };
+        const participantQuery = {};
 
         const allParticipants = await Participant.find(participantQuery);
         console.log(`[ALLOCATION] Found ${allParticipants.length} eligible participants.`);
@@ -82,7 +78,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 4. Update Database
-        const targetField = eventType === 'Workshop' ? 'assignedWorkshopLab' : 'assignedHackathonLab';
+        const targetField = 'assignedHackathonLab';
 
         console.log(`[ALLOCATION] Updating ${allocations.length} teams...`);
 

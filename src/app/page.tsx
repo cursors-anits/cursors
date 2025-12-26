@@ -1,16 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/landing/Navbar';
 import Hero from '@/components/landing/Hero';
 import Sponsors from '@/components/landing/Sponsors';
-import Schedule from '@/components/landing/Schedule';
 import FeaturesRewards from '@/components/landing/FeaturesRewards';
 import PricingCalculator from '@/components/landing/PricingCalculator';
 import WhatToBring from '@/components/landing/WhatToBring';
-import HackathonSchedule from '@/components/landing/HackathonSchedule';
 import ProblemStatements from '@/components/landing/ProblemStatements';
-import WorkshopSyllabus from '@/components/landing/WorkshopSyllabus';
 import Footer from '@/components/landing/Footer';
 import RegistrationModal from '@/components/modals/RegistrationModal';
 import LoginModal from '@/components/modals/LoginModal';
@@ -24,6 +22,14 @@ export default function Home() {
   const { currentUser, setCurrentUser, settings } = useData();
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (currentUser) {
+      const dashboardPath = `/dashboard/${currentUser.role.toLowerCase()}`;
+      router.push(dashboardPath);
+    }
+  }, [currentUser, router]);
 
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
@@ -91,10 +97,8 @@ export default function Home() {
         <Sponsors />
         <PricingCalculator />
         <WhatToBring />
-        <WorkshopSyllabus />
-        <HackathonSchedule />
+
         <ProblemStatements />
-        <Schedule />
         <FeaturesRewards />
       </main>
 
