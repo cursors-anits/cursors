@@ -118,6 +118,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
         defaultValues: {
             ticketType: 'hackathon',
             teamSize: 1,
+
             members: [{ fullName: '', email: '', college: '', city: '', department: '', whatsapp: '', year: '3rd Year' }],
             transactionId: '',
         }
@@ -130,6 +131,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
 
     const teamSize = watch('teamSize');
     const ticketType = watch('ticketType');
+
 
     useEffect(() => {
         if (!settings?.bufferConfig) return;
@@ -192,15 +194,20 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     };
 
     const calculatePricing = () => {
-        const basePrice = PRICES[ticketType] || 499;
+        let basePrice = PRICES[ticketType] || 499;
+
         // Group discount: Each member gets ₹10 OFF per additional member
         const discountPerPerson = (teamSize - 1) * 10;
-        const pricePerPerson = basePrice - discountPerPerson;
+        let pricePerPerson = basePrice - discountPerPerson;
+
+        // Food Coupon Removed
+
         const total = pricePerPerson * teamSize;
         return {
             total,
             basePrice,
             discountPerPerson,
+            foodPrice: 0,
             totalDiscount: discountPerPerson * teamSize,
             perPerson: pricePerPerson
         };
@@ -252,7 +259,14 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
             }
 
             const { screenshot, ...rest } = finalData;
-            formData.append('data', JSON.stringify({ ...rest, status: isBufferMode ? 'pending' : 'approved' }));
+            const payload = {
+                ...rest,
+                status: isBufferMode ? 'pending' : 'approved',
+                // Explicitly send foodCoupon status: Always false now
+
+            };
+
+            formData.append('data', JSON.stringify(payload));
 
             if (selectedFile && !isBufferMode) {
                 formData.append('screenshot', selectedFile);
@@ -483,6 +497,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                     </Button>
                                                 ))}
                                             </div>
+
                                             {teamSize > 0 && ticketType && (
                                                 <Alert className="bg-brand-primary/10 border-brand-primary/20 text-brand-primary py-3 mt-4">
                                                     <Info className="h-4 w-4" />

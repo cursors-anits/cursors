@@ -44,7 +44,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
 
     return (
         <SidebarProvider>
-            <div className="flex min-h-screen w-full bg-brand-dark overflow-hidden">
+            <div className="flex h-dvh w-full bg-brand-dark overflow-hidden">
                 {showSidebar && (
                     <DashboardNav
                         items={items}

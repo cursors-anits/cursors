@@ -24,7 +24,9 @@ import {
     Clock,
     UserX,
     AlertCircle,
-    Download
+    Download,
+    Utensils,
+    Moon
 } from 'lucide-react';
 import { User, Participant } from '@/types';
 import { useData } from '@/lib/context/DataContext';
@@ -104,7 +106,8 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
-    const [eventDay, setEventDay] = useState('1');
+
+
     const [searchQuery, setSearchQuery] = useState('');
     const [scanInput, setScanInput] = useState('');
     const [scannedTeam, setScannedTeam] = useState<{ id: string, members: Participant[] } | null>(null);
@@ -115,7 +118,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
     const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
     const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
     const [typeFilter, setTypeFilter] = useState('all');
-    const [paymentFilter, setPaymentFilter] = useState('all');
+    const [paymentFilter] = useState('all');
     const [allocationFilter, setAllocationFilter] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);
     const ITEMS_PER_PAGE = 10;
@@ -166,7 +169,6 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                 id: teamId,
                 members: teamMembers
             });
-            setSelectedMembers([]);
             setIsScannerModalOpen(false); // Close scanner modal
             setIsAttendanceModalOpen(true);
         } else {
@@ -229,9 +231,23 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
     const handleAction = useCallback(async (all: boolean) => {
         if (!scannedTeam) return;
 
-        const targets = all ? scannedTeam.members : scannedTeam.members.filter(m => selectedMembers.includes(m._id));
+        // Filter targets based on current mode to avoid double-marking
+        let targets = scannedTeam.members;
+
+        if (all) {
+            targets = targets.filter(member => {
+                if (mode === 'snacks') return !member.foodAttendance?.some(s => s.toLowerCase().includes('snacks'));
+                if (mode === 'hackathon') return !member.hackathonAttendance;
+                if (mode === 'entry') return !member.entryGateTimestamp;
+                if (mode === 'exit') return !member.exitGateTimestamp;
+                return true;
+            });
+        } else {
+            targets = targets.filter(m => selectedMembers.includes(m._id));
+        }
+
         if (targets.length === 0) {
-            toast.warning("Please select at least one member");
+            toast.warning("No new members to mark!");
             return;
         }
 
@@ -239,9 +255,8 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
         let details = '';
 
         if (mode === 'snacks') {
-            const eventLabel = eventDay === 'hackathon' ? 'Hackathon' : `Day ${eventDay}`;
-            actionType = `SNACKS_${eventDay.toUpperCase()}`;
-            details = `Snacks Issued for ${eventLabel}`;
+            actionType = 'SNACKS';
+            details = 'Snacks Distributed';
         } else if (mode === 'hackathon') {
             actionType = 'HACKATHON_ATTENDANCE';
             details = 'Hackathon Attendance Marked';
@@ -259,9 +274,11 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
             await markAttendance(
                 participantIds,
                 mode,
-                'present',
-                eventDay
+                'present'
             );
+
+            toast.success(`Marked ${targets.length} members!`);
+
         } catch (error) {
             console.error('Attendance error:', error);
             // Error handling is managed by markAttendance toast, but we can catch here if needed
@@ -279,9 +296,9 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
         // Reset
         setScannedTeam(null);
         setScanInput('');
-        setSelectedMembers([]);
         setIsAttendanceModalOpen(false);
-    }, [scannedTeam, mode, eventDay, selectedMembers, addLog]);
+        setSelectedMembers([]);
+    }, [scannedTeam, mode, selectedMembers, markAttendance]);
 
     const navItems: NavItem[] = [
         { label: 'Scan ID', icon: Camera, value: 'scan', group: 'Actions' },
@@ -295,7 +312,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
         { id: 'entry', label: 'Entry Gate', icon: LogIn, color: 'green', description: 'Check-in at entry' },
         { id: 'hackathon', label: 'Hackathon', icon: Zap, color: 'purple', description: 'Mark hackathon attendance' },
         { id: 'exit', label: 'Exit Gate', icon: LogOut, color: 'red', description: 'Check-out at exit' },
-        { id: 'snacks', label: 'Snacks', icon: Coffee, color: 'orange', description: 'Issue snacks' },
+        { id: 'snacks', label: 'Snacks', icon: Utensils, color: 'orange', description: 'Issue Snacks' },
     ];
 
     // Reset pagination when filters/search change
@@ -479,13 +496,13 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                             </h3>
                             <ScrollArea className="h-[500px]">
                                 <div className="space-y-2">
-                                    {logs.filter(l => l.action !== 'LOGIN').length === 0 ? (
+                                    {logs.filter(l => l.user === user.name && l.action !== 'LOGIN').length === 0 ? (
                                         <div className="text-center py-20">
                                             <CheckCircle className="w-12 h-12 text-gray-500/20 mx-auto mb-4" />
                                             <p className="text-gray-500">No logs yet. Start scanning IDs!</p>
                                         </div>
                                     ) : (
-                                        logs.filter(l => l.action !== 'LOGIN').map((log, i) => (
+                                        logs.filter(l => l.user === user.name && l.action !== 'LOGIN').map((log, i) => (
                                             <Card key={i} className="bg-brand-dark border-white/5 hover:border-white/10 transition-colors">
                                                 <CardContent className="p-4">
                                                     <div className="flex justify-between items-start">
@@ -494,7 +511,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                                                 <CheckCircle2 className="w-4 h-4 text-brand-primary" />
                                                             </div>
                                                             <div className="flex-1">
-                                                                <p className="font-medium text-sm text-white">{log.user}</p>
+                                                                <p className="font-medium text-sm text-white">You</p>
                                                                 <p className="text-xs text-gray-400 mt-1">{log.details}</p>
                                                                 <Badge variant="outline" className="mt-2 text-[10px] bg-white/5 border-white/10">
                                                                     {log.action}
@@ -565,7 +582,6 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                             <TableHead className="text-gray-400">Team Size</TableHead>
                                             <TableHead className="text-gray-400">Type</TableHead>
                                             <TableHead className="text-gray-400">Allocation</TableHead>
-                                            <TableHead className="text-gray-400">Payment</TableHead>
                                             <TableHead className="text-gray-400 text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -607,6 +623,8 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                                 const paymentUrl = members.find(m => m.paymentScreenshotUrl)?.paymentScreenshotUrl;
                                                 const hasHackathon = members.some(m => m.assignedHackathonLab);
                                                 const isAllocated = hasHackathon;
+                                                // Assuming first member is leader or representative
+                                                const mobile = members[0]?.whatsapp || members[0]?.members?.[0]?.whatsapp || '-';
 
                                                 return (
                                                     <React.Fragment key={teamId}>
@@ -643,19 +661,10 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                                                     <span className="text-gray-600 text-[10px]">Not allocated</span>
                                                                 )}
                                                             </TableCell>
-                                                            <TableCell>
-                                                                {hasPayment ? (
-                                                                    <Badge className="bg-green-500/10 text-green-400 border-green-500/20 text-[10px]">
-                                                                        Paid
-                                                                    </Badge>
-                                                                ) : (
-                                                                    <Badge variant="outline" className="text-gray-500 text-[10px]">
-                                                                        Unpaid
-                                                                    </Badge>
-                                                                )}
-                                                            </TableCell>
+                                                            {/* Paid Column Removed to match Admin */}
                                                             <TableCell className="text-right">
                                                                 <div className="flex gap-1 justify-end items-center" onClick={(e) => e.stopPropagation()}>
+                                                                    {/* Mail Button Removed as per request "limited to only eye" */}
                                                                     {hasPayment && paymentUrl && (
                                                                         <Button
                                                                             size="sm"
@@ -676,11 +685,11 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                                                     <div className="space-y-3">
                                                                         {members.map((member) => (
                                                                             <div key={member._id} className="bg-brand-dark p-4 rounded-lg border border-white/5">
-                                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+                                                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
                                                                                     <div><span className="text-gray-500">Name:</span> <span className="text-white ml-1">{member.name}</span></div>
                                                                                     <div className="truncate"><span className="text-gray-500">Email:</span> <span className="text-gray-300 ml-1">{member.email}</span></div>
+                                                                                    <div className="truncate"><span className="text-gray-500">Mobile:</span> <span className="text-gray-300 ml-1">{member.whatsapp || '-'}</span></div>
                                                                                     <div className="truncate"><span className="text-gray-500">College:</span> <span className="text-gray-300 ml-1" title={member.college}>{member.college}</span></div>
-
                                                                                     {member.assignedHackathonLab && <div><span className="text-gray-500">Hackathon Lab:</span> <span className="text-brand-primary ml-1">{member.assignedHackathonLab}</span></div>}
                                                                                 </div>
                                                                             </div>
@@ -878,7 +887,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                     }
                 }
             }}>
-                <DialogContent className="bg-brand-surface border-white/10 text-white max-w-lg">
+                <DialogContent className="bg-brand-surface border-white/10 text-white max-w-lg max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                             <Camera className="w-6 h-6 text-brand-primary" />
@@ -890,25 +899,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                     </DialogHeader>
 
                     <div className="space-y-4">
-                        {/* Day Selector for Snacks */}
-                        {(mode === 'snacks') && (
-                            <div className="bg-brand-dark rounded-xl p-4 border border-white/10">
-                                <Label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Select Day/Event</Label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {['1', '2', '3', ...(mode === 'snacks' ? ['hackathon'] : [])].map((day) => (
-                                        <Button
-                                            key={day}
-                                            variant={eventDay === day ? 'default' : 'outline'}
-                                            size="sm"
-                                            className={eventDay === day ? 'bg-brand-primary text-white' : 'bg-white/5 border-white/10'}
-                                            onClick={() => setEventDay(day)}
-                                        >
-                                            {day === 'hackathon' ? 'Hackathon' : `Day ${day}`}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+
 
                         {/* Scanner Area */}
                         {showRealScanner ? (
@@ -973,10 +964,10 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
 
             {/* Attendance Modal */}
             <Dialog open={isAttendanceModalOpen} onOpenChange={setIsAttendanceModalOpen}>
-                <DialogContent className="bg-brand-surface border-white/10 text-white max-w-md">
+                <DialogContent className="bg-brand-surface border-white/10 text-white max-w-md max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-2xl font-bold">
-                            {mode === 'snacks' ? `${eventDay === 'hackathon' ? 'Hackathon' : `Day ${eventDay}`} Snacks` :
+                            {mode === 'snacks' ? 'Snacks Distribution' :
                                 mode === 'hackathon' ? 'Hackathon' : mode === 'entry' ? 'Gate Entry' : 'Gate Exit'}
                         </DialogTitle>
                         <DialogDescription className="text-sm text-gray-400">
@@ -985,9 +976,18 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                     </DialogHeader>
 
                     <div className="py-4 space-y-4">
-                        <Label className="text-sm font-medium text-gray-500 uppercase">Select Members</Label>
+                        <Label className="text-sm font-medium text-gray-500 uppercase">Select Members (Unmarked Only)</Label>
                         <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                            {scannedTeam?.members.map(member => (
+                            {scannedTeam?.members.filter(member => {
+                                // Filter logic: Show only NOT marked
+                                if (mode === 'snacks') {
+                                    return !member.foodAttendance?.some(s => s.toLowerCase().includes('snacks'));
+                                }
+                                if (mode === 'hackathon') return !member.hackathonAttendance;
+                                if (mode === 'entry') return !member.entryGateTimestamp;
+                                if (mode === 'exit') return !member.exitGateTimestamp;
+                                return true;
+                            }).map(member => (
                                 <div
                                     key={member._id}
                                     className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${selectedMembers.includes(member._id) ? 'bg-brand-primary/10 border-brand-primary/50 scale-[1.02]' : 'bg-brand-dark border-white/5 hover:border-white/10'}`}
@@ -1007,6 +1007,15 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                     <Badge variant="outline" className="text-[10px] opacity-70">{member.type}</Badge>
                                 </div>
                             ))}
+                            {scannedTeam && scannedTeam.members.filter(member => {
+                                if (mode === 'snacks') return !member.foodAttendance?.some(s => s.toLowerCase().includes('snacks'));
+                                if (mode === 'hackathon') return !member.hackathonAttendance;
+                                if (mode === 'entry') return !member.entryGateTimestamp;
+                                if (mode === 'exit') return !member.exitGateTimestamp;
+                                return true;
+                            }).length === 0 && (
+                                    <p className="text-center text-gray-500 py-4">All members already marked!</p>
+                                )}
                         </div>
                     </div>
 
@@ -1014,17 +1023,30 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                         <Button
                             variant="outline"
                             className="flex-1 bg-white/5 border-white/20 hover:bg-white/10"
-                            onClick={() => handleAction(false)}
+                            onClick={() => handleAction(false)} // Marks selected
                             disabled={selectedMembers.length === 0}
                         >
                             Mark Selected ({selectedMembers.length})
                         </Button>
                         <Button
                             className="flex-1 bg-brand-primary text-white hover:bg-brand-primary/80"
-                            onClick={() => handleAction(true)}
+                            onClick={() => handleAction(true)} // Marks all UNMARKED (filtered)
+                            disabled={scannedTeam?.members.filter(member => {
+                                if (mode === 'snacks') return !member.foodAttendance?.some(s => s.toLowerCase().includes('snacks'));
+                                if (mode === 'hackathon') return !member.hackathonAttendance;
+                                if (mode === 'entry') return !member.entryGateTimestamp;
+                                if (mode === 'exit') return !member.exitGateTimestamp;
+                                return true;
+                            }).length === 0}
                         >
                             <CheckCircle2 className="w-4 h-4 mr-2" />
-                            Mark All ({scannedTeam?.members.length || 0})
+                            Mark Remaining ({scannedTeam?.members.filter(member => {
+                                if (mode === 'snacks') return !member.foodAttendance?.some(s => s.toLowerCase().includes('snacks'));
+                                if (mode === 'hackathon') return !member.hackathonAttendance;
+                                if (mode === 'entry') return !member.entryGateTimestamp;
+                                if (mode === 'exit') return !member.exitGateTimestamp;
+                                return true;
+                            }).length || 0})
                         </Button>
                     </DialogFooter>
                 </DialogContent>

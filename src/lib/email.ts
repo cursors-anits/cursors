@@ -331,6 +331,22 @@ export async function processEmailQueue() {
             }
 
             await email.save();
+            await email.save();
         }
+    }
+}
+
+export async function sendGenericEmail(to: string, subject: string, html: string) {
+    try {
+        await transporter.sendMail({
+            from: `"Vibe Coding 2026" <${process.env.SMTP_USER}>`,
+            to,
+            subject,
+            html,
+        });
+        return { success: true };
+    } catch (error) {
+        console.error("Error sending generic email:", error);
+        throw error;
     }
 }

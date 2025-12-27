@@ -12,7 +12,7 @@ interface EditCoordinatorModalProps {
     isOpen: boolean;
     onClose: () => void;
     coordinator: Coordinator | null;
-    onSave: (updates: Partial<Coordinator>) => Promise<void>;
+    onSave: (updates: Coordinator) => Promise<void>;
 }
 
 export const EditCoordinatorModal: React.FC<EditCoordinatorModalProps> = ({

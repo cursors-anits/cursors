@@ -25,7 +25,7 @@ const COLLEGES = [
     "Andhra University College of Engineering [AUCE]",
     "Andhra University College of Engineering for Women [AUCEW]",
     "Anil Neerukonda Institute of Technology and Sciences [ANITS]",
-    "Avanthi Institute Of Engineering and Technology [AIET]",
+    "Avanthi Institute of Engineering and Technology [AVEV]",
     "Baba Institute of Technology and Sciences [BITS]",
     "Behara College of Engineering and Technology [BCET]",
     "Centurion University of Technology and Management [CUTM]",
@@ -265,13 +265,13 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
                                             <Label>Hackathon Lab</Label>
                                             <Select
                                                 value={member.assignedHackathonLab || ''}
-                                                onValueChange={(v) => updateMember(index, 'assignedHackathonLab', v || undefined)}
+                                                onValueChange={(v) => updateMember(index, 'assignedHackathonLab', v === 'none' ? undefined : v)}
                                             >
                                                 <SelectTrigger className="bg-brand-surface border-white/10">
                                                     <SelectValue placeholder="Select lab" />
                                                 </SelectTrigger>
                                                 <SelectContent className="bg-brand-surface border-white/10">
-                                                    <SelectItem value="">None</SelectItem>
+                                                    <SelectItem value="none">None</SelectItem>
                                                     {labs.map(lab => (
                                                         <SelectItem key={lab._id} value={lab.name}>{lab.name}</SelectItem>
                                                     ))}

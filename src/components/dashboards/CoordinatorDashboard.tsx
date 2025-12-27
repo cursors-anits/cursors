@@ -52,7 +52,6 @@ interface CoordinatorDashboardProps {
     user: User;
 }
 
-type Mode = 'entry' | 'exit' | 'workshop' | 'hackathon' | 'snacks';
 
 const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => {
     const {
@@ -63,7 +62,8 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
         isLoading,
         supportRequests,
         updateSupportRequest,
-        fetchSupportRequests
+        fetchSupportRequests,
+        markAttendance
     } = useData();
 
     const router = useRouter();
@@ -71,7 +71,8 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
     const pathname = usePathname();
 
     const view = (searchParams.get('view') as 'scan' | 'list' | 'participants' | 'requests' | 'settings') || 'scan';
-    const mode = (searchParams.get('mode') as Mode) || 'workshop';
+    const day = (searchParams.get('day') as '1' | '2') || '1';
+    const activity = searchParams.get('activity') || 'entry';
 
     const setView = (newView: string) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -79,13 +80,21 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
-    const setMode = (newMode: string) => {
+    const setDay = (newDay: string) => {
         const params = new URLSearchParams(searchParams.toString());
-        params.set('mode', newMode);
+        params.set('day', newDay);
+        // Reset activity to default for that day
+        if (newDay === '1') params.set('activity', 'entry');
+        else params.set('activity', 'exit'); // Default for day 2 updated
         router.push(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
-    const [workshopDay, setWorkshopDay] = useState('1');
+    const setActivity = (newActivity: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('activity', newActivity);
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
     const [searchQuery, setSearchQuery] = useState('');
 
     const [scanInput, setScanInput] = useState('');
@@ -97,8 +106,11 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
     const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
 
     const handleFetchTeam = useCallback((overrideInput?: string) => {
-        const input = overrideInput || scanInput;
+        let input = overrideInput || scanInput;
         if (!input) return;
+
+        // Clean input for Food QR
+        input = input.replace('FOOD:', '');
 
         const found = participants.filter(p => p.teamId === input || p.participantId === input);
 
@@ -195,36 +207,36 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
             return;
         }
 
-        let actionType = '';
-        let details = '';
+        try {
+            // Determine the target argument for markAttendance
+            // If all, use Team ID string. If partial, use array of IDs (here using _id as api/coordinator/attendance supports it)
+            const targetArg = all ? scannedTeam.id : targets.map(m => m._id);
 
-        if (mode === 'workshop') {
-            actionType = `WORKSHOP_D${workshopDay}`;
-            details = `Workshop Attendance Day ${workshopDay}`;
-        } else if (mode === 'snacks') {
-            const eventLabel = workshopDay === 'hackathon' ? 'Hackathon' : `Day ${workshopDay}`;
-            actionType = `SNACKS_${workshopDay.toUpperCase()}`;
-            details = `Snacks Issued for ${eventLabel}`;
-        } else if (mode === 'hackathon') {
-            actionType = 'HACKATHON_ATTENDANCE';
-            details = 'Hackathon Attendance Marked';
-        } else if (mode === 'entry') {
-            actionType = 'ENTRY_GATE';
-            details = 'Gate Check-In';
-        } else if (mode === 'exit') {
-            actionType = 'EXIT_GATE';
-            details = 'Gate Check-Out';
+            // Map 'activity' to valid 'mode'. 'activity' comes from Select: entry, exit, hackathon, snacks
+            // They map directly to 'mode' types except we need to ensure type safety.
+            // valid modes: 'hackathon' | 'hackathon_exit' | 'entry' | 'exit' | 'snacks'
+
+            let mode = activity as 'hackathon' | 'hackathon_exit' | 'entry' | 'exit' | 'snacks';
+
+            // Just double check mapping if activity names diverged? 
+            // In Select: 'entry', 'hackathon', 'snacks', 'exit'. 'lunch'/'dinner' removed.
+
+            await markAttendance(targetArg, mode, 'present');
+
+            // Logs are handled inside markAttendance now usually, but maybe add local toast? 
+            // markAttendance already does toasts.
+
+        } catch (e) {
+            console.error(e);
+            toast.error('Failed to mark attendance');
         }
-
-        await addLog(actionType, `${details} for ${targets.length} members of Team ${scannedTeam.id}: ${targets.map(t => t.name).join(', ')}`);
-        toast.success(`${actionType} successful for ${targets.length} members`);
 
         // Reset
         setScannedTeam(null);
         setScanInput('');
         setSelectedMembers([]);
         setIsAttendanceModalOpen(false);
-    }, [scannedTeam, mode, workshopDay, selectedMembers, addLog]);
+    }, [scannedTeam, activity, selectedMembers, markAttendance]);
 
     return (
         <DashboardShell
@@ -242,39 +254,41 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
             <div className="space-y-6">
                 {/* Mode Configuration Card */}
                 <Card className="bg-brand-surface border-white/5">
-                    <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                            <Label className="text-xs font-bold text-gray-500 uppercase">Operation Mode</Label>
-                            <Select onValueChange={(v) => { setMode(v as Mode); setScannedTeam(null); }} value={mode}>
+                            <Label className="text-xs font-bold text-gray-500 uppercase">Select Event Day</Label>
+                            <Select onValueChange={setDay} value={day}>
                                 <SelectTrigger className="bg-brand-dark border-white/10">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="workshop">Workshop Attendance</SelectItem>
-                                    <SelectItem value="entry">Entry Gate</SelectItem>
-                                    <SelectItem value="hackathon">Hackathon Attendance</SelectItem>
-                                    <SelectItem value="snacks">Snacks Distribution</SelectItem>
-                                    <SelectItem value="exit">Exit Gate</SelectItem>
+                                    <SelectItem value="1">Day 1 (Saturday)</SelectItem>
+                                    <SelectItem value="2">Day 2 (Sunday)</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
-                        {(mode === 'workshop' || mode === 'snacks') && (
-                            <div className="space-y-1 animate-in fade-in duration-300">
-                                <Label className="text-xs font-bold text-gray-500 uppercase">Event / Day</Label>
-                                <Select onValueChange={setWorkshopDay} value={workshopDay}>
-                                    <SelectTrigger className="bg-brand-dark border-white/10">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="1">Day 1</SelectItem>
-                                        <SelectItem value="2">Day 2</SelectItem>
-                                        <SelectItem value="3">Day 3</SelectItem>
-                                        {(mode === 'snacks') && <SelectItem value="hackathon">Hackathon</SelectItem>}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        )}
+                        <div className="space-y-1">
+                            <Label className="text-xs font-bold text-gray-500 uppercase">Select Activity</Label>
+                            <Select onValueChange={(v) => { setActivity(v); setScannedTeam(null); }} value={activity}>
+                                <SelectTrigger className="bg-brand-dark border-white/10">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {day === '1' ? (
+                                        <>
+                                            <SelectItem value="entry">Entry Gate</SelectItem>
+                                            <SelectItem value="hackathon">Hackathon Attendance</SelectItem>
+                                            <SelectItem value="snacks">Snacks Distribution</SelectItem>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <SelectItem value="exit">Exit Gate</SelectItem>
+                                        </>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </CardContent>
                 </Card>
 
@@ -331,7 +345,7 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                                     <Button variant="ghost" onClick={() => setScannedTeam(null)}>Cancel</Button>
                                 </div>
 
-                                <ScrollArea className="max-h-[300px] pr-4">
+                                <ScrollArea className="max-h-[60vh] pr-4">
                                     <div className="space-y-3">
                                         {scannedTeam.members.map(m => (
                                             <div
@@ -497,16 +511,17 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                 <DialogContent className="bg-brand-surface border-white/10 text-white max-w-md">
                     <DialogHeader>
                         <DialogTitle className="text-2xl font-bold">
-                            {mode === 'workshop' ? `Day ${workshopDay} Workshop` :
-                                mode === 'snacks' ? `${workshopDay === 'hackathon' ? 'Hackathon' : `Day ${workshopDay}`} Snacks` :
-                                    mode === 'hackathon' ? 'Hackathon' : mode === 'entry' ? 'Gate Entry' : 'Gate Exit'}
+                            {activity === 'entry' && `Day ${day} Entry`}
+                            {activity === 'exit' && `Day ${day} Exit`}
+                            {activity === 'hackathon' && 'Hackathon Attendance'}
+                            {['snacks', 'lunch', 'dinner'].includes(activity) && `${activity.charAt(0).toUpperCase() + activity.slice(1)} Distribution`}
                         </DialogTitle>
                         <p className="text-sm text-gray-400">Team {scannedTeam?.id || '...'}</p>
                     </DialogHeader>
 
                     <div className="py-4 space-y-4">
                         <Label className="text-sm font-medium text-gray-500 uppercase">Select Members</Label>
-                        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
                             {scannedTeam?.members.map(member => (
                                 <div
                                     key={member._id}
@@ -537,7 +552,7 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
                             onClick={() => handleAction(false)}
                             disabled={selectedMembers.length === 0}
                         >
-                            Mark Attendance ({selectedMembers.length})
+                            Mark {['snacks', 'lunch', 'dinner'].includes(activity) ? 'Issued' : 'Attendance'} ({selectedMembers.length})
                         </Button>
                         <Button
                             className="flex-1 bg-brand-primary text-brand-dark hover:bg-white"

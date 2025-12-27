@@ -12,6 +12,15 @@ import {
     AlertCircle,
     FileCheck
 } from 'lucide-react';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { PROBLEM_STATEMENTS } from '@/lib/data/problemStatements';
 
@@ -88,6 +97,40 @@ export default function ProblemAllocationTab({ adminEmail }: ProblemAllocationTa
             });
         } finally {
             setAllocating(false);
+        }
+    };
+
+    const [reverting, setReverting] = useState(false);
+    const [isRevertModalOpen, setIsRevertModalOpen] = useState(false);
+
+    const handleRevertAllocation = () => {
+        setIsRevertModalOpen(true);
+    };
+
+    const confirmRevertAllocation = async () => {
+        setIsRevertModalOpen(false);
+        setReverting(true);
+        try {
+            const response = await fetch('/api/admin/allocate-problems', { method: 'DELETE' });
+            const data = await response.json();
+
+            if (response.ok) {
+                toast({
+                    title: 'Success',
+                    description: 'Allocation reverted successfully.'
+                });
+                await fetchStats();
+            } else {
+                throw new Error(data.error || 'Failed to revert');
+            }
+        } catch (error) {
+            toast({
+                title: 'Error',
+                description: 'Failed to revert allocation',
+                variant: 'destructive'
+            });
+        } finally {
+            setReverting(false);
         }
     };
 
@@ -182,24 +225,43 @@ export default function ProblemAllocationTab({ adminEmail }: ProblemAllocationTa
                                 </div>
                             )}
 
-                            <Button
-                                onClick={handleAllocate}
-                                disabled={allocating || (stats !== null && stats.allocated > 0)}
-                                className="bg-brand-primary hover:bg-brand-primary/80 disabled:opacity-50"
-                                size="lg"
-                            >
-                                {allocating ? (
-                                    <>
-                                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                                        Allocating...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Zap className="w-4 h-4 mr-2" />
-                                        Allocate Problems
-                                    </>
-                                )}
-                            </Button>
+                            <div className="flex gap-4">
+                                <Button
+                                    onClick={handleAllocate}
+                                    disabled={allocating || (stats !== null && stats.allocated > 0)}
+                                    className="bg-brand-primary hover:bg-brand-primary/80 disabled:opacity-50"
+                                    size="lg"
+                                >
+                                    {allocating ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                            Allocating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Zap className="w-4 h-4 mr-2" />
+                                            Allocate Problems
+                                        </>
+                                    )}
+                                </Button>
+
+                                <Button
+                                    onClick={handleRevertAllocation}
+                                    disabled={reverting || (stats?.allocated === 0)}
+                                    variant="destructive"
+                                    size="lg"
+                                    className="bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/20 disabled:opacity-50"
+                                >
+                                    {reverting ? (
+                                        <>
+                                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                            Reverting...
+                                        </>
+                                    ) : (
+                                        "Revert Allocation"
+                                    )}
+                                </Button>
+                            </div>
                         </div>
                         <FileCheck className="w-16 h-16 text-brand-primary opacity-20" />
                     </div>
@@ -256,6 +318,21 @@ export default function ProblemAllocationTab({ adminEmail }: ProblemAllocationTa
                     </div>
                 </CardContent>
             </Card>
+
+            <AlertDialog open={isRevertModalOpen} onOpenChange={setIsRevertModalOpen}>
+                <AlertDialogContent className="bg-brand-surface border-white/10">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Revert Problem Allocation?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to REVERT problem allocation? This will delete all problem assignments and reset participant confirmations.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction onClick={() => setIsRevertModalOpen(false)} className="bg-white/5 hover:bg-white/10 border-white/10 text-white">Cancel</AlertDialogAction>
+                        <AlertDialogAction onClick={confirmRevertAllocation} className="bg-red-500 hover:bg-red-600 text-white">Revert</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

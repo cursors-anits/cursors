@@ -32,6 +32,7 @@ export const TeamMemberSchema = z.object({
 export const RegistrationSchema = z.object({
     ticketType: z.enum(['hackathon']),
     teamSize: z.number().min(1).max(5),
+
     members: z.array(TeamMemberSchema),
     transactionId: z.string().min(12, 'UTR must be 12 digits'),
     screenshot: z.string().min(1, 'Payment screenshot is required'),
@@ -89,6 +90,11 @@ export interface Participant {
     assignedSeat?: string;
     avatarUrl?: string;
     paymentScreenshotUrl?: string;
+
+    foodAttendance?: string[]; // Array of sessions claimed
+    hackathonAttendance?: boolean;
+    entryGateTimestamp?: Date | string;
+    exitGateTimestamp?: Date | string;
     generatedEmail?: string;
     passkey?: string;
     eventChecklist?: string[]; // Array of checked checklist item IDs
@@ -140,6 +146,13 @@ export interface Lab {
     capacity: number;
     currentCount: number;
     type: 'Hackathon';
+    seatingConfig?: {
+        size5: number;
+        size4: number;
+        size3: number;
+        size2: number;
+        size1: number;
+    };
 }
 
 export interface SupportRequest {
@@ -173,6 +186,8 @@ export interface Settings {
     fomoConfig?: {
         hackathonCount: number;
         showFakeCounts: boolean;
+        fomoDecayRate?: number;
+        fomoDecayStart?: Date | string;
     };
     bufferConfig?: {
         hackathonLimit: number;
@@ -184,4 +199,5 @@ export interface Settings {
     hackathonEndDate?: Date | string;
     submissionWindowOpen?: boolean;
     submissionWindowStartTime?: Date | string;
+
 }

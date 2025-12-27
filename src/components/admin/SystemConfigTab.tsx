@@ -255,6 +255,7 @@ export default function SystemConfigTab() {
                                 placeholder="https://..."
                             />
                         </div>
+
                     </div>
                 </CardContent>
             </Card>
@@ -364,6 +365,49 @@ export default function SystemConfigTab() {
                                 onChange={(e) => setConfig({ ...config, hackathonCount: Number(e.target.value) })}
                                 className="bg-brand-dark/50 border-white/10"
                             />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Decay Rate (Spots/Hour)</Label>
+                            <Input
+                                type="number"
+                                step="0.1"
+                                defaultValue={settings?.fomoConfig?.fomoDecayRate || 2}
+                                onBlur={(e) => updateSettings({
+                                    fomoConfig: {
+                                        ...settings?.fomoConfig!,
+                                        fomoDecayRate: Number(e.target.value)
+                                    }
+                                })}
+                                className="bg-brand-dark/50 border-white/10"
+                            />
+                            <p className="text-[10px] text-gray-500">Spots reduce automatically every hour.</p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Decay Start Time</Label>
+                            <Input
+                                type="datetime-local"
+                                defaultValue={settings?.fomoConfig?.fomoDecayStart ? new Date(new Date(settings.fomoConfig.fomoDecayStart).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''}
+                                onBlur={(e) => updateSettings({
+                                    fomoConfig: {
+                                        ...settings?.fomoConfig!,
+                                        fomoDecayStart: new Date(e.target.value)
+                                    }
+                                })}
+                                className="bg-brand-dark/50 border-white/10"
+                            />
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full mt-2 text-xs"
+                                onClick={() => updateSettings({
+                                    fomoConfig: {
+                                        ...settings?.fomoConfig!,
+                                        fomoDecayStart: new Date()
+                                    }
+                                })}
+                            >
+                                Set to Now
+                            </Button>
                         </div>
                     </div>
                     <div className="flex justify-end pt-4">

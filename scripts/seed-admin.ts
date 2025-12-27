@@ -28,7 +28,7 @@ async function seedAdmin() {
         if (!adminUser) {
             await User.create({
                 email: adminEmail,
-                name: 'System Admin',
+                name: 'Omkar Palika',
                 role: 'admin',
                 password: adminPassword,
             });

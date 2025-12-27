@@ -43,7 +43,7 @@ interface ParticipantDashboardProps {
 }
 
 const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => {
-    const { participants, currentUser, labs, logout, fetchParticipants } = useData();
+    const { participants, fetchParticipants } = useData();
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -109,7 +109,6 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                 throw new Error(errorData.error || 'Upload failed');
             }
 
-            const data = await res.json();
             toast.success('Team avatar updated!');
             await fetchParticipants();
         } catch (error: any) {
@@ -435,17 +434,17 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                                 <ShieldCheck className="w-4 h-4" /> Verified Attendee
                             </div>
                         </div>
+                    </div>
 
-                        <div className="bg-black/60 p-4 text-center text-[8px] text-gray-600 font-mono relative">
-                            <Separator className="bg-white/5 absolute top-0 left-0 w-full" />
-                            OFFICIAL ENTRY PASS • VIBE CODING 2026
-                        </div>
+                    <div className="bg-black/60 p-4 text-center text-[8px] text-gray-600 font-mono relative">
+                        <Separator className="bg-white/5 absolute top-0 left-0 w-full" />
+                        OFFICIAL ENTRY PASS • VIBE CODING 2026
                     </div>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* Support Request Modal */}
-            <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
+            < Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen} >
                 <DialogContent className="bg-brand-surface border-white/10 text-white max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
@@ -483,10 +482,10 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                         </Button>
                     </DialogFooter>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* SOS Confirmation Modal */}
-            <Dialog open={isSOSModalOpen} onOpenChange={setIsSOSModalOpen}>
+            < Dialog open={isSOSModalOpen} onOpenChange={setIsSOSModalOpen} >
                 <DialogContent className="bg-brand-surface border-red-500/20 text-white max-w-sm text-center">
                     <DialogHeader>
                         <div className="mx-auto w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-4">
@@ -514,8 +513,11 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                         </Button>
                     </DialogFooter>
                 </DialogContent>
-            </Dialog>
-        </DashboardShell>
+            </Dialog >
+
+
+
+        </DashboardShell >
     );
 };
 

@@ -14,13 +14,15 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { CreatableCombobox } from '@/components/ui/creatable-combobox'; // Added import
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-    DialogFooter
+    DialogFooter,
+    DialogDescription
 } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -68,7 +70,8 @@ export default function DataManagementTab() {
     const handleAdd = async () => {
         if (!newItem.trim()) return;
         const currentData = getData();
-        if (currentData.includes(newItem.trim())) {
+        // Case-insensitive duplicate check
+        if (currentData.some(item => item.toLowerCase() === newItem.trim().toLowerCase())) {
             toast.error('Item already exists');
             return;
         }
@@ -86,7 +89,8 @@ export default function DataManagementTab() {
 
         // Remove old, add new, re-sort
         const newData = currentData.filter(item => item !== currentEditItem.old);
-        if (newData.includes(currentEditItem.new.trim())) {
+        // Case-insensitive duplicate check
+        if (newData.some(item => item.toLowerCase() === currentEditItem.new.trim().toLowerCase())) {
             toast.error('Item already exists');
             return;
         }
@@ -290,10 +294,12 @@ export default function DataManagementTab() {
                                             <DialogTitle>Add New College</DialogTitle>
                                         </DialogHeader>
                                         <div className="space-y-4 py-4">
-                                            <Input
-                                                placeholder={`Enter college name...`}
+                                            <CreatableCombobox
+                                                options={getData()}
                                                 value={newItem}
-                                                onChange={(e) => setNewItem(e.target.value)}
+                                                onChange={(val) => setNewItem(val)}
+                                                onCreate={(val) => setNewItem(val)}
+                                                placeholder={`Search or type new ${activeTab === 'colleges' ? 'college' : 'city'}...`}
                                                 className="bg-brand-dark/50 border-white/10"
                                             />
                                         </div>
@@ -412,10 +418,12 @@ export default function DataManagementTab() {
                                             <DialogTitle>Add New City</DialogTitle>
                                         </DialogHeader>
                                         <div className="space-y-4 py-4">
-                                            <Input
-                                                placeholder={`Enter city name...`}
+                                            <CreatableCombobox
+                                                options={getData()}
                                                 value={newItem}
-                                                onChange={(e) => setNewItem(e.target.value)}
+                                                onChange={(val) => setNewItem(val)}
+                                                onCreate={(val) => setNewItem(val)}
+                                                placeholder={`Search or type new ${activeTab === 'colleges' ? 'college' : 'city'}...`}
                                                 className="bg-brand-dark/50 border-white/10"
                                             />
                                         </div>
@@ -519,16 +527,47 @@ export default function DataManagementTab() {
                         <DialogTitle>Edit {activeTab === 'colleges' ? 'College' : 'City'}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
-                        <Input
-                            placeholder="Data value..."
+                        <CreatableCombobox
+                            options={getData()}
                             value={currentEditItem?.new || ''}
-                            onChange={(e) => setCurrentEditItem({ ...currentEditItem!, new: e.target.value })}
+                            onChange={(val) => setCurrentEditItem({ ...currentEditItem!, new: val })}
+                            onCreate={(val) => setCurrentEditItem({ ...currentEditItem!, new: val })}
+                            placeholder="Select or type new value..."
                             className="bg-brand-dark/50 border-white/10"
                         />
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
                         <Button onClick={handleEdit} className="bg-brand-primary text-brand-dark">Save Changes</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Normalize Dialog */}
+            <Dialog open={isNormalizeDialogOpen} onOpenChange={setIsNormalizeDialogOpen}>
+                <DialogContent className="bg-brand-surface border-white/10 text-white">
+                    <DialogHeader>
+                        <DialogTitle>Approve or Edit Pending Item</DialogTitle>
+                        <DialogDescription className="text-gray-400">
+                            You are approving "{normalizeTarget?.oldName}". You can edit the name before saving, which will update all referencing participants.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-300">Standardized Name</label>
+                            <Input
+                                placeholder="Enter correct name..."
+                                value={normalizeTarget?.newName || ''}
+                                onChange={(e) => setNormalizeTarget(prev => prev ? ({ ...prev, newName: e.target.value }) : null)}
+                                className="bg-brand-dark/50 border-white/10"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsNormalizeDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleNormalize} disabled={isNormalizing} className="bg-brand-primary text-brand-dark">
+                            {isNormalizing ? 'Processing...' : 'Approve & Merge'}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

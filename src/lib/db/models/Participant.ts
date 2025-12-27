@@ -63,6 +63,10 @@ export interface IParticipant {
     snacksDay3?: Date;
     snacksHackathon?: Date;
 
+    // Food Coupon
+
+    foodAttendance?: string[];
+
     createdAt?: Date;
     updatedAt?: Date;
 }
@@ -227,6 +231,12 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
         },
         snacksHackathon: {
             type: Date,
+        },
+
+
+        foodAttendance: {
+            type: [String],
+            default: []
         },
     },
     {

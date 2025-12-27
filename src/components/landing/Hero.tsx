@@ -34,18 +34,22 @@ const RecentActivityBadge = () => {
         // Initialize map with FAKE activities to ensure baseline
         const activityMap = new Map<string, { count: number, college: string }>();
 
+        // Pre-populate with normalized keys map to preserve original casing for display if needed
         FAKE_ACTIVITIES.forEach(a => {
-            activityMap.set(a.college, { ...a });
+            const key = a.college.trim().toLowerCase();
+            activityMap.set(key, { ...a });
         });
 
         if (participants) {
             // Group real participants by college
             participants.forEach(p => {
-                const college = p.college || 'Unknown College';
-                if (!activityMap.has(college)) {
-                    activityMap.set(college, { count: 0, college });
+                const rawCollege = p.college || 'Unknown College';
+                const key = rawCollege.trim().toLowerCase();
+
+                if (!activityMap.has(key)) {
+                    activityMap.set(key, { count: 0, college: rawCollege });
                 }
-                const entry = activityMap.get(college)!;
+                const entry = activityMap.get(key)!;
                 entry.count += 1;
             });
         }
@@ -91,13 +95,40 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
     const hackathonLimit = settings?.bufferConfig?.hackathonLimit || 500;
 
     // Fake Bases (The "Starting" count for FOMO)
-    const hackathonFakeBase = settings?.fomoConfig?.hackathonCount || 488;
+    const initialFakeBase = settings?.fomoConfig?.hackathonCount || 488;
+
+    // Decay Logic
+    const decayRate = settings?.fomoConfig?.fomoDecayRate || 2; // Spots/Hour
+    const decayStart = settings?.fomoConfig?.fomoDecayStart ? new Date(settings.fomoConfig.fomoDecayStart).getTime() : Date.now();
+
+    // Calculate effective base with decay
+    const now = Date.now();
+    let effectiveFakeBase = initialFakeBase;
+
+    if (showFake && settings?.fomoConfig?.fomoDecayStart) {
+        const hoursPassed = Math.max(0, (now - decayStart) / (1000 * 60 * 60));
+        const totalDecay = Math.floor(hoursPassed * decayRate);
+        effectiveFakeBase = Math.max(0, initialFakeBase - totalDecay);
+    }
 
     // Real Counts
     const hackathonReal = participants?.filter(p => p.type === 'Hackathon').length || 0;
 
     // Displayed "Spots Left" Calculation
-    const hackathonLeft = Math.max(0, (showFake ? hackathonFakeBase : hackathonLimit) - hackathonReal);
+    // Ensure we don't show negative or zero if we want to maintain FOMO (unless real buffer hit)
+    // If effectiveBase drops below real, we just show real limit logic? 
+    // Actually, "Spots Left" = (FakeBase - Real) -> This naturally reduces as Real increases.
+    // Decay reduces the FakeBase, so (FakeBase - Real) shrinks FASTER.
+
+    let hackathonLeft = 0;
+
+    if (showFake) {
+        // If decay makes base lower than real, clamp it? No, just let it be limited by 5 at absolute minimum visually?
+        // Spots Left = EffectiveFakeBase - Real
+        hackathonLeft = Math.max(0, effectiveFakeBase - hackathonReal);
+    } else {
+        hackathonLeft = Math.max(0, hackathonLimit - hackathonReal);
+    }
 
     // The minimum is now just hackathonLeft
     const minLeft = hackathonLeft;

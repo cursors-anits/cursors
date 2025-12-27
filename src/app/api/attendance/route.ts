@@ -58,9 +58,14 @@ export async function POST(request: NextRequest) {
         }
 
         // Atomic update using $set - safe for concurrent operations
-        // Multiple coordinators can mark different participants simultaneously
+        // Only update if the field does NOT exist
+        const query = {
+            _id: { $in: participantIds },
+            [Object.keys(updateField)[0]]: { $exists: false }
+        };
+
         const result = await Participant.updateMany(
-            { _id: { $in: participantIds } },
+            query,
             { $set: updateField }
         );
 

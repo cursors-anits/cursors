@@ -1,13 +1,13 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useData } from '@/lib/context/DataContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { Users, LayoutGrid, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Users, LayoutGrid, CheckCircle2 } from 'lucide-react';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 export function AnalyticsTab() {
-    const { participants, labs, logs } = useData();
+    const { participants, labs } = useData();
 
     // Key Metrics
     const totalParticipants = participants.length;

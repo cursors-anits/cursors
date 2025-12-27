@@ -8,14 +8,13 @@ export async function POST(request: NextRequest) {
         await dbConnect();
 
         const body = await request.json();
-        const { teamId, type, status } = body; // status ('present'|'absent') is used for logging/toast but backend logic uses timestamps
+        const { teamId, participantId, type, status } = body; // status ('present'|'absent') is used for logging/toast but backend logic uses timestamps
 
-        if (!teamId || !type) {
-            return NextResponse.json({ error: 'TeamId and Type are required' }, { status: 400 });
+        if ((!teamId && !participantId) || !type) {
+            return NextResponse.json({ error: 'TeamId OR ParticipantId, and Type are required' }, { status: 400 });
         }
 
         const now = new Date();
-        const updateField: Record<string, any> = {};
 
         // Mapping logic consistent with existing attendance requirements
         // Default to day 1 if not specified 
@@ -23,27 +22,35 @@ export async function POST(request: NextRequest) {
         // Given the simplified frontend call, we assume a "Mark Present" button for the *current* relevant session.
         // However, looking at standard hackathon flows:
 
+        let updateOperation: any = {};
+
         if (type === 'hackathon') {
-            updateField.hackathonAttendance = now;
+            updateOperation = { $set: { hackathonAttendance: now } };
         } else if (type === 'hackathon_exit') {
-            updateField.exitGateTimestamp = now;
-        } else {
-            // Entry/Snacks/etc if needed
-            if (type === 'entry') updateField.entryGateTimestamp = now;
+            updateOperation = { $set: { exitGateTimestamp: now } };
+        } else if (type === 'entry') {
+            updateOperation = { $set: { entryGateTimestamp: now } };
+        } else if (type === 'snacks') {
+            const snackTag = `Snacks (${now.toLocaleTimeString()})`;
+            updateOperation = { $push: { foodAttendance: snackTag } };
         }
 
-        // Logic: Find all participants in the team and update them
-        // This effectively "marks attendance for the team"
-        const result = await Participant.updateMany(
-            { teamId: teamId },
-            { $set: updateField }
-        );
+        // Logic: Find participants
+        if (Object.keys(updateOperation).length > 0) {
+            const query = participantId ? { _id: participantId } : { teamId: teamId };
+            const result = await Participant.updateMany(
+                query,
+                updateOperation
+            );
 
-        return NextResponse.json({
-            success: true,
-            updated: result.modifiedCount,
-            message: `Attendance marked for ${result.modifiedCount} members of team ${teamId}`
-        });
+            return NextResponse.json({
+                success: true,
+                updated: result.modifiedCount,
+                message: `Attendance marked`
+            });
+        }
+
+        return NextResponse.json({ success: false, message: "No valid type specified" });
 
     } catch (error: any) {
         console.error('Coordinator Attendance Error:', error);

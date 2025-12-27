@@ -12,6 +12,8 @@ export interface ISettings {
     fomoConfig?: {
         hackathonCount: number;
         showFakeCounts: boolean;
+        fomoDecayRate?: number;
+        fomoDecayStart?: Date;
     };
     bufferConfig?: {
         hackathonLimit: number;
@@ -61,6 +63,8 @@ const SettingsSchema = new Schema<ISettings, SettingsModel>(
         fomoConfig: {
             hackathonCount: { type: Number, default: 488 },
             showFakeCounts: { type: Boolean, default: true },
+            fomoDecayRate: { type: Number, default: 2 }, // Spots dropping per hour
+            fomoDecayStart: { type: Date, default: () => new Date() }, // When the decay starts
         },
         bufferConfig: {
             hackathonLimit: { type: Number, default: 500 },

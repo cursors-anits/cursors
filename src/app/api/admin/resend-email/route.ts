@@ -8,7 +8,7 @@ import { sendEventPassEmail } from '@/lib/email';
 export async function POST(request: NextRequest) {
     try {
         await dbConnect();
-        const { teamId } = await request.json();
+        const { teamId, memberIds } = await request.json();
 
         if (!teamId) {
             return NextResponse.json({ error: 'Team ID is required' }, { status: 400 });
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         // Define college here so it's available for emailMembers mapping
         const college = participants[0].college;
 
-        // Construct email members list from Participant records
+        // Construct email members list from Participant records (ALL members for context)
         const emailMembers = participants.map(p => ({
             name: p.name,
             college: p.college || college, // Use participant's college or fallback to team college
@@ -46,8 +46,14 @@ export async function POST(request: NextRequest) {
         let ticketType: any = 'hackathon';
         // All participants are hackathon type now
 
-        // Resend to ALL members' personal emails
-        const personalEmails = participants.map(p => p.email);
+        // Determine who to send to
+        let targetParticipants = participants;
+        if (memberIds && Array.isArray(memberIds) && memberIds.length > 0) {
+            targetParticipants = participants.filter(p => memberIds.includes(p._id.toString()));
+        }
+
+        // Resend only to TARGET members' personal emails
+        const personalEmails = targetParticipants.map(p => p.email);
         const results = await Promise.allSettled(personalEmails.map(email =>
             sendEventPassEmail(email, teamId, emailMembers, college, ticketType, teamEmail, sharedPasskey)
         ));
