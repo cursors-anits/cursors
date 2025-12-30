@@ -52,25 +52,19 @@ export async function POST(request: NextRequest) {
                 { college: oldName },
                 { $set: { college: newName } }
             );
+        } else if (type === 'city') {
+            updateResult1 = await Participant.updateMany(
+                { city: oldName },
+                { $set: { city: newName } }
+            );
         }
 
-        // Update nested members
-        // We need to use arrayFilters to update specific elements in the 'members' array
-        const memberField = type === 'college' ? 'members.college' : 'members.city';
-        const setField = type === 'college' ? 'members.$[elem].college' : 'members.$[elem].city';
-        const filterField = type === 'college' ? 'elem.college' : 'elem.city';
 
-        const updateResult2 = await Participant.updateMany(
-            { [memberField]: oldName },
-            { $set: { [setField]: newName } },
-            { arrayFilters: [{ [filterField]: oldName }] }
-        );
 
         return NextResponse.json({
             success: true,
             settingsUpdated: updatedList,
-            participantsUpdated: (updateResult1.modifiedCount || 0),
-            membersUpdated: updateResult2.modifiedCount
+            participantsUpdated: (updateResult1.modifiedCount || 0)
         });
 
     } catch (error: any) {

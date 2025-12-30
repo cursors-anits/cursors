@@ -11,10 +11,10 @@ export interface ReportingTimeInfo {
 
 export const REPORTING_TIMES = {
     Hackathon: {
-        time: '12:30 PM',
+        time: '10:00 AM',
         date: 'Monday, January 5, 2026',
-        dayLabel: 'Day 4',
-        fullDescription: 'All hackathon participants must report to the venue by 12:30 PM on Monday, January 5, 2026 (Day 4)'
+        dayLabel: 'Day 1',
+        fullDescription: 'All hackathon participants must report to the venue by 10:00 AM on Monday, January 5, 2026 (Day 1)'
     } as ReportingTimeInfo
 };
 

@@ -36,7 +36,7 @@ export async function POST(
         }
 
         // 1. Get Assignment
-        let assignment = await ProblemAssignment.findOne({ participantId: id });
+        const assignment = await ProblemAssignment.findOne({ participantId: id });
         if (!assignment) {
             // Should usually exist if "Allocated" state is true, but handle case where it doesn't
             return NextResponse.json({ error: 'Assignment not found. Please wait for admin allocation.' }, { status: 404 });

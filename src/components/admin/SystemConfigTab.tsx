@@ -218,6 +218,16 @@ export default function SystemConfigTab() {
                             />
                             <p className="text-[10px] text-gray-500">Shown on hero section.</p>
                         </div>
+                        <div className="space-y-2 md:col-span-2">
+                            <Label className="flex items-center gap-2">Certificate Drive URL</Label>
+                            <Input
+                                defaultValue={settings?.certificateDriveUrl}
+                                onBlur={(e) => updateSettings({ certificateDriveUrl: e.target.value })}
+                                className="bg-brand-dark/50 border-white/10"
+                                placeholder="https://drive.google.com/..."
+                            />
+                            <p className="text-[10px] text-gray-500">Link used in certificate download emails.</p>
+                        </div>
                     </div>
                 </CardContent>
             </Card>

@@ -12,6 +12,20 @@ import { toast } from 'sonner';
 import { Participant, Coordinator } from '@/types';
 import { useData } from '@/lib/context/DataContext';
 
+import {
+    getWelcomeEmailTemplate,
+    getEventReminderTemplate,
+    getEventUpdateTemplate,
+    getRefundTemplate,
+    getExitGateTemplate,
+    getPromotionalTemplate,
+    getWaitlistTemplate,
+    getSubmissionSuccessTemplate,
+    getWinnerTemplate,
+    getCertificateTemplate,
+    getFeedbackTemplate
+} from '@/lib/email-templates';
+
 interface CampaignTabProps {
     participants: Participant[];
     coordinators: Coordinator[];
@@ -21,6 +35,7 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({ participants, coordina
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
     const [targetType, setTargetType] = useState('all_participants');
+    const [customAudienceInput, setCustomAudienceInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const { logs } = useData();
 
@@ -28,12 +43,48 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({ participants, coordina
     const applyTemplate = (type: string) => {
         switch (type) {
             case 'welcome':
-                setSubject('Welcome to Vibe Coding 2026!');
-                setBody('Hi {{name}},\n\nWe are excited to have you onboard. Please check your dashboard for further instructions.\n\nBest,\nVibe Team');
+                setSubject('Welcome to Vibe Coding 2026! 🚀');
+                setBody(getWelcomeEmailTemplate('{{name}}', '{{teamId}}'));
                 break;
             case 'reminder':
-                setSubject('Reminder: Hackathon Starts Tomorrow!');
-                setBody('Hello {{name}},\n\nJust a friendly reminder that the hackathon kicks off tomorrow at 9 AM. Don\'t be late!\n\nCheers,\nVibe Team');
+                setSubject('⏳ 5 Days Left: Vibe Coding 2026');
+                setBody(getEventReminderTemplate(5));
+                break;
+            case 'update':
+                setSubject('🔔 Important Update: Reporting Time Changed');
+                setBody(getEventUpdateTemplate('New Reporting Time', '<p>The reporting time is now <strong>10:00 AM</strong>.</p>'));
+                break;
+            case 'refund':
+                setSubject('💳 Refund Processed');
+                setBody(getRefundTemplate('{{refundAmount}}', 'Workshop cancellation adjustment'));
+                break;
+            case 'exit':
+                setSubject('👋 Safe Travels!');
+                setBody(getExitGateTemplate('{{name}}'));
+                break;
+            case 'promo':
+                setSubject('🚀 START 2026 WITH A BANG! - Vibe Coding');
+                setBody(getPromotionalTemplate());
+                break;
+            case 'waitlist':
+                setSubject('🎟️ You\'re In! Claim your ticket now');
+                setBody(getWaitlistTemplate('{{name}}'));
+                break;
+            case 'submission':
+                setSubject('🚀 Project Submission Received');
+                setBody(getSubmissionSuccessTemplate('Project Name', 'Team Name'));
+                break;
+            case 'winner':
+                setSubject('🏆 CONGRATULATIONS! You won!');
+                setBody(getWinnerTemplate('1st Prize', '₹25,000'));
+                break;
+            case 'certificate':
+                setSubject('📜 Your Certificate is Ready');
+                setBody(getCertificateTemplate('{{name}}', '{{certificateLink}}'));
+                break;
+            case 'feedback':
+                setSubject('🤔 How was the Vibe?');
+                setBody(getFeedbackTemplate('https://forms.gle/feedback-link'));
                 break;
             case 'custom':
                 setSubject('');
@@ -48,6 +99,17 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({ participants, coordina
             return;
         }
 
+        let customRecipients: any[] = [];
+        if (targetType === 'custom') {
+            if (!customAudienceInput) {
+                toast.error('Please enter email addresses for custom audience');
+                return;
+            }
+            // Parse CSV/Lines
+            const lines = customAudienceInput.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+            customRecipients = lines.map(email => ({ email, name: 'Participant' })); // Basic
+        }
+
         setIsLoading(true);
         try {
             const res = await fetch('/api/admin/campaign/send', {
@@ -56,7 +118,8 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({ participants, coordina
                 body: JSON.stringify({
                     subject,
                     body,
-                    targetType
+                    targetType,
+                    customRecipients
                 })
             });
 
@@ -66,6 +129,7 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({ participants, coordina
             toast.success(`Campaign sent to ${data.count} recipients!`);
             setSubject('');
             setBody('');
+            setCustomAudienceInput('');
         } catch (error) {
             toast.error('Failed to send campaign');
             console.error(error);
@@ -114,20 +178,44 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({ participants, coordina
                                             <SelectItem value="verified_participants">Approved Participants ({participants.filter(p => p.status === 'approved').length})</SelectItem>
                                             <SelectItem value="pending_participants">Pending Participants ({participants.filter(p => p.status === 'pending').length})</SelectItem>
                                             <SelectItem value="all_coordinators">All Coordinators ({coordinators.length})</SelectItem>
+                                            <SelectItem value="custom">Custom List (Enter Emails)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
+
+                                {targetType === 'custom' && (
+                                    <div className="space-y-2">
+                                        <Label className="text-gray-300">Custom Recipient Emails</Label>
+                                        <Textarea
+                                            value={customAudienceInput}
+                                            onChange={(e) => setCustomAudienceInput(e.target.value)}
+                                            className="bg-brand-dark border-white/10 text-white font-mono text-sm"
+                                            placeholder="enter@email.com, another@email.com..."
+                                            rows={4}
+                                        />
+                                        <p className="text-xs text-gray-500">Separate emails by commas or new lines.</p>
+                                    </div>
+                                )}
 
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center">
                                         <Label className="text-gray-300">Template</Label>
                                         <Select onValueChange={applyTemplate}>
-                                            <SelectTrigger className="w-[180px] h-8 bg-brand-dark border-white/10 text-xs">
+                                            <SelectTrigger className="w-[220px] h-8 bg-brand-dark border-white/10 text-xs">
                                                 <SelectValue placeholder="Load Template" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="welcome">Welcome Email</SelectItem>
-                                                <SelectItem value="reminder">Event Reminder</SelectItem>
+                                                <SelectItem value="welcome">Welcome Greeting</SelectItem>
+                                                <SelectItem value="reminder">Event Reminder (Countdown)</SelectItem>
+                                                <SelectItem value="update">Event Update (Announcement)</SelectItem>
+                                                <SelectItem value="promo">Promotional (Big Bang)</SelectItem>
+                                                <SelectItem value="waitlist">Waitlist Notification</SelectItem>
+                                                <SelectItem value="submission">Project Submission Received</SelectItem>
+                                                <SelectItem value="winner">Winner Announcement</SelectItem>
+                                                <SelectItem value="certificate">Certificate Download</SelectItem>
+                                                <SelectItem value="feedback">Feedback Request</SelectItem>
+                                                <SelectItem value="refund">Refund Processed</SelectItem>
+                                                <SelectItem value="exit">Exit Gate Email</SelectItem>
                                                 <SelectItem value="custom">Clear / Custom</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -145,7 +233,7 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({ participants, coordina
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-gray-300">Message Body</Label>
+                                    <Label className="text-gray-300">Message Body (HTML Supported)</Label>
                                     <Textarea
                                         value={body}
                                         onChange={(e) => setBody(e.target.value)}
@@ -179,7 +267,8 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({ participants, coordina
                                             targetType === 'all_coordinators' ? coordinators.length :
                                                 targetType === 'verified_participants' ? participants.filter(p => p.status === 'approved').length :
                                                     targetType === 'pending_participants' ? participants.filter(p => p.status === 'pending').length :
-                                                        '--'}
+                                                        targetType === 'custom' ? customAudienceInput.split(/[\n,]+/).filter(Boolean).length :
+                                                            '--'}
                                     </div>
                                     <p className="text-xs text-gray-500">Estimated Recipients</p>
                                 </CardContent>

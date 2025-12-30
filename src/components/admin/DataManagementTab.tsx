@@ -555,10 +555,12 @@ export default function DataManagementTab() {
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-300">Standardized Name</label>
-                            <Input
-                                placeholder="Enter correct name..."
+                            <CreatableCombobox
+                                options={normalizeTarget?.type === 'college' ? (settings?.colleges || []) : (settings?.cities || [])}
                                 value={normalizeTarget?.newName || ''}
-                                onChange={(e) => setNormalizeTarget(prev => prev ? ({ ...prev, newName: e.target.value }) : null)}
+                                onChange={(val) => setNormalizeTarget(prev => prev ? ({ ...prev, newName: val }) : null)}
+                                onCreate={(val) => setNormalizeTarget(prev => prev ? ({ ...prev, newName: val }) : null)}
+                                placeholder={`Select or type correct ${normalizeTarget?.type}...`}
                                 className="bg-brand-dark/50 border-white/10"
                             />
                         </div>

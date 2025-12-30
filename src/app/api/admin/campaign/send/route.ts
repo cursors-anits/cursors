@@ -4,6 +4,7 @@ import connectDB from '@/lib/db/mongodb';
 import Participant from '@/lib/db/models/Participant';
 import Coordinator from '@/lib/db/models/Coordinator';
 import Log from '@/lib/db/models/Log';
+import Settings from '@/lib/db/models/Settings';
 import { getServerSession } from '@/lib/auth';
 import { sendGenericEmail } from '@/lib/email';
 
@@ -16,27 +17,33 @@ export async function POST(request: Request) {
         }
 
         await connectDB();
-        const { subject, body, targetType } = await request.json();
+        const settings = await Settings.findOne();
+        const { subject, body, targetType, customRecipients } = await request.json();
 
         if (!subject || !body) {
             return NextResponse.json({ error: 'Subject and Body are required' }, { status: 400 });
         }
 
-        let recipients: { name: string; email: string;[key: string]: any }[] = [];
+        let recipients: { name: string; email: string; type?: string;[key: string]: any }[] = [];
 
         // Determine recipients
         switch (targetType) {
             case 'all_participants':
-                recipients = await Participant.find({}).select('name email teamId college');
+                recipients = await Participant.find({}).select('name email teamId college type');
                 break;
             case 'verified_participants':
-                recipients = await Participant.find({ status: 'approved' }).select('name email teamId college');
+                recipients = await Participant.find({ status: 'approved' }).select('name email teamId college type');
                 break;
             case 'pending_participants':
-                recipients = await Participant.find({ status: 'pending' }).select('name email teamId college');
+                recipients = await Participant.find({ status: 'pending' }).select('name email teamId college type');
                 break;
             case 'all_coordinators':
                 recipients = await Coordinator.find({}).select('name email role');
+                break;
+            case 'custom':
+                if (Array.isArray(customRecipients)) {
+                    recipients = customRecipients;
+                }
                 break;
             default:
                 return NextResponse.json({ error: 'Invalid target type' }, { status: 400 });
@@ -52,10 +59,19 @@ export async function POST(request: Request) {
 
         // Basic variable replacement helper
         const replaceVariables = (text: string, data: any) => {
-            return text
+            let processed = text
                 .replace(/{{name}}/g, data.name || 'Participant')
                 .replace(/{{teamId}}/g, data.teamId || 'N/A')
-                .replace(/{{college}}/g, data.college || 'N/A');
+                .replace(/{{college}}/g, data.college || 'N/A')
+                .replace(/{{certificateLink}}/g, settings?.certificateDriveUrl || '#');
+
+            // Dynamic Refund Calculation
+            // Assumption: Combo (Workshop+Hackathon) refund is ₹150 (Workshop price), else 0 or full base?
+            // User requested "calculate dynamically".
+            const refundAmount = data.type === 'Combo' ? '₹150' : '₹349';
+            processed = processed.replace(/{{refundAmount}}/g, refundAmount);
+
+            return processed;
         };
 
         // We limit to 50 for this demo/MVP to prevent timeouts if running on Vercel serverless
@@ -66,8 +82,10 @@ export async function POST(request: Request) {
         await Promise.all(processingList.map(async (recipient) => {
             try {
                 const personalizedBody = replaceVariables(body, recipient);
-                // Simple NL to <br> conversion for HTML email
-                const htmlBody = personalizedBody.replace(/\n/g, '<br/>');
+
+                // Detect if it is already HTML (basic check)
+                const isHtml = personalizedBody.trim().startsWith('<!DOCTYPE') || personalizedBody.trim().startsWith('<div');
+                const htmlBody = isHtml ? personalizedBody : personalizedBody.replace(/\n/g, '<br/>');
 
                 await sendGenericEmail(recipient.email, subject, htmlBody);
                 successCount++;

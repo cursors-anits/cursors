@@ -194,11 +194,11 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     };
 
     const calculatePricing = () => {
-        let basePrice = PRICES[ticketType] || 499;
+        const basePrice = PRICES[ticketType] || 499;
 
         // Group discount: Each member gets ₹10 OFF per additional member
         const discountPerPerson = (teamSize - 1) * 10;
-        let pricePerPerson = basePrice - discountPerPerson;
+        const pricePerPerson = basePrice - discountPerPerson;
 
         // Food Coupon Removed
 

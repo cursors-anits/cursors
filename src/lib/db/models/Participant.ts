@@ -8,6 +8,7 @@ export interface IParticipant {
     email: string;
     college: string;
     department: string;
+    city?: string;
     whatsapp: string;
     year: string;
     linkedin?: string;
@@ -105,6 +106,9 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
         department: {
             type: String,
             required: true,
+        },
+        city: {
+            type: String,
         },
         whatsapp: {
             type: String,

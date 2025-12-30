@@ -216,7 +216,7 @@ const CoordinatorDashboard: React.FC<CoordinatorDashboardProps> = ({ user }) => 
             // They map directly to 'mode' types except we need to ensure type safety.
             // valid modes: 'hackathon' | 'hackathon_exit' | 'entry' | 'exit' | 'snacks'
 
-            let mode = activity as 'hackathon' | 'hackathon_exit' | 'entry' | 'exit' | 'snacks';
+            const mode = activity as 'hackathon' | 'hackathon_exit' | 'entry' | 'exit' | 'snacks';
 
             // Just double check mapping if activity names diverged? 
             // In Select: 'entry', 'hackathon', 'snacks', 'exit'. 'lunch'/'dinner' removed.

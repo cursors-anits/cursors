@@ -7,22 +7,23 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 
 const SCHEDULE = {
     day1: [
-        { time: '12:30 PM', activity: '🔥 REPORTING TIME', highlight: true },
-        { time: '02:00 PM - 03:00 PM', activity: 'Inauguration' },
-        { time: '03:00 PM - 03:30 PM', activity: 'Hackathon Instructions & Networking with Team' },
+        { time: '10:00 AM', activity: '🔥 REPORTING TIME', highlight: true },
+        { time: '10:30 AM - 11:30 AM', activity: 'Inauguration' },
+        { time: '02:00 PM - 03:00 PM', activity: 'Hackathon Instructions & Networking with Team' },
         { time: '03:30 PM - 04:30 PM', activity: 'Ideation & Break' },
-        { time: '05:00 PM - 07:30 PM', activity: 'Level 1 – Creating the Problem Statement of the Project' },
+        { time: '04:30 PM - 07:30 PM', activity: 'Level 1 – Creating the Problem Statement of the Project' },
         { time: '07:30 PM - 08:30 PM', activity: 'Dinner Break' },
         { time: '08:30 PM - 11:30 PM', activity: 'Level 2 – Project Building' },
-        { time: '11:30 PM - 01:30 AM', activity: 'Campfire, Dances, Fun, Water Games etc.' }
+        { time: '11:30 PM - 01:30 AM', activity: 'Movies, Campfire, Dances, Fun, etc.' }
     ],
     day2: [
         { time: '01:30 AM - 04:00 AM', activity: 'Level 3 – Database & EFS Connectivity' },
         { time: '04:00 AM - 06:00 AM', activity: 'Level 4 – Integrating Infrastructure' },
         { time: '06:00 AM - 08:30 AM', activity: 'Fresh Up & Breakfast' },
-        { time: '08:30 AM - 11:00 AM', activity: 'Document Preparation' },
-        { time: '11:00 AM - 01:00 PM', activity: 'Evaluation & Lunch Break' },
-        { time: '02:00 PM - 03:00 PM', activity: 'Valedictory' }
+        { time: '08:30 AM - 10:00 AM', activity: 'Document Preparation' },
+        { time: '10:00 AM - 12:00 PM', activity: 'Evaluation & Lunch Break' },
+        { time: '12:00 PM - 02:00 PM', activity: 'Evaluation & End of Hackathon' },
+        { time: 'To be announced', activity: 'Valedictory' }
     ]
 };
 
@@ -89,7 +90,7 @@ export default function HackathonSchedule() {
                             <div>
                                 <h3 className="font-bold text-white text-xl mb-1">Important: Reporting Time</h3>
                                 <p className="text-orange-300 text-sm">
-                                    <span className="font-bold text-orange-400">All participants:</span> 12:30 PM on Monday, January 5, 2026
+                                    <span className="font-bold text-orange-400">All participants:</span> 10:00 AM on Monday, January 5, 2026
                                 </p>
                                 <div className="flex items-center gap-4 mt-3 text-sm text-gray-400">
                                     <div className="flex items-center gap-1">

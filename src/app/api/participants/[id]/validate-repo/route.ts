@@ -77,7 +77,7 @@ export async function POST(
         const hackathonStart = settings.hackathonStartDate || new Date('2026-01-05T15:00:00');
 
         let isVerified = true;
-        let flags: string[] = [];
+        const flags: string[] = [];
 
         // 3. Creation Date Check
         if (createdAt < hackathonStart) {

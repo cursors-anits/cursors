@@ -834,6 +834,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
             .sort((a, b) => parseInt(a.size) - parseInt(b.size));
     }, [participants]);
 
+    // College Distribution Data
+    const collegeData = useMemo(() => {
+        return Object.entries(participants.reduce((acc, p) => {
+            const college = p.college || 'Unknown';
+            acc[college] = (acc[college] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>))
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value);
+    }, [participants]);
+
     if (isLoading && participants.length === 0) {
         return (
             <div className="pt-24 pb-12 px-6 max-w-7xl mx-auto space-y-8">
@@ -1430,6 +1441,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                             </CardContent>
                         </Card>
 
+                        {/* College Distribution */}
                         <Card className="bg-brand-surface border-white/5 p-6">
                             <CardHeader className="px-0 pt-0">
                                 <CardTitle className="text-xl">College Distribution</CardTitle>
@@ -1439,14 +1451,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
-                                            data={Object.entries(participants.reduce((acc, p) => {
-                                                const college = p.college || 'Unknown';
-                                                acc[college] = (acc[college] || 0) + 1;
-                                                return acc;
-                                            }, {} as Record<string, number>))
-                                                .map(([name, value]) => ({ name, value }))
-                                                .sort((a, b) => b.value - a.value)
-                                                .slice(0, 5)}
+                                            data={collegeData}
                                             cx="50%"
                                             cy="50%"
                                             innerRadius={60}
@@ -1454,7 +1459,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                                             paddingAngle={5}
                                             dataKey="value"
                                         >
-                                            {participants.map((_entry, index) => (
+                                            {collegeData.map((_entry, index) => (
                                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                             ))}
                                         </Pie>
@@ -1463,7 +1468,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                                             itemStyle={{ color: '#fff' }}
                                             labelStyle={{ color: '#fff' }}
                                             labelFormatter={(label) => {
-                                                // Extract content in brackets if exists
                                                 const match = label.match(/\[(.*?)\]/);
                                                 return match ? match[1] : label;
                                             }}

@@ -25,6 +25,7 @@ export interface ISettings {
     hackathonEndDate?: Date;
     submissionWindowOpen?: boolean;
     submissionWindowStartTime?: Date;
+    certificateDriveUrl?: string;
     updatedAt?: Date;
 }
 
@@ -92,6 +93,10 @@ const SettingsSchema = new Schema<ISettings, SettingsModel>(
         cities: {
             type: [String],
             default: []
+        },
+        certificateDriveUrl: {
+            type: String,
+            default: ''
         },
     },
     {

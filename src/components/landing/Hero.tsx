@@ -31,14 +31,8 @@ const RecentActivityBadge = () => {
     const [activities, setActivities] = useState<{ count: number, college: string }[]>([]);
 
     useEffect(() => {
-        // Initialize map with FAKE activities to ensure baseline
+        // Only use REAL participant data
         const activityMap = new Map<string, { count: number, college: string }>();
-
-        // Pre-populate with normalized keys map to preserve original casing for display if needed
-        FAKE_ACTIVITIES.forEach(a => {
-            const key = a.college.trim().toLowerCase();
-            activityMap.set(key, { ...a });
-        });
 
         if (participants) {
             // Group real participants by college

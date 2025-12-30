@@ -467,7 +467,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                                 )}
                                                 <p className="text-xs text-gray-400">Seat: {participantData.assignedSeat || 'TBD'}</p>
                                             </div>
-                                            <Badge className="bg-purple-500 text-white">Day 3-5</Badge>
+                                            <Badge className="bg-purple-500 text-white">Day 1-2</Badge>
                                         </div>
                                     </div>
                                 ) : (

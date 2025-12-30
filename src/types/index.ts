@@ -199,5 +199,6 @@ export interface Settings {
     hackathonEndDate?: Date | string;
     submissionWindowOpen?: boolean;
     submissionWindowStartTime?: Date | string;
+    certificateDriveUrl?: string;
 
 }

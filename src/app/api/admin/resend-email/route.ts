@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
             passkey: sharedPasskey // Team-level shared passkey
         }));
 
-        let ticketType: any = 'hackathon';
+        const ticketType: any = 'hackathon';
         // All participants are hackathon type now
 
         // Determine who to send to

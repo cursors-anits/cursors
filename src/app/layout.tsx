@@ -22,27 +22,28 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://cursors-anits.vercel.app'),
-  title: "Vibe Coding | 24H Hackathon",
-  description: "Join the ultimate 24-Hour Hackathon at ANITS. Build, innovate, and vibe with the best minds.",
-  keywords: ["hackathon", "coding", "ANITS", "programming competition", "tech event"],
+  title: "Vibe Coding 2026: The Ultimate 24-Hour Hackathon at ANITS",
+  description: "Join 500+ developers at Vibe Coding 2026. A 24-hour hackathon to build, innovate and win 60K+ in prizes. Register now for the ultimate coding experience!",
+  keywords: ["hackathon", "coding", "ANITS", "programming competition", "tech event", "student hackathon", "visakhapatnam events"],
   authors: [{ name: "Vibe Coding Team" }],
   openGraph: {
-    title: "Vibe Coding | 24H Hackathon",
-    description: "Join the ultimate 24-Hour Hackathon at ANITS",
+    title: "Vibe Coding 2026: The Ultimate 24-Hour Hackathon at ANITS",
+    description: "Join 500+ developers at Vibe Coding 2026. A 24-hour hackathon to build, innovate and win 60K+ in prizes. Register now!",
     type: "website",
     locale: "en_US",
-    images: [{
-      url: "/link preview.png",
-      width: 1200,
-      height: 630,
-      alt: "Vibe Coding Event Preview"
-    }],
+    // Dynamic image from opengraph-image.tsx will be used automatically
+    // images: [{
+    //   url: "/link preview.png",
+    //   width: 1200,
+    //   height: 630,
+    //   alt: "Vibe Coding 2026 Event Preview"
+    // }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Vibe Coding | 24H Hackathon",
-    description: "Join the ultimate 24-Hour Hackathon at ANITS",
-    images: ["/link preview.png"],
+    title: "Vibe Coding 2026: The Ultimate 24-Hour Hackathon at ANITS",
+    description: "Join 500+ developers at Vibe Coding 2026. A 24-hour hackathon to build, innovate and win 60K+ in prizes. Register now!",
+    // images: ["/link preview.png"],
   },
   manifest: "/manifest.json",
   icons: {

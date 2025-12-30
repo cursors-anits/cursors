@@ -234,7 +234,7 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                                                 <p className="text-white font-bold">{participantData.assignedHackathonLab} • {participantData.assignedSeat || 'Gen Seat'}</p>
                                             </div>
                                         </div>
-                                        <Badge className="bg-purple-500 text-white">Day 3-4</Badge>
+                                        <Badge className="bg-purple-500 text-white">Day 1-2</Badge>
                                     </div>
                                 )}
 
