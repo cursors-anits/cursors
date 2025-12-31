@@ -1,27 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/mongodb';
 import Participant from '@/lib/db/models/Participant';
-import { revalidatePath } from 'next/cache';
 
 export async function POST(request: NextRequest) {
     try {
         await dbConnect();
 
         const body = await request.json();
-        const { teamId, participantId, type, status } = body; // status ('present'|'absent') is used for logging/toast but backend logic uses timestamps
+        const { teamId, participantId, participantIds, type, status } = body;
 
-        if ((!teamId && !participantId) || !type) {
-            return NextResponse.json({ error: 'TeamId OR ParticipantId, and Type are required' }, { status: 400 });
+        if ((!teamId && !participantId && (!participantIds || participantIds.length === 0)) || !type) {
+            return NextResponse.json({ error: 'TeamId, ParticipantId(s), and Type are required' }, { status: 400 });
         }
 
         const now = new Date();
-
-        // Mapping logic consistent with existing attendance requirements
-        // Default to day 1 if not specified 
-        // OR we should have required 'day' in the payload. 
-        // Given the simplified frontend call, we assume a "Mark Present" button for the *current* relevant session.
-        // However, looking at standard hackathon flows:
-
         let updateOperation: any = {};
 
         if (type === 'hackathon') {
@@ -35,13 +27,50 @@ export async function POST(request: NextRequest) {
             updateOperation = { $push: { foodAttendance: snackTag } };
         }
 
-        // Logic: Find participants
         if (Object.keys(updateOperation).length > 0) {
-            const query = participantId ? { _id: participantId } : { teamId: teamId };
-            const result = await Participant.updateMany(
-                query,
-                updateOperation
-            );
+            let query = {};
+            if (participantIds && Array.isArray(participantIds) && participantIds.length > 0) {
+                query = { _id: { $in: participantIds } };
+            } else if (participantId) {
+                query = { _id: participantId };
+            } else {
+                query = { teamId: teamId };
+            }
+
+            const result = await Participant.updateMany(query, updateOperation);
+
+            // AUTOMATION: Send Emails for Entry/Exit
+            if (result.modifiedCount > 0 && (type === 'entry' || type === 'hackathon_exit')) {
+                // Fetch affected participants to send emails
+                const participants = await Participant.find(query);
+
+                // Import email utils dynamically to avoid circular deps if any (though standard import is fine usually)
+                const { sendGenericEmail: sendEmail } = await import('@/lib/email');
+                const { getWelcomeEmailTemplate, getExitGateTemplate } = await import('@/lib/email-templates');
+
+                for (const p of participants) {
+                    if (!p.email || !p.name) continue;
+
+                    try {
+                        if (type === 'entry') {
+                            await sendEmail(
+                                p.email,
+                                'Welcome to Vibe Coding 2026! 🚀',
+                                getWelcomeEmailTemplate(p.name, p.teamId)
+                            );
+                        } else if (type === 'hackathon_exit') {
+                            await sendEmail(
+                                p.email,
+                                '👋 Safe Travels!',
+                                getExitGateTemplate(p.name)
+                            );
+                        }
+                    } catch (emailErr) {
+                        console.error(`Failed to send ${type} email to ${p.email}:`, emailErr);
+                        // Don't fail the request, just log
+                    }
+                }
+            }
 
             return NextResponse.json({
                 success: true,

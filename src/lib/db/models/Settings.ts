@@ -26,6 +26,7 @@ export interface ISettings {
     submissionWindowOpen?: boolean;
     submissionWindowStartTime?: Date;
     certificateDriveUrl?: string;
+    registrationDeadline?: Date;
     updatedAt?: Date;
 }
 
@@ -97,6 +98,9 @@ const SettingsSchema = new Schema<ISettings, SettingsModel>(
         certificateDriveUrl: {
             type: String,
             default: ''
+        },
+        registrationDeadline: {
+            type: Date, // If not set, use eventDate or manual toggle
         },
     },
     {

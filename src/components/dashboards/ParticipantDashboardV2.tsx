@@ -22,7 +22,9 @@ import {
     X,
     Lightbulb,
     Download,
-    Upload
+    Upload,
+    ThumbsUp,
+    ThumbsDown
 } from 'lucide-react';
 import { useData } from '@/lib/context/DataContext';
 import { Button } from '@/components/ui/button';
@@ -49,7 +51,7 @@ interface ParticipantDashboardProps {
 }
 
 const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) => {
-    const { participants, currentUser, labs, logout, fetchParticipants } = useData();
+    const { participants, currentUser, labs, logout, fetchParticipants, supportRequests, fetchSupportRequests, updateSupportRequest } = useData();
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -66,6 +68,11 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
 
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const [reportType, setReportType] = useState<'SOS' | 'Help' | 'Complaint'>('Help');
+    const [replyMessage, setReplyMessage] = useState('');
+    const [isReplyLoading, setIsReplyLoading] = useState(false);
+    const [followUpId, setFollowUpId] = useState<string | null>(null);
+    const [followUpMessage, setFollowUpMessage] = useState('');
+    const [isFollowUpLoading, setIsFollowUpLoading] = useState(false);
     const [reportMessage, setReportMessage] = useState('');
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
     const [isSOSModalOpen, setIsSOSModalOpen] = useState(false);
@@ -74,6 +81,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
     const [isProblemModalOpen, setIsProblemModalOpen] = useState(false);
     const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
     const [isSupportMenuOpen, setIsSupportMenuOpen] = useState(false);
+    const [showRequestsHistory, setShowRequestsHistory] = useState(false);
     const [showHintBanner, setShowHintBanner] = useState(() => {
         if (typeof window !== 'undefined') {
             return !localStorage.getItem('participant-hint-dismissed');
@@ -141,6 +149,43 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
         }
     }, [user.teamId]);
 
+    const lastFetchedTeamId = React.useRef<string | null>(null);
+
+    // Fetch support requests for history
+    React.useEffect(() => {
+        if (participantData?.teamId && participantData.teamId !== lastFetchedTeamId.current) {
+            fetchSupportRequests(undefined, true); // Run in background to avoid triggering isLoading
+            lastFetchedTeamId.current = participantData.teamId;
+        }
+    }, [participantData?.teamId, fetchSupportRequests]);
+
+    const handleFollowUp = async () => {
+        if (!followUpId || !followUpMessage.trim()) return;
+
+        setIsFollowUpLoading(true);
+        try {
+            await updateSupportRequest(followUpId, 'Open', undefined, undefined, followUpMessage);
+            toast.success('Follow-up sent successfully');
+            setFollowUpId(null);
+            setFollowUpMessage('');
+            fetchSupportRequests(undefined, true);
+        } catch (error) {
+            toast.error('Failed to send follow-up');
+        } finally {
+            setIsFollowUpLoading(false);
+        }
+    };
+
+    const handleReaction = async (id: string, reaction: 'Like' | 'Dislike') => {
+        try {
+            await updateSupportRequest(id, 'Open', undefined, undefined, undefined, undefined, reaction);
+            toast.success(`Marked as ${reaction}`);
+            fetchSupportRequests(undefined, true);
+        } catch (error) {
+            toast.error('Failed to update reaction');
+        }
+    };
+
     const handleAvatarUpload = useCallback(async (file: File) => {
         if (file.size > 30 * 1024 * 1024) {
             toast.error('Avatar size should be less than 30MB');
@@ -169,15 +214,16 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
         }
     }, [user.teamId, fetchParticipants]);
 
-    const submitSupportRequest = useCallback(async () => {
+    const submitSupportRequest = useCallback(async (explicitType?: 'SOS' | 'Help' | 'Complaint') => {
         setIsSubmittingReport(true);
+        const typeToSubmit = explicitType || reportType;
         try {
             const res = await fetch('/api/participant/support-request', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     teamId: user.teamId,
-                    type: reportType,
+                    type: typeToSubmit,
                     message: reportMessage
                 })
             });
@@ -187,12 +233,14 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
             setIsReportModalOpen(false);
             setIsSOSModalOpen(false);
             setReportMessage('');
+            // Trigger refresh
+            fetchSupportRequests(undefined, true);
         } catch (error) {
             toast.error('Failed to submit request');
         } finally {
             setIsSubmittingReport(false);
         }
-    }, [participantData?.participantId, reportType, reportMessage]);
+    }, [participantData?.participantId, reportType, reportMessage, user.teamId, fetchSupportRequests]);
 
     const navItems: NavItem[] = [
         {
@@ -282,7 +330,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                 <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Event Starts In</div>
                                 <div className="text-2xl font-bold text-brand-primary font-mono">
                                     {(() => {
-                                        const eventDate = new Date('2026-01-05T15:00:00');
+                                        const eventDate = new Date('2026-01-05T10:00:00'); // Updated start time to morning? Or just keep date and ensure logic.
                                         const now = new Date();
                                         const diff = eventDate.getTime() - now.getTime();
                                         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -499,6 +547,31 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                     <span className="text-sm text-gray-400">Team Size</span>
                                     <span className="font-bold text-white">{participants.filter(p => p.teamId === user.teamId).length} members</span>
                                 </div>
+
+                                {/* Aggregated College */}
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-sm text-gray-400">College(s)</span>
+                                    <span className="text-sm font-medium text-white text-right">
+                                        {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.college))].join(', ')}
+                                    </span>
+                                </div>
+
+                                {/* Aggregated Department */}
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-sm text-gray-400">Department(s)</span>
+                                    <span className="text-sm font-medium text-white text-right">
+                                        {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.department))].join(', ')}
+                                    </span>
+                                </div>
+
+                                {/* Aggregated Year */}
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-sm text-gray-400">Year(s)</span>
+                                    <span className="text-sm font-medium text-white text-right">
+                                        {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.year))].join(', ')}
+                                    </span>
+                                </div>
+
                                 <Separator className="bg-white/10" />
                                 <div>
                                     <p className="text-xs text-gray-400 mb-2">Team Members</p>
@@ -736,6 +809,134 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                 </div>
                             </CardContent>
                         </Card>
+
+                        {/* View My Requests History */}
+                        <Button
+                            variant="outline"
+                            className="w-full border-white/10 hover:bg-white/5"
+                            onClick={() => {
+                                setIsSupportMenuOpen(false);
+                                setShowRequestsHistory(true);
+                            }}
+                        >
+                            View My Requests
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Requests History Dialog */}
+            <Dialog open={showRequestsHistory} onOpenChange={setShowRequestsHistory}>
+                <DialogContent className="bg-brand-surface border-white/20 text-white max-w-lg max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>My Support Requests</DialogTitle>
+                        <DialogDescription className="text-gray-400">
+                            History of your help requests and SOS alerts
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        {supportRequests.filter(r => r.teamId === user.teamId).length === 0 ? (
+                            <div className="text-center py-8 text-gray-500">
+                                <p>No history found.</p>
+                            </div>
+                        ) : (
+                            supportRequests
+                                .filter(r => r.teamId === user.teamId)
+                                .sort((a, b) => b.timestamp - a.timestamp)
+                                .map(req => (
+                                    <div key={req._id} className="p-4 rounded-lg bg-brand-dark border border-white/5">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <Badge variant={req.status === 'Resolved' ? 'default' : 'secondary'} className={req.status === 'Resolved' ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"}>
+                                                {req.status}
+                                            </Badge>
+                                            <span className="text-xs text-gray-500">{new Date(req.timestamp).toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${req.type === 'SOS' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                                {req.type}
+                                            </span>
+                                            {req.message && <span className="text-sm font-medium text-gray-300">{req.message}</span>}
+                                        </div>
+                                        {req.reply && (
+                                            <div className="mt-3 pl-3 border-l-2 border-brand-primary/30">
+                                                <p className="text-xs text-gray-500 mb-1">Reply from Coordinator:</p>
+                                                <p className="text-sm text-white">{req.reply}</p>
+                                                {!req.participantReaction && (
+                                                    <div className="flex gap-2 mt-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-6 px-2 text-xs text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                                                            onClick={() => handleReaction(req._id!, 'Like')}
+                                                        >
+                                                            <ThumbsUp className="w-3 h-3 mr-1" /> Helpful
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            className="h-6 px-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                                            onClick={() => handleReaction(req._id!, 'Dislike')}
+                                                        >
+                                                            <ThumbsDown className="w-3 h-3 mr-1" /> Not Helpful
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                                {req.participantReaction && (
+                                                    <p className="text-xs mt-2 text-gray-400 italic">
+                                                        You found this {req.participantReaction === 'Like' ? 'Helpful' : 'Not Helpful'}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                        {req.reply && !req.participantFollowUp && req.status !== 'Resolved' && (
+                                            <div className="mt-3">
+                                                {followUpId === req._id ? (
+                                                    <div className="flex gap-2 items-center">
+                                                        <Input
+                                                            placeholder="Type your follow-up..."
+                                                            value={followUpMessage}
+                                                            onChange={(e) => setFollowUpMessage(e.target.value)}
+                                                            className="flex-1 bg-brand-dark/50 border-white/10"
+                                                        />
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={handleFollowUp}
+                                                            disabled={isFollowUpLoading}
+                                                        >
+                                                            {isFollowUpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() => {
+                                                                setFollowUpId(null);
+                                                                setFollowUpMessage('');
+                                                            }}
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-xs text-brand-primary h-auto p-0 hover:bg-transparent hover:text-brand-primary/80"
+                                                        onClick={() => setFollowUpId(req._id || null)}
+                                                    >
+                                                        Reply to Coordinator
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        )}
+                                        {req.participantFollowUp && (
+                                            <div className="mt-2 pl-3 border-l-2 border-white/20">
+                                                <p className="text-xs text-gray-500 mb-1">Your Follow-up:</p>
+                                                <p className="text-sm text-white">{req.participantFollowUp}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>
@@ -766,7 +967,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                 </div>
                                 <div className="text-right text-white relative z-10">
                                     <Calendar className="w-5 h-5 ml-auto mb-1 opacity-70" />
-                                    <span className="text-[10px] font-mono font-bold">JAN 02-06</span>
+                                    <span className="text-[10px] font-mono font-bold">JAN 05-06</span>
                                 </div>
                             </div>
 
@@ -813,8 +1014,12 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
 
                             <div className="pt-16 pb-6 px-6 text-center">
                                 <h3 className="text-xl font-bold text-white mb-1">{user.name}</h3>
-                                <p className="text-sm text-gray-400 mb-1">{participantData.college}</p>
-                                <p className="text-xs text-gray-500 mb-4">{participantData.department} • {participantData.year}</p>
+                                <p className="text-xs text-gray-400 mb-1 px-2 line-clamp-2">
+                                    {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.college))].join(', ')}
+                                </p>
+                                <p className="text-[10px] text-gray-500 mb-4 px-2">
+                                    {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.department))].join(', ')} • {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.year))].join(', ')}
+                                </p>
 
                                 <div className="bg-white p-4 rounded-2xl mb-4">
                                     <div className="bg-white flex items-center justify-center h-32 w-32 mx-auto">
@@ -859,6 +1064,31 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                 </DialogContent>
             </Dialog>
 
+            {/* Problem Selection Modal */}
+            <Dialog open={isProblemModalOpen} onOpenChange={setIsProblemModalOpen}>
+                <DialogContent className="bg-brand-dark border-purple-500/20 max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-white flex items-center gap-2">
+                            <Zap className="w-5 h-5 text-purple-400" /> Select Problem Statement
+                        </DialogTitle>
+                        <DialogDescription className="text-gray-400">
+                            Choose your domain and select a problem statement for the hackathon.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {participantData?.participantId && (
+                        <ProblemSelection
+                            participantId={participantData.participantId}
+                            onSuccess={() => {
+                                // Close modal after short delay or let component handle it?
+                                // Component calls onSuccess after confirmation.
+                                fetchParticipants(); // Refresh data
+                                setIsProblemModalOpen(false); // Optional: keep open to show success state
+                            }}
+                        />
+                    )}
+                </DialogContent>
+            </Dialog>
+
             {/* Support Modals */}
             <Dialog open={isSOSModalOpen} onOpenChange={setIsSOSModalOpen}>
                 <DialogContent className="bg-brand-dark border-red-500/50">
@@ -881,8 +1111,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                         <Button variant="outline" onClick={() => setIsSOSModalOpen(false)}>Cancel</Button>
                         <Button
                             onClick={() => {
-                                setReportType('SOS');
-                                submitSupportRequest();
+                                submitSupportRequest('SOS');
                             }}
                             disabled={isSubmittingReport}
                             className="bg-red-600 hover:bg-red-700"
@@ -911,7 +1140,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsReportModalOpen(false)}>Cancel</Button>
                         <Button
-                            onClick={submitSupportRequest}
+                            onClick={() => submitSupportRequest()}
                             disabled={isSubmittingReport}
                             className="bg-brand-primary hover:bg-brand-primary/80"
                         >
@@ -920,7 +1149,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </DashboardShell>
+        </DashboardShell >
     );
 };
 

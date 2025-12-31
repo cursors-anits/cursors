@@ -63,7 +63,20 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
     const [reportMessage, setReportMessage] = useState('');
     const [isSubmittingReport, setIsSubmittingReport] = useState(false);
     const [isSOSModalOpen, setIsSOSModalOpen] = useState(false);
+
     const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+    const [myRequests, setMyRequests] = useState<any[]>([]);
+
+    React.useEffect(() => {
+        if (user.teamId) {
+            fetch(`/api/participant/support-request?teamId=${user.teamId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) setMyRequests(data);
+                })
+                .catch(console.error);
+        }
+    }, [user.teamId, isReportModalOpen]); // Refresh when modal closes (new request)
 
     const participantData = useMemo(() => {
         return participants.find(p => p.email === user.email || p.teamId === user.teamId) || null;
@@ -282,6 +295,52 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                         ))}
                     </div>
 
+                    {/* My Requests & Replies */}
+                    <Card className="bg-brand-surface border-white/5 overflow-hidden">
+                        <div className="p-4 flex items-center justify-between relative">
+                            <Separator className="bg-white/5 absolute bottom-0 left-0 w-full" />
+                            <h3 className="font-bold flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4 text-brand-primary" />
+                                My Requests
+                            </h3>
+                            <Badge variant="outline" className="text-[10px]">{myRequests.length}</Badge>
+                        </div>
+                        {myRequests.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500 text-sm">
+                                <p>No help requests submitted yet.</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-white/5">
+                                {myRequests.map((req) => (
+                                    <div key={req._id} className="p-4 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant={req.type === 'SOS' ? 'destructive' : req.type === 'Complaint' ? 'secondary' : 'default'} className="text-[10px]">
+                                                    {req.type}
+                                                </Badge>
+                                                <span className="text-xs text-gray-500">{new Date(req.timestamp).toLocaleString()}</span>
+                                            </div>
+                                            <Badge variant={req.status === 'Open' ? 'outline' : 'default'} className={req.status === 'Resolved' ? 'bg-green-500/20 text-green-400 border-green-500/20' : 'text-orange-400 border-orange-400/20'}>
+                                                {req.status}
+                                            </Badge>
+                                        </div>
+                                        <p className="text-sm text-gray-300">{req.message}</p>
+
+                                        {req.reply && (
+                                            <div className="bg-brand-primary/10 border border-brand-primary/20 rounded-lg p-3 mt-2">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Zap className="w-3 h-3 text-brand-primary" />
+                                                    <span className="text-xs font-bold text-brand-primary">Reply from Admin</span>
+                                                </div>
+                                                <p className="text-sm text-white">{req.reply}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </Card>
+
                     {/* Team List */}
                     <Card className="bg-brand-surface border-white/5 overflow-hidden">
                         <div className="p-4 flex items-center justify-between relative">
@@ -398,7 +457,17 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                         <div className="mt-16 px-6 pb-8 text-center space-y-6">
                             <div>
                                 <h2 className="text-2xl font-bold">{user.name}</h2>
-                                <p className="text-gray-500 text-sm mt-1">{participantData?.college || 'Anil Neerukonda Institute of Technology and Sciences [ANITS]'}</p>
+                                <p className="text-gray-500 text-sm mt-1">
+                                    {(() => {
+                                        const colleges = new Set<string>();
+                                        if (participantData?.college) colleges.add(participantData.college);
+                                        participantData?.members?.forEach(m => {
+                                            if (m.college) colleges.add(m.college);
+                                        });
+                                        if (colleges.size > 1) return 'Multiple Colleges';
+                                        return participantData?.college || 'Anil Neerukonda Institute of Technology and Sciences [ANITS]';
+                                    })()}
+                                </p>
                             </div>
 
                             <div className="bg-white/5 rounded-2xl p-4 border border-white/10 grid grid-cols-2 gap-4 text-left">

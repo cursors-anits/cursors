@@ -9,6 +9,12 @@ export interface ISupportRequest {
     status: 'Open' | 'Resolved';
     resolvedBy?: string;
     timestamp: number;
+    reply?: string;
+    replyTime?: number;
+    repliedBy?: string;
+    participantFollowUp?: string;
+    acknowledged?: boolean;
+    participantReaction?: 'Like' | 'Dislike';
 }
 
 type SupportRequestModel = Model<ISupportRequest>;
@@ -46,6 +52,18 @@ const SupportRequestSchema = new Schema<ISupportRequest, SupportRequestModel>(
             default: () => Date.now(),
             index: true,
         },
+        reply: String,
+        replyTime: Number,
+        repliedBy: String,
+        participantFollowUp: String,
+        acknowledged: {
+            type: Boolean,
+            default: false
+        },
+        participantReaction: {
+            type: String,
+            enum: ['Like', 'Dislike']
+        }
     },
     {
         timestamps: true,

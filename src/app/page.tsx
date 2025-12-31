@@ -8,6 +8,7 @@ import Sponsors from '@/components/landing/Sponsors';
 import FeaturesRewards from '@/components/landing/FeaturesRewards';
 import PricingCalculator from '@/components/landing/PricingCalculator';
 import WhatToBring from '@/components/landing/WhatToBring';
+import TravelGuide from '@/components/landing/TravelGuide';
 import ProblemStatements from '@/components/landing/ProblemStatements';
 import Footer from '@/components/landing/Footer';
 import RegistrationModal from '@/components/modals/RegistrationModal';
@@ -97,6 +98,7 @@ export default function Home() {
         <Sponsors />
         <PricingCalculator />
         <WhatToBring />
+        <TravelGuide />
 
         <ProblemStatements />
         <FeaturesRewards />

@@ -12,7 +12,15 @@ export async function POST(
 ) {
     try {
         const { id } = await context.params;
-        const { repoUrl } = await request.json();
+        const { repoUrl, projectTitle, projectDocumentUrl } = await request.json();
+
+        if (!projectTitle || projectTitle.length < 3) {
+            return NextResponse.json({ error: 'Project Title is required (min 3 chars)' }, { status: 400 });
+        }
+
+        if (!projectDocumentUrl) {
+            return NextResponse.json({ error: 'Project Document URL is required' }, { status: 400 });
+        }
 
         if (!repoUrl || !repoUrl.includes('github.com')) {
             return NextResponse.json({ error: 'Invalid GitHub URL' }, { status: 400 });
@@ -101,6 +109,8 @@ export async function POST(
 
         // 5. Update Participant
         participant.projectRepo = repoUrl;
+        participant.projectTitle = projectTitle;
+        participant.projectDocumentUrl = projectDocumentUrl;
         participant.projectRepoLocked = true;
         participant.projectRepoSubmittedAt = new Date();
         participant.submissionTime = new Date();
@@ -123,6 +133,8 @@ export async function POST(
         // 6. Sync to team members
         const updateFields: any = {
             projectRepo: repoUrl,
+            projectTitle: projectTitle,
+            projectDocumentUrl: projectDocumentUrl,
             projectRepoLocked: true,
             projectRepoSubmittedAt: new Date(),
             submissionTime: new Date(),
@@ -139,6 +151,26 @@ export async function POST(
             { teamId: participant.teamId },
             { $set: updateFields }
         );
+
+        // AUTOMATION: Send Confirmation Email
+        if (isVerified) { // Only send if verified? Or always? Usually always to confirm receipt.
+            try {
+                const { sendGenericEmail: sendEmail } = await import('@/lib/email');
+                const { getConfirmationTemplate } = await import('@/lib/email-templates');
+
+                // Send to the submitter (or whole team?) - Logic suggests whole team should know, but submitter for sure.
+                // Let's send to the submitter first.
+                if (participant.email) {
+                    await sendEmail(
+                        participant.email,
+                        'Domain & Problem Statement Confirmed | Vibe Coding',
+                        getConfirmationTemplate(projectTitle, participant.teamId, repoUrl, projectDocumentUrl)
+                    );
+                }
+            } catch (emailErr) {
+                console.error("Failed to send submission email", emailErr);
+            }
+        }
 
         return NextResponse.json({
             success: true,

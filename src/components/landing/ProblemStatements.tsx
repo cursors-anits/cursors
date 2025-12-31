@@ -197,8 +197,8 @@ export default function ProblemStatements() {
                         const isOpenInnovation = domain.domain.startsWith('Open Innovation');
 
                         return (
-                            <Card key={index} className="bg-brand-surface/50 backdrop-blur-xl border-white/10 overflow-hidden hover:border-brand-primary/30 transition-all">
-                                <CardContent className="p-6">
+                            <Card key={index} className="bg-brand-surface/50 backdrop-blur-xl border-white/10 overflow-hidden hover:border-brand-primary/30 transition-colors h-full">
+                                <CardContent className="p-6 h-full">
                                     <div className="flex items-center gap-4">
                                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${colors.bg} shrink-0`}>
                                             <IconComponent className={`w-6 h-6 ${colors.text}`} />

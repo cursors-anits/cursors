@@ -90,6 +90,8 @@ export interface Participant {
     assignedSeat?: string;
     avatarUrl?: string;
     paymentScreenshotUrl?: string;
+    ticketType?: 'hackathon' | 'combo';
+    amountPaid?: number;
 
     foodAttendance?: string[]; // Array of sessions claimed
     hackathonAttendance?: boolean;
@@ -101,6 +103,8 @@ export interface Participant {
     problemAssignmentId?: string; // Reference to ProblemAssignment
     hasConfirmedProblem?: boolean;
     projectRepo?: string;
+    projectTitle?: string;
+    projectDocumentUrl?: string;
     projectRepoSubmittedAt?: Date | string;
     projectRepoLocked?: boolean;
     codingPlatform?: string; // Initial platform selection
@@ -164,6 +168,12 @@ export interface SupportRequest {
     status: 'Open' | 'Resolved';
     resolvedBy?: string;
     timestamp: number;
+    reply?: string;
+    replyTime?: number;
+    repliedBy?: string;
+    participantFollowUp?: string;
+    acknowledged?: boolean;
+    participantReaction?: 'Like' | 'Dislike';
 }
 
 export interface Log {
@@ -200,5 +210,6 @@ export interface Settings {
     submissionWindowOpen?: boolean;
     submissionWindowStartTime?: Date | string;
     certificateDriveUrl?: string;
+    registrationDeadline?: Date | string;
 
 }

@@ -159,7 +159,7 @@ export default function DataManagementTab() {
             const result = await res.json();
             toast.success(`Updated ${result.participantsUpdated} participants`);
 
-            await Promise.all([fetchSettings(), fetchParticipants(true)]);
+            await Promise.all([fetchSettings(true), fetchParticipants(true)]);
             setIsNormalizeDialogOpen(false);
             setNormalizeTarget(null);
         } catch (error) {

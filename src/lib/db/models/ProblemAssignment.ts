@@ -51,7 +51,7 @@ const OfferedProblemSchema = new Schema({
         type: Number,
         required: true,
         min: -1,
-        max: 10 // Increased max to handle domains with more problems (e.g. 6+), -1 for custom
+        max: 100 // Increased max to handle domains with more problems (e.g. 6+), -1 for custom
     },
     domain: {
         type: String,

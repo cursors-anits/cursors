@@ -27,7 +27,7 @@ const BaseLayout = (content: string) => `
     <div style="${styles.container}">
         <!-- Header -->
         <div style="${styles.header}">
-            <h1 style="${styles.logoText}">VIBE CODING</h1>
+            <h1 style="${styles.logoText}">VIBE CODING • CSE</h1>
             <p style="${styles.subText}">CURSORS 2026 • ANITS</p>
         </div>
 
@@ -65,7 +65,7 @@ export const getWelcomeEmailTemplate = (name: string, teamId: string) => {
 
         <div style="text-align: center;">
             <p style="${styles.textNormal}">
-                Head over to the help desk if you need your ID card or swag kit.
+                Head over to the welcome desk to get your wristband.
                 <br><br>
                 <strong style="color: #fff;">Let the Vibe Begin! 🚀</strong>
             </p>
@@ -90,7 +90,7 @@ export const getEventReminderTemplate = (daysLeft: number) => {
             </p>
             <ul style="${styles.textNormal} padding-left: 20px; margin-top: 15px;">
                 <li style="margin-bottom: 8px;">Check your dashboard for team status.</li>
-                <li style="margin-bottom: 8px;">Review the problem statements.</li>
+                <li style="margin-bottom: 8px;">Review the problem domains.</li>
                 <li style="margin-bottom: 8px;">Don't forget your college ID!</li>
             </ul>
         </div>
@@ -229,36 +229,13 @@ export const getPromotionalTemplate = () => {
     return BaseLayout(content);
 };
 
-// 7. Waitlist Notification
-export const getWaitlistTemplate = (name: string) => {
-    const content = `
-        <div style="${styles.highlightBox}; border-color: #22c55e; background: rgba(34, 197, 94, 0.1);">
-            <div style="font-size: 40px; margin-bottom: 10px;">🎟️</div>
-            <h2 style="margin: 0 0 5px; color: #fff; font-size: 24px;">You're In!</h2>
-            <p style="margin: 0; color: #86efac;">You've been moved off the waitlist.</p>
-        </div>
-
-        <div style="${styles.card}">
-            <p style="${styles.textNormal}">
-                Great news, ${name.split(' ')[0]}! A spot has opened up for Vibe Coding 2026.
-                You have <strong>24 hours</strong> to claim your ticket before we offer it to the next person.
-            </p>
-        </div>
-
-        <div style="text-align: center; margin-top: 30px;">
-             <a href="https://cursors-anits.vercel.app/" style="${styles.button}; background-color: #22c55e; box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);">CLAIM TICKET NOW</a>
-        </div>
-    `;
-    return BaseLayout(content);
-};
-
-// 8. Project Submission Success
-export const getSubmissionSuccessTemplate = (projectName: string, teamName: string) => {
+// 7. Project Submission Success
+export const getConfirmationTemplate = (projectName: string, teamName: string, repoUrl: string, docUrl: string) => {
     const content = `
         <div style="${styles.card}; text-align: center;">
             <div style="font-size: 40px; margin-bottom: 10px;">🚀</div>
-            <h2 style="color: #fff; margin: 0 0 5px;">Submission Received</h2>
-            <p style="color: #888; margin: 0;">We've got your project!</p>
+            <h2 style="color: #fff; margin: 0 0 5px;">Domain & Problem Statement Confirmed</h2>
+            <p style="color: #888; margin: 0;">We've received your confirmation!</p>
         </div>
 
         <div style="${styles.card}">
@@ -266,9 +243,17 @@ export const getSubmissionSuccessTemplate = (projectName: string, teamName: stri
                 <p style="${styles.textMuted} text-transform: uppercase; margin-bottom: 5px;">Project Name</p>
                 <h3 style="color: #fff; margin: 0;">${projectName}</h3>
             </div>
-            <div>
+            <div style="margin-bottom: 15px;">
                 <p style="${styles.textMuted} text-transform: uppercase; margin-bottom: 5px;">Team</p>
                 <h4 style="color: #a855f7; margin: 0;">${teamName}</h4>
+            </div>
+             <div style="margin-bottom: 15px;">
+                <p style="${styles.textMuted} text-transform: uppercase; margin-bottom: 5px;">Repository Link</p>
+                <a href="${repoUrl}" style="color: #3b82f6; text-decoration: none;">${repoUrl}</a>
+            </div>
+             <div>
+                <p style="${styles.textMuted} text-transform: uppercase; margin-bottom: 5px;">Related Docs</p>
+                <a href="${docUrl}" style="color: #3b82f6; text-decoration: none;">View Document</a>
             </div>
         </div>
 
@@ -283,7 +268,7 @@ export const getSubmissionSuccessTemplate = (projectName: string, teamName: stri
     return BaseLayout(content);
 };
 
-// 9. Winner Announcement
+// 8. Winner Announcement
 export const getWinnerTemplate = (prizeName: string, amount: string) => {
     const content = `
         <div style="${styles.highlightBox}; border-color: #eab308; background: rgba(234, 179, 8, 0.15);">
@@ -308,12 +293,12 @@ export const getWinnerTemplate = (prizeName: string, amount: string) => {
     return BaseLayout(content);
 };
 
-// 10. Certificate Download
+// 9. Certificate Download
 export const getCertificateTemplate = (name: string, certificateLink: string) => {
     const content = `
         <div style="${styles.card}; text-align: center;">
             <div style="font-size: 40px; margin-bottom: 10px;">📜</div>
-            <h2 style="color: #fff; margin: 0 0 5px;">Certificate of Achievement</h2>
+            <h2 style="color: #fff; margin: 0 0 5px;">Certificate of Participation</h2>
             <p style="color: #888; margin: 0;">Vibe Coding 2026</p>
         </div>
 
@@ -333,7 +318,7 @@ export const getCertificateTemplate = (name: string, certificateLink: string) =>
     return BaseLayout(content);
 };
 
-// 11. Feedback Request
+// 10. Feedback Request
 export const getFeedbackTemplate = (formLink: string) => {
     const content = `
         <div style="${styles.card}; text-align: center;">

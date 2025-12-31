@@ -83,9 +83,7 @@ export async function POST(request: NextRequest) {
             let seatIndex = -1;
 
             // Try to find a lab with exact slot available
-            // Strategy: Fill labs one by one or distribute? 
-            // Usually filling one by one maximizes distinct types usage, but distributing balances load.
-            // Let's iterate linearly to fill labs efficiently.
+            // Strategy: Linear iteration to fill labs efficiently (greedy match).
             for (const lab of labStates) {
                 const configCapacity = lab.seatingConfig[sizeKey] || 0;
                 const used = lab.usedSlots[sizeKey] || 0;
@@ -115,16 +113,14 @@ export async function POST(request: NextRequest) {
                 });
             } else {
                 // Critical: No space for this specific team size
-                // Potential fallback: put small team in larger slot? 
-                // For now, strict allocation as requested.
+                // Current logic enforces strict allocation based on seating config.
                 unallocatedTeams.push({ teamId, size: teamSize, reason: 'No matching slot available' });
             }
         }
 
         if (unallocatedTeams.length > 0) {
-            // Return error if teams are left out, but properly save the ones that worked?
-            // Usually all-or-nothing is safer to prevent partial states, but for large hackathons partial might be needed.
-            // Let's fail safe.
+            // Fail fast mechanism to prevent partial allocation states.
+            // Requires admin intervention (configuring more slots or handling specific teams).
             return NextResponse.json({
                 error: `Allocation Incomplete: ${unallocatedTeams.length} teams could not be seated.`,
                 details: unallocatedTeams.slice(0, 5), // Show first 5

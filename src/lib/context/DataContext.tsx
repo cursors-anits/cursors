@@ -12,7 +12,7 @@ interface DataContextType {
     settings: Settings | null;
     labs: Lab[];
     supportRequests: SupportRequest[];
-    fetchSettings: () => Promise<void>;
+    fetchSettings: (isBackground?: boolean) => Promise<void>;
     updateSettings: (newSettings: Partial<Settings>) => Promise<void>;
     isLoading: boolean;
     error: string | null;
@@ -23,8 +23,8 @@ interface DataContextType {
     updateLab: (l: Lab) => Promise<void>;
     deleteLab: (id: string) => Promise<void>;
 
-    fetchSupportRequests: (labName?: string) => Promise<void>;
-    updateSupportRequest: (id: string, status: string, resolvedBy?: string) => Promise<void>;
+    fetchSupportRequests: (labName?: string, isBackground?: boolean) => Promise<void>;
+    updateSupportRequest: (id: string, status: string, resolvedBy?: string, reply?: string, participantFollowUp?: string, acknowledged?: boolean, participantReaction?: 'Like' | 'Dislike') => Promise<void>;
 
     // Auth
     setCurrentUser: (user: User | null) => void;
@@ -100,27 +100,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const apiCall = useCallback(async <T,>(fn: () => Promise<T>, errorMsg: string, isBackground = false): Promise<T | null> => {
         if (!navigator.onLine) {
             if (!isBackground) {
-                // If it's a mutation (we can guess by context or assume mutations happen in specific calls)
-                // Actually, simplistic check: if it returns void/null it might be mutation?
-                // Better: We let the specific handlers decide to queue, OR we queue everything that fails?
-                // Current approach: Just notify offline. Real offline queue needs serialization of arguments, 
-                // but our 'fn' is closure. We can stash closures in memory but they vanish on reload.
-                // For "Quick Win Persistence", we need to serialize.
-                // But for now, let's just use memory queue for transient offline.
-
-                // For critical reads, we just fail. For writes, we queue?
-                // Let's rely on the caller to handle queueing if we want robust, but here we can just warn.
+                // Offline Strategy: 
+                // We use an in-memory queue for transient offline states (e.g. flaky connection).
+                // Persistent queueing (localStorage) is skipped for now to avoid complexity with closure serialization.
+                // We notify the user and return null, expecting the caller to handle UI updates.
                 toast.warning('You are offline. Action queued.');
-                // We'd need to return a Promise that resolves? Or just null?
-                // If we return null, the caller might revert optimistic UI. 
-                // So we should THROW if we want to queue later? 
-
-                // Simplified Offline Queue for this session:
-                // We can't easily queue the 'fn' closure persistently. 
-                // But we can queue it in memory.
-
-                // Let's just return null and let the specific handler decide? 
-                // Or better: Modify the handlers to use a specialized 'mutate' wrapper.
             }
             return null;
         }
@@ -185,14 +169,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data) setSupportRequests(data);
     }, [apiCall]);
 
-    const fetchSettings = useCallback(async () => {
+    const fetchSettings = useCallback(async (isBackground = false) => {
         const data = await apiCall(async () => {
             const res = await fetch('/api/settings');
             if (!res.ok) throw new Error();
             return res.json();
-        }, 'Failed to fetch settings');
+        }, 'Failed to fetch settings', isBackground);
         if (data) setSettings(data);
-    }, []);
+    }, [apiCall]);
 
     const updateSettings = async (newSettings: Partial<Settings>) => {
         const data = await apiCall(async () => {
@@ -296,6 +280,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const updateParticipant = async (p: Participant) => {
+        // Handle new participant creation
+        if (p._id && p._id.startsWith('new-')) {
+            await addParticipant(p);
+            return;
+        }
+
         // Optimistic Update
         const originalParticipants = [...participants];
         setParticipants(prev => prev.map(item => item._id === p._id ? p : item));
@@ -388,15 +378,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }, 'Failed to delete lab', true);
     };
 
-    const updateSupportRequest = async (id: string, status: string, resolvedBy?: string) => {
+    const updateSupportRequest = async (id: string, status: string, resolvedBy?: string, reply?: string, participantFollowUp?: string, acknowledged?: boolean, participantReaction?: 'Like' | 'Dislike') => {
         const originalRequests = [...supportRequests];
-        setSupportRequests(prev => prev.map(r => r._id === id ? { ...r, status: status as any, resolvedBy } : r));
+        setSupportRequests(prev => prev.map(r => r._id === id ? { ...r, status: status as any, resolvedBy, reply, participantFollowUp, acknowledged, participantReaction } : r));
 
         await apiCall(async () => {
             const res = await fetch('/api/support-requests', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, status, resolvedBy }),
+                body: JSON.stringify({ id, status, resolvedBy, reply, participantFollowUp, acknowledged, participantReaction }),
             });
             if (!res.ok) {
                 setSupportRequests(originalRequests);
@@ -532,7 +522,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const isFood = mode === 'snacks';
 
             if (mode === 'snacks') {
-                // Now reroute snacks to the coordinator/attendance API
                 if (isTeam) {
                     const res = await fetch('/api/coordinator/attendance', {
                         method: 'POST',
@@ -543,37 +532,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const d = await res.json();
                     toast.success(d.message);
                 } else {
-                    // If individual participant IDs are passed (which dashboard does now)
-                    // The coordinator/attendance API (legacy) takes teamId.
-                    // We need to update it to accept participantIds OR update specific participants.
-                    // For now, let's assume the dashboard sends TEAM IDs for snacks or we adapt the API.
-                    // Actually CoordinatorDashboardV2 sends participant IDs for everything now?
-                    // Let's quickly check if we can support participantIds in coordinator/attendance.
-                    // If not, we iterate.
-
-                    // Iterating for now as legacy API expects teamId usually, 
-                    // BUT I'll just use the /api/attendance generic route if it supports it?
-                    // No, /api/attendance usually handles "user's own attendance" or similar? 
-                    // Lets double check /api/attendance...
-
-                    // Stick to the plan: Call /api/coordinator/attendance for each team if possible.
-                    // But wait, the dashboard sends an array of IDs.
-                    // I will assume for SNACKS we might want to just use the same /api/attendance route if possible
-                    // OR keep using a dedicated loop.
-
-                    // BETTER PLAN: Update /api/coordinator/attendance to accept `participantId` or `participantIds`.
-                    // I'll update the API next. For now, writing the call here assuming it handles it.
-                    // Or I loop here.
-
-                    const promises = participantIds.map(pid =>
-                        fetch('/api/coordinator/attendance', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ participantId: pid, type: 'snacks' })
-                        }).then(r => r.json())
-                    );
-
-                    await Promise.all(promises);
+                    // Send all participant IDs in one go
+                    await fetch('/api/coordinator/attendance', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ participantIds: participantIds, type: 'snacks' })
+                    });
                 }
             } else {
                 // Standard Attendance API (Hackathon / Gate)
@@ -583,7 +547,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     body: JSON.stringify({
                         participantIds,
                         mode,
-                        // day // Keep day for hackathon if needed, but dashboard might not send it
                     }),
                 });
 

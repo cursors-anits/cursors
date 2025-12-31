@@ -26,96 +26,85 @@ type SubmissionPhase = 'initial' | 'success-screen' | 'extended-form' | 'final-s
 
 const ProjectSubmission: React.FC<ProjectSubmissionProps> = ({ participantId }) => {
     const { participants, settings, fetchParticipants } = useData();
+    const [projectTitle, setProjectTitle] = useState('');
+    const [projectDocumentUrl, setProjectDocumentUrl] = useState('');
     const [repoUrl, setRepoUrl] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [timeLeft, setTimeLeft] = useState<string>('');
-    const [isWindowActive, setIsWindowActive] = useState(false);
+    const [timeLeft, setTimeLeft] = useState('');
     const [windowStatus, setWindowStatus] = useState<'waiting' | 'open' | 'closed'>('waiting');
-
-    // Extended Submission State
-    const [submissionPhase, setSubmissionPhase] = useState<SubmissionPhase>('initial');
-    const [platforms, setPlatforms] = useState<string[]>([]);
-    const [files, setFiles] = useState<{
-        envFile: File | null;
-        requirementsFile: File | null;
-        documentFile: File | null;
-        otherFiles: File[];
-    }>({
-        envFile: null,
-        requirementsFile: null,
-        documentFile: null,
-        otherFiles: []
-    });
 
     const participant = participants.find(p => p.participantId === participantId);
 
-    // Determine Phase
     useEffect(() => {
         if (!participant) return;
 
-        if (participant.extendedSubmissionData?.submittedAt) {
-            setSubmissionPhase('final-submitted');
-        } else if (participant.projectRepoLocked) {
-            const submittedAt = participant.projectRepoSubmittedAt ? new Date(participant.projectRepoSubmittedAt) : new Date();
-            const hoursSinceSubmission = (new Date().getTime() - submittedAt.getTime()) / (1000 * 60 * 60);
-
-            // If less than 12 hours, show success screen
-            // BUT logic check: User said "show success screen for at least 12 hours".
-            // This means after 12 hours they can proceed.
-            if (hoursSinceSubmission < 12) {
-                setSubmissionPhase('success-screen');
-            } else {
-                setSubmissionPhase('extended-form');
-            }
-        } else {
-            setSubmissionPhase('initial');
-        }
-
-        if (participant.projectRepo) {
-            setRepoUrl(participant.projectRepo);
-        }
+        if (participant.projectRepo) setRepoUrl(participant.projectRepo);
+        if (participant.projectTitle) setProjectTitle(participant.projectTitle);
+        if (participant.projectDocumentUrl) setProjectDocumentUrl(participant.projectDocumentUrl);
     }, [participant]);
 
     // Timer Logic
     useEffect(() => {
-        if (!settings) return;
+        const calculateTimeLeft = () => {
+            // Fallback dates if settings aren't loaded yet
+            if (!settings) return;
 
-        const checkTime = () => {
-            const now = new Date();
+            const now = new Date().getTime();
+            const submissionStart = settings.submissionWindowStartTime ? new Date(settings.submissionWindowStartTime).getTime() : 0;
+            // 1 Hour window
+            const submissionEnd = submissionStart + (60 * 60 * 1000);
 
-            if (!settings.submissionWindowOpen) {
-                setWindowStatus('waiting');
-                setIsWindowActive(false);
-                return;
-            }
-
-            if (settings.submissionWindowOpen && settings.submissionWindowStartTime) {
-                // Initial Repo Submission Window
-                const startTime = new Date(settings.submissionWindowStartTime);
-                const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour window for initial repo
-
-                // Extended window is open until hackathon end technically, but let's stick to this for initial
-                if (now < endTime) {
+            if (settings.submissionWindowOpen) {
+                // If manually opened, treat as Open
+                if (submissionStart && now < submissionEnd) {
                     setWindowStatus('open');
-                    setIsWindowActive(true);
-                    const diff = endTime.getTime() - now.getTime();
-                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                    const distance = submissionEnd - now;
+
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
                     setTimeLeft(`${minutes}m ${seconds}s`);
-                } else {
+                } else if (submissionStart && now > submissionEnd) {
                     setWindowStatus('closed');
-                    setIsWindowActive(false);
-                    setTimeLeft('0m 0s');
+                    setTimeLeft('00m 00s');
+                } else {
+                    // Open but no specific timer set? Or just open indefinitely?
+                    // Assuming manual toggle overrides timer if timer not set
+                    setWindowStatus('open');
+                    setTimeLeft('Closing Manual');
+                }
+
+                // If no start time is set but flag is true, assume open indefinitely or logic needs refinement
+                if (!submissionStart) {
+                    setWindowStatus('open');
+                    setTimeLeft('Open');
+                }
+
+            } else {
+                // Closed
+                if (submissionStart && now > submissionEnd) {
+                    setWindowStatus('closed');
+                } else {
+                    setWindowStatus('waiting');
                 }
             }
         };
 
-        checkTime();
-        const interval = setInterval(checkTime, 1000);
-        return () => clearInterval(interval);
+        const timer = setInterval(calculateTimeLeft, 1000);
+        calculateTimeLeft(); // Initial call
+
+        return () => clearInterval(timer);
     }, [settings]);
 
+
     const handleInitialSubmit = async () => {
+        if (!projectTitle || projectTitle.length < 3) {
+            toast.error('Please enter a valid Project Title');
+            return;
+        }
+        if (!projectDocumentUrl) {
+            toast.error('Please provided the Document URL');
+            return;
+        }
         if (!repoUrl) {
             toast.error('Please enter a valid GitHub URL');
             return;
@@ -131,16 +120,17 @@ const ProjectSubmission: React.FC<ProjectSubmissionProps> = ({ participantId }) 
             const res = await fetch(`/api/participants/${participant?._id}/validate-repo`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ repoUrl })
+                body: JSON.stringify({ repoUrl, projectTitle, projectDocumentUrl })
             });
 
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Submission failed');
 
             if (data.isVerified) {
-                toast.success('Repository submitted successfully!');
+                toast.success('Project submitted & confirmed successfully!');
             } else {
-                toast.warning('Repository submitted but flagged: ' + (data.flags?.join(', ') || 'Validation issues'));
+                // Hiding flag details from participant as requested
+                toast.success('Project submitted successfully!');
             }
 
             await fetchParticipants(true);
@@ -152,220 +142,6 @@ const ProjectSubmission: React.FC<ProjectSubmissionProps> = ({ participantId }) 
         }
     };
 
-    const handleExtendedSubmit = async () => {
-        if (platforms.length === 0) {
-            toast.error('Please list at least one coding platform used');
-            return;
-        }
-
-        // Validate File Size (Frontend Check)
-        const MAX_SIZE_MB = 50;
-        let totalSize = 0;
-        if (files.envFile) totalSize += files.envFile.size;
-        if (files.requirementsFile) totalSize += files.requirementsFile.size;
-        if (files.documentFile) totalSize += files.documentFile.size;
-        files.otherFiles.forEach(f => totalSize += f.size);
-
-        if (totalSize > MAX_SIZE_MB * 1024 * 1024) {
-            toast.error(`Total file size exceeds ${MAX_SIZE_MB}MB limit`);
-            return;
-        }
-
-        setIsSubmitting(true);
-        try {
-            const formData = new FormData();
-            formData.append('platforms', JSON.stringify(platforms));
-
-            if (files.envFile) formData.append('envFile', files.envFile);
-            if (files.requirementsFile) formData.append('requirementsFile', files.requirementsFile);
-            if (files.documentFile) formData.append('documentFile', files.documentFile);
-            files.otherFiles.forEach(f => formData.append('otherFiles', f));
-
-            const res = await fetch(`/api/participants/${participant?._id}/extended-submission`, {
-                method: 'POST',
-                body: formData
-            });
-
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Submission failed');
-
-            toast.success('Final project submitted successfully!');
-            await fetchParticipants(true);
-        } catch (error) {
-            toast.error('Failed to submit extended project details');
-            console.error(error);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    if (!participant) return null;
-    if (!participant.hasConfirmedProblem) return null;
-
-    // RENDER: Final Submitted State
-    if (submissionPhase === 'final-submitted') {
-        return (
-            <div className="space-y-6">
-                <div className="p-6 bg-brand-dark rounded-xl border border-white/10 text-center">
-                    <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-white mb-2">Project Successfully Submitted!</h3>
-                    <p className="text-gray-400 mb-6">You have completed all submission requirements.</p>
-
-                    <div className="flex flex-col gap-3 text-left bg-white/5 p-4 rounded-lg max-w-md mx-auto">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">Repository:</span>
-                            <a href={participant.projectRepo} target="_blank" className="text-blue-400 hover:underline flex items-center gap-1">
-                                View Repo <ExternalLink className="w-3 h-3" />
-                            </a>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">Platforms:</span>
-                            <span className="text-white">{participant.extendedSubmissionData?.codingPlatforms?.join(', ')}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-gray-400">Files Uploaded:</span>
-                            <span className="text-white">
-                                {[
-                                    participant.extendedSubmissionData?.filesUploaded?.envFile && '.env',
-                                    participant.extendedSubmissionData?.filesUploaded?.requirementsFile && 'requirements.txt',
-                                    participant.extendedSubmissionData?.filesUploaded?.documentFile && 'Report',
-                                    participant.extendedSubmissionData?.filesUploaded?.otherFiles && `${participant.extendedSubmissionData?.filesUploaded?.otherFiles.length} others`
-                                ].filter(Boolean).join(', ')}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // RENDER: Success Screen (Wait 12 Hours)
-    if (submissionPhase === 'success-screen') {
-        const submittedAt = participant.projectRepoSubmittedAt ? new Date(participant.projectRepoSubmittedAt) : new Date();
-        const unlockTime = new Date(submittedAt.getTime() + 12 * 60 * 60 * 1000);
-
-        return (
-            <div className="space-y-6">
-                <div className="p-6 bg-brand-dark rounded-xl border border-white/10 text-center">
-                    <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <CheckCircle2 className="w-6 h-6 text-green-400" />
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-2">Repository Locked!</h3>
-                    <p className="text-gray-400 mb-6 max-w-lg mx-auto">
-                        Your GitHub repository has been registered. You can continue working on your project.
-                        The final submission form for reports and additional files will open in:
-                    </p>
-
-                    <div className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 px-4 py-2 rounded-full font-mono font-medium">
-                        <Clock className="w-4 h-4" />
-                        Next Phase Opens: {unlockTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-
-                    <div className="mt-8 p-4 bg-white/5 rounded-lg border border-white/10 text-left max-w-lg mx-auto">
-                        <Label className="text-xs text-gray-500 uppercase tracking-widest mb-2 block">Registered Repository</Label>
-                        <div className="flex items-center gap-2 text-white font-mono text-sm bg-black/30 p-2 rounded border border-white/5">
-                            <Lock className="w-3 h-3 text-gray-500" />
-                            {participant.projectRepo}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // RENDER: Extended Submission Form
-    if (submissionPhase === 'extended-form') {
-        return (
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                            <Upload className="w-6 h-6 text-brand-primary" />
-                            Final Project Submission
-                        </h3>
-                        <p className="text-gray-400 text-sm mt-1">Upload project files and details</p>
-                    </div>
-                </div>
-
-                <div className="space-y-6 p-6 bg-brand-dark rounded-xl border border-white/10">
-                    {/* Repo Info */}
-                    <div className="p-3 bg-black/30 rounded border border-white/5 mb-4">
-                        <Label className="text-xs text-gray-500 uppercase">Repository</Label>
-                        <div className="text-white font-mono text-sm flex items-center gap-2 mt-1">
-                            <Lock className="w-3 h-3 text-gray-500" />
-                            {participant.projectRepo}
-                        </div>
-                    </div>
-
-                    {/* Platforms */}
-                    <MultiPlatformInput
-                        platforms={platforms}
-                        onPlatformsChange={setPlatforms}
-                    />
-
-                    <div className="h-px bg-white/10 my-4" />
-
-                    {/* File Uploads */}
-                    <h4 className="text-white font-semibold">Project Files</h4>
-                    <p className="text-xs text-gray-500 -mt-1 mb-4">Max total size: 50MB</p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <FileUploadField
-                            label=".env File"
-                            sublabel="Environment variables"
-                            accept=".env,text/plain" // .env often has no MIME type or text/plain
-                            file={files.envFile}
-                            onFileChange={(f) => setFiles({ ...files, envFile: f })}
-                        />
-                        <FileUploadField
-                            label="requirements.txt"
-                            sublabel="For Python projects"
-                            accept=".txt"
-                            file={files.requirementsFile}
-                            onFileChange={(f) => setFiles({ ...files, requirementsFile: f })}
-                        />
-                    </div>
-
-                    <FileUploadField
-                        label="Project Report / Document"
-                        sublabel="PDF format preferred"
-                        accept=".pdf,.doc,.docx"
-                        file={files.documentFile}
-                        onFileChange={(f) => setFiles({ ...files, documentFile: f })}
-                    />
-
-                    <MultiFileUpload
-                        label="Other Files"
-                        sublabel="Any other relevant assets (images, configs, etc.)"
-                        files={files.otherFiles}
-                        onFilesChange={(fs) => setFiles({ ...files, otherFiles: fs })}
-                        maxFiles={5}
-                    />
-
-                    {/* Submit Button */}
-                    <div className="pt-4">
-                        <Button
-                            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-12 text-lg"
-                            onClick={handleExtendedSubmit}
-                            disabled={isSubmitting || platforms.length === 0}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                    Uploading & Submitting...
-                                </>
-                            ) : (
-                                <>
-                                    Complete Submission
-                                </>
-                            )}
-                        </Button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     // RENDER: Initial Phase (Repo Submission)
     return (
         <div className="space-y-6">
@@ -373,9 +149,9 @@ const ProjectSubmission: React.FC<ProjectSubmissionProps> = ({ participantId }) 
                 <div>
                     <h3 className="text-xl font-bold text-white flex items-center gap-2">
                         <Github className="w-6 h-6 text-brand-primary" />
-                        Project Submission
+                        Domain & Problem Statement Confirmation
                     </h3>
-                    <p className="text-gray-400 text-sm mt-1">Register your repository to start</p>
+                    <p className="text-gray-400 text-sm mt-1">Register your project details to start</p>
                 </div>
                 <Badge className={`${windowStatus === 'open' ? 'bg-blue-500/20 text-blue-400 animate-pulse' :
                     windowStatus === 'closed' ? 'bg-red-500/20 text-red-400' :
@@ -397,6 +173,34 @@ const ProjectSubmission: React.FC<ProjectSubmissionProps> = ({ participantId }) 
                         </div>
 
                         <div className="space-y-2">
+                            <Label className="text-gray-300">Project Title</Label>
+                            <Input
+                                placeholder="Enter your project title"
+                                className="bg-brand-dark border-white/10 text-white placeholder:text-gray-600 focus:border-blue-500 transition-colors"
+                                value={projectTitle}
+                                onChange={(e) => setProjectTitle(e.target.value)}
+                                disabled={isSubmitting || !!participant?.projectRepoLocked}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-gray-300">Project Abstract / Document URL</Label>
+                            <div className="relative">
+                                <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                <Input
+                                    placeholder="https://docs.google.com/..."
+                                    className="pl-9 bg-brand-dark border-white/10 text-white placeholder:text-gray-600 focus:border-blue-500 transition-colors"
+                                    value={projectDocumentUrl}
+                                    onChange={(e) => setProjectDocumentUrl(e.target.value)}
+                                    disabled={isSubmitting || !!participant?.projectRepoLocked}
+                                />
+                            </div>
+                            <p className="text-xs text-gray-500">
+                                * Link to your abstract or problem statement doc (Google Docs/Drive/Notion).
+                            </p>
+                        </div>
+
+                        <div className="space-y-2">
                             <Label className="text-gray-300">GitHub Repository URL</Label>
                             <div className="relative">
                                 <Github className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -405,7 +209,7 @@ const ProjectSubmission: React.FC<ProjectSubmissionProps> = ({ participantId }) 
                                     className="pl-9 bg-brand-dark border-white/10 text-white placeholder:text-gray-600 focus:border-blue-500 transition-colors"
                                     value={repoUrl}
                                     onChange={(e) => setRepoUrl(e.target.value)}
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || !!participant?.projectRepoLocked}
                                 />
                             </div>
                             <p className="text-xs text-gray-500">
@@ -416,22 +220,30 @@ const ProjectSubmission: React.FC<ProjectSubmissionProps> = ({ participantId }) 
                             </p>
                         </div>
 
-                        <Button
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                            onClick={handleInitialSubmit}
-                            disabled={isSubmitting || !repoUrl}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Verifying...
-                                </>
-                            ) : (
-                                <>
-                                    Verify & Register Repository
-                                </>
-                            )}
-                        </Button>
+                        {!participant?.projectRepoLocked && (
+                            <Button
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                                onClick={handleInitialSubmit}
+                                disabled={isSubmitting || !repoUrl || !projectTitle || !projectDocumentUrl}
+                            >
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Verifying...
+                                    </>
+                                ) : (
+                                    <>
+                                        Confirm Domain & Submit
+                                    </>
+                                )}
+                            </Button>
+                        )}
+
+                        {participant?.projectRepoLocked && (
+                            <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-center">
+                                <p className="text-green-400 font-bold">Submission Confirmed!</p>
+                            </div>
+                        )}
                     </>
                 ) : (
                     // Waiting or Closed (same as before)

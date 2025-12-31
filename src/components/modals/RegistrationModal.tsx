@@ -452,11 +452,15 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                 <ul className="space-y-2 text-sm">
                                                     <li className="flex items-start gap-2">
                                                         <span className="text-blue-400 mt-0.5">🍽️</span>
-                                                        <span><strong>Dinner:</strong> Available at college canteen or via Swiggy/Zomato</span>
+                                                        <span><strong>Food:</strong> Not provided. Food is available at the college canteen at your own cost. The menu includes both Tiffins and Main Course. Note: For dinner, Thalis/Meals are not available; however, Biryani, Starters, Fried Rice, and other items will be served.</span>
                                                     </li>
                                                     <li className="flex items-start gap-2">
                                                         <span className="text-blue-400 mt-0.5">🏨</span>
                                                         <span><strong>Extra Accommodation:</strong> If needed beyond hackathon night, at nearby hostels</span>
+                                                    </li>
+                                                    <li className="flex items-start gap-2">
+                                                        <span className="text-blue-400 mt-0.5">📶</span>
+                                                        <span><strong>Internet (Backup):</strong> High-speed Wi-Fi is provided. However, we recommend bringing an Airtel SIM (other networks have poor signal) with a data pack as a backup.</span>
                                                     </li>
                                                 </ul>
 

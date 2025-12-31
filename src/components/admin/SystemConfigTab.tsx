@@ -105,6 +105,17 @@ export default function SystemConfigTab() {
                                 className="data-[state=checked]:bg-green-500"
                             />
                         </div>
+
+                        <div className="space-y-2 pt-4">
+                            <Label className="flex items-center gap-2">Registration Deadline</Label>
+                            <Input
+                                type="datetime-local"
+                                className="bg-brand-dark/50 border-white/10"
+                                defaultValue={settings?.registrationDeadline ? new Date(new Date(settings.registrationDeadline).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ''}
+                                onBlur={(e) => updateSettings({ registrationDeadline: new Date(e.target.value) })}
+                            />
+                            <p className="text-[10px] text-gray-500">Automatically closes registration after this date (optional logic).</p>
+                        </div>
                     </CardContent>
                 </Card>
                 {/* Hackathon Timeline */}

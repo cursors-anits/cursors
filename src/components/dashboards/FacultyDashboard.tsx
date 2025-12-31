@@ -58,6 +58,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 
+import { SOSAlertPopup } from '@/components/dashboards/SOSAlertPopup';
+
 interface FacultyDashboardProps {
     user: User;
 }
@@ -90,17 +92,33 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
 
     const ticketDist = [
         { name: 'Combo', value: participants.filter(p => p.type.toLowerCase().includes('combo')).length },
-        { name: 'Workshop', value: participants.filter(p => p.type.toLowerCase().includes('workshop')).length },
         { name: 'Hackathon', value: participants.filter(p => p.type.toLowerCase().includes('hackathon')).length },
     ];
 
-    const totalRevenue = participants.reduce<number>((acc, p) => {
-        const type = p.type.toLowerCase();
-        if (type.includes('combo')) return acc + 499;
-        if (type.includes('hackathon')) return acc + 349;
-        if (type.includes('workshop')) return acc + 199;
-        return acc + 499; // Default
-    }, 0);
+    const totalRevenue = React.useMemo(() => {
+        // Group by team
+        const teams = participants.reduce((acc, p) => {
+            if (!acc[p.teamId]) acc[p.teamId] = [];
+            acc[p.teamId].push(p);
+            return acc;
+        }, {} as Record<string, typeof participants>);
+
+        return Object.values(teams).reduce((acc, members) => {
+            const size = members.length;
+            const type = members[0].ticketType || (members[0].type.toLowerCase().includes('combo') ? 'combo' : 'hackathon');
+
+            let basePrice = 349;
+            if (type === 'combo') basePrice = 499;
+
+            const discountPerPerson = size > 1 ? (size - 1) * 10 : 0;
+            const finalPricePerPerson = basePrice - discountPerPerson;
+
+            // Count paid members
+            const paidMembers = members.filter(m => m.paymentScreenshotUrl).length;
+
+            return acc + (paidMembers * finalPricePerPerson);
+        }, 0);
+    }, [participants]);
 
     const navItems: NavItem[] = [
         { label: 'Overview', icon: TrendingUp, value: 'overview', group: 'Management' },
@@ -274,7 +292,6 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
                                     </SelectTrigger>
                                     <SelectContent className="bg-brand-surface border-white/10">
                                         <SelectItem value="all">All Types</SelectItem>
-                                        <SelectItem value="Workshop">Workshop</SelectItem>
                                         <SelectItem value="Hackathon">Hackathon</SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -529,6 +546,8 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
                     <SettingsTab user={user} />
                 </TabsContent>
             </Tabs>
+            {/* SOS Alert Popup */}
+            <SOSAlertPopup />
         </DashboardShell>
     );
 };

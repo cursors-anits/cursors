@@ -42,6 +42,7 @@ import DataManagementTab from '../admin/DataManagementTab';
 import { useData } from '@/lib/context/DataContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
     Tabs,
     TabsContent
@@ -99,6 +100,8 @@ import PendingRequestsTab from '@/components/admin/PendingRequestsTab';
 import { DashboardShell } from '@/components/dashboards/DashboardShell';
 import { NavItem } from '@/components/dashboards/DashboardNav';
 import { CampaignTab } from '@/components/admin/CampaignTab';
+
+import { SOSAlertPopup } from '@/components/dashboards/SOSAlertPopup';
 
 interface AdminDashboardProps {
     user: User;
@@ -339,13 +342,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                 return (
                     <div className="text-right">
                         {req.status === 'Open' && (
-                            <Button
-                                size="sm"
-                                className="h-7 px-2 text-[11px] bg-green-500 text-white hover:bg-green-600"
-                                onClick={() => updateSupportRequest(req._id, 'Resolved', user.name)}
-                            >
-                                Resolve
-                            </Button>
+                            <div className="flex justify-end gap-1">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[11px] border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+                                    onClick={() => {
+                                        setReplyRequest(req);
+                                        setReplyText('');
+                                        setReplyModalOpen(true);
+                                    }}
+                                >
+                                    Reply
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    className="h-7 px-2 text-[11px] bg-green-500 text-white hover:bg-green-600"
+                                    onClick={() => updateSupportRequest(req._id, 'Resolved', user.name)}
+                                >
+                                    Resolve
+                                </Button>
+                            </div>
+                        )}
+                        {req.status === 'Resolved' && req.reply && (
+                            <div className="text-[10px] text-gray-500 italic mt-1">
+                                Replied: {req.reply.substring(0, 20)}...
+                            </div>
                         )}
                     </div>
                 );
@@ -402,6 +424,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
     const [isAddCoordinatorOpen, setIsAddCoordinatorOpen] = useState(false);
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
     const [emailTargetTeam, setEmailTargetTeam] = useState<{ teamId: string, members: Participant[] } | null>(null);
+
+    // Reply Modal State
+    const [replyModalOpen, setReplyModalOpen] = useState(false);
+    const [replyRequest, setReplyRequest] = useState<SupportRequest | null>(null);
+    const [replyText, setReplyText] = useState('');
 
     const handleEditParticipant = async (participant: Participant) => {
         const teamMembers = participants.filter(p => p.teamId === participant.teamId);
@@ -605,7 +632,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.teamId.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.whatsapp?.toLowerCase().includes(searchQuery.toLowerCase())
+        p.whatsapp?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.college?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.members?.some(m => m.college?.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
     // Group participants by teamId
@@ -791,9 +820,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         setCurrentPage(1);
     }, [typeFilter, allocationFilter, searchQuery]);
 
-    const totalRevenue = participants.reduce<number>((acc) => {
-        return acc + 349; // Hackathon pass price
-    }, 0);
+    const totalRevenue = React.useMemo(() => {
+        // Group by team to calculate team size and discounts
+        const teams = participants.reduce((acc, p) => {
+            if (!acc[p.teamId]) acc[p.teamId] = [];
+            acc[p.teamId].push(p);
+            return acc;
+        }, {} as Record<string, typeof participants>);
+
+        return Object.values(teams).reduce((acc, members) => {
+            const size = members.length;
+            const type = members[0].ticketType || (members[0].type === 'Hackathon' ? 'hackathon' : 'combo'); // Fallback
+
+            let basePrice = 349;
+            if (type === 'combo') basePrice = 499;
+
+            const discountPerPerson = size > 1 ? (size - 1) * 10 : 0;
+            const finalPricePerPerson = basePrice - discountPerPerson;
+
+            // Count paid members
+            const paidMembers = members.filter(m => m.paymentScreenshotUrl).length;
+
+            return acc + (paidMembers * finalPricePerPerson);
+        }, 0);
+    }, [participants]);
 
     const revenueDisplay = (totalRevenue / 1000).toFixed(3) + 'k';
 
@@ -1155,6 +1205,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                             </Button>
                         </div>
                     </div>
+                    {/* Spacer for bottom access */}
+                    <div className="h-24 lg:h-0" />
                 </TabsContent>
 
                 <TabsContent value="lab" className="mt-6 space-y-6">
@@ -1163,7 +1215,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                             <h3 className="text-xl font-bold">Lab Management</h3>
                             <p className="text-sm text-gray-400">Total capacity: {labs.reduce((acc, l) => acc + l.capacity, 0)} slots</p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                             <Button onClick={fetchLabs} variant="outline" size="sm" className="border-white/10 bg-white/5 hover:bg-white/10">
                                 <RefreshCw className={`w-3 h-3 mr-2 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
                             </Button>
@@ -1361,6 +1413,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>
+                    {/* Spacer for bottom access */}
+                    <div className="h-24 lg:h-0" />
                 </TabsContent>
 
                 {/* Problem Allocation Tab */}
@@ -1416,6 +1470,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                             </Card>
                         ))}
                     </div>
+
+                    {/* Spacer for bottom nav/fab */}
+                    <div className="h-24 lg:h-0" />
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
@@ -1740,6 +1797,49 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                 </AlertDialogContent>
             </AlertDialog>
 
+            {/* Reply Modal */}
+            <Dialog open={replyModalOpen} onOpenChange={setReplyModalOpen}>
+                <DialogContent className="bg-brand-surface border-white/10 text-white">
+                    <DialogHeader>
+                        <DialogTitle>Reply to {replyRequest?.type} Request</DialogTitle>
+                        <DialogDescription>
+                            Team: {replyRequest?.teamId} | Lab: {replyRequest?.labName}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div className="bg-white/5 p-3 rounded-md text-sm text-gray-300 italic">
+                            "{replyRequest?.message}"
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Your Reply</Label>
+                            <Textarea
+                                value={replyText}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setReplyText(e.target.value)}
+                                placeholder="Type your response..."
+                                className="bg-brand-dark border-white/10 text-white h-32"
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button variant="ghost" onClick={() => setReplyModalOpen(false)}>Cancel</Button>
+                            <Button
+                                className="bg-blue-600 hover:bg-blue-700"
+                                onClick={async () => {
+                                    if (!replyRequest) return;
+                                    await updateSupportRequest(replyRequest._id, 'Resolved', user.name, replyText);
+                                    setReplyModalOpen(false);
+                                    toast.success('Reply sent & request resolved');
+                                }}
+                            >
+                                Reply & Resolve
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            <div className="mb-8" />
+
+            {/* SOS Alert Popup */}
+            <SOSAlertPopup />
         </DashboardShell >
     );
 };

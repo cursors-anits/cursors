@@ -36,3 +36,20 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to submit request' }, { status: 500 });
     }
 }
+
+export async function GET(request: NextRequest) {
+    try {
+        await dbConnect();
+        const { searchParams } = new URL(request.url);
+        const teamId = searchParams.get('teamId');
+
+        if (!teamId) {
+            return NextResponse.json({ error: 'Team ID is required' }, { status: 400 });
+        }
+
+        const requests = await SupportRequest.find({ teamId }).sort({ timestamp: -1 });
+        return NextResponse.json(requests);
+    } catch (error) {
+        return NextResponse.json({ error: 'Failed to fetch requests' }, { status: 500 });
+    }
+}

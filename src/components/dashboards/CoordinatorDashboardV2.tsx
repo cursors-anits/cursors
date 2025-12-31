@@ -26,7 +26,8 @@ import {
     AlertCircle,
     Download,
     Utensils,
-    Moon
+    Moon,
+    Loader2
 } from 'lucide-react';
 import { User, Participant } from '@/types';
 import { useData } from '@/lib/context/DataContext';
@@ -68,6 +69,8 @@ import { Label } from '@/components/ui/label';
 import { SettingsTab } from '@/components/dashboards/SettingsTab';
 import { DashboardShell } from '@/components/dashboards/DashboardShell';
 import { NavItem } from '@/components/dashboards/DashboardNav';
+
+import { SOSAlertPopup } from '@/components/dashboards/SOSAlertPopup';
 
 interface CoordinatorDashboardProps {
     user: User;
@@ -112,7 +115,12 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
     const [scanInput, setScanInput] = useState('');
     const [scannedTeam, setScannedTeam] = useState<{ id: string, members: Participant[] } | null>(null);
     const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+    const [replyingTo, setReplyingTo] = useState<string | null>(null);
+    const [replyMessage, setReplyMessage] = useState('');
+    const [isReplyLoading, setIsReplyLoading] = useState(false);
     const [showRealScanner, setShowRealScanner] = useState(false);
+
+
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
     const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
     const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
@@ -341,6 +349,8 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                 <Skeleton className="h-20 w-full bg-white/5 rounded-2xl" />
                 <Skeleton className="h-32 w-full bg-white/5 rounded-2xl" />
                 <Skeleton className="h-[400px] w-full bg-white/5 rounded-2xl" />
+                {/* SOS Alert Popup */}
+                <SOSAlertPopup />
             </div>
         );
     }
@@ -847,7 +857,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                                             From Team: <span className="text-white font-mono font-bold">{req.teamId}</span>
                                                         </p>
                                                         {req.message && (
-                                                            <p className="text-sm text-gray-400 mt-2 italic">"{req.message}"</p>
+                                                            <p className="text-sm text-gray-400 mt-2 italic whitespace-normal wrap-break-word">"{req.message}"</p>
                                                         )}
                                                         <p className="text-xs text-gray-600 mt-2 flex items-center gap-1">
                                                             <Clock className="w-3 h-3" />
@@ -855,13 +865,28 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <Button
-                                                    className="bg-green-500 hover:bg-green-600 text-white whitespace-nowrap"
-                                                    onClick={() => updateSupportRequest(req._id, 'Resolved')}
-                                                >
-                                                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                                                    Resolve
-                                                </Button>
+                                                <div className="flex flex-col gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        className="bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20 hover:text-blue-300"
+                                                        onClick={() => {
+                                                            setReplyingTo(req._id!);
+                                                            setReplyMessage('');
+                                                        }}
+                                                    >
+                                                        <MessageSquare className="w-4 h-4 mr-2" />
+                                                        Reply
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        className="bg-green-500 hover:bg-green-600 text-white whitespace-nowrap"
+                                                        onClick={() => updateSupportRequest(req._id!, 'Resolved', user.name)}
+                                                    >
+                                                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                                                        Resolve
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -1047,6 +1072,43 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                 if (mode === 'exit') return !member.exitGateTimestamp;
                                 return true;
                             }).length || 0})
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            {/* Reply Modal */}
+            <Dialog open={!!replyingTo} onOpenChange={(open) => !open && setReplyingTo(null)}>
+                <DialogContent className="bg-brand-surface border-white/10 text-white">
+                    <DialogHeader>
+                        <DialogTitle>Reply to Request</DialogTitle>
+                        <DialogDescription className="text-gray-400">
+                            Send a message back to the participant.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <textarea
+                            value={replyMessage}
+                            onChange={(e) => setReplyMessage(e.target.value)}
+                            placeholder="Type your reply here..."
+                            className="w-full bg-brand-dark border-white/10 rounded-md p-3 text-sm min-h-[100px] text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-primary/50"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setReplyingTo(null)}>Cancel</Button>
+                        <Button
+                            className="bg-brand-primary text-white"
+                            disabled={!replyMessage.trim() || isReplyLoading}
+                            onClick={async () => {
+                                if (replyingTo) {
+                                    setIsReplyLoading(true);
+                                    await updateSupportRequest(replyingTo, 'Open', user.name, replyMessage);
+                                    setIsReplyLoading(false);
+                                    setReplyingTo(null);
+                                    toast.success('Reply sent!');
+                                }
+                            }}
+                        >
+                            {isReplyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send Reply'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

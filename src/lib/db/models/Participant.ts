@@ -14,6 +14,8 @@ export interface IParticipant {
     linkedin?: string;
     domain?: string;
     transactionId: string;
+    ticketType?: 'hackathon' | 'combo';
+    amountPaid?: number;
     type: 'Hackathon';
     status: 'pending' | 'approved' | 'rejected';
     assignedLab?: string;
@@ -26,6 +28,8 @@ export interface IParticipant {
     problemAssignmentId?: mongoose.Types.ObjectId;
     hasConfirmedProblem?: boolean;
     projectRepo?: string;
+    projectTitle?: string;
+    projectDocumentUrl?: string; // Link to abstract/doc
     submissionStatus?: 'pending' | 'verified' | 'flagged';
     submissionTime?: Date;
 
@@ -168,6 +172,14 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
         },
         projectRepo: {
             type: String,
+        },
+        projectTitle: {
+            type: String,
+            trim: true
+        },
+        projectDocumentUrl: {
+            type: String,
+            trim: true
         },
         submissionStatus: {
             type: String,

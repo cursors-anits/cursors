@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db/mongodb';
 import Participant from '@/lib/db/models/Participant';
 import ProblemAssignment from '@/lib/db/models/ProblemAssignment';
-
+import { PROBLEM_STATEMENTS } from '@/lib/data/problemStatements';
+import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
     try {
         await dbConnect();
 
-        // Check admin authorization (you can enhance this with proper auth)
+        // Check admin authorization
         const { adminEmail } = await request.json();
 
         if (!adminEmail) {
@@ -19,7 +20,8 @@ export async function POST(request: NextRequest) {
         }
 
         // Get all participants
-        const participants = await Participant.find({});
+        // Optimization: Lean query (only needed fields)
+        const participants = await Participant.find({}).select('participantId teamId assignedLab assignedSeat name');
 
         if (participants.length === 0) {
             return NextResponse.json(
@@ -40,132 +42,100 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 1. Group Participants by Seat (Team)
-        // Key: `${labName}::${seatId}`
-        // This ensures the whole team gets the SAME options (consistency)
-        const seatGroups = new Map<string, typeof participants>();
+        // 1. Group by Team
+        // We allocate to the TEAM, not the seat (though seat usually == team)
+        // Grouping by teamId is safer for unassigned participants.
+        const teamGroups = new Map<string, typeof participants>();
 
         participants.forEach(p => {
-            const lab = p.assignedLab || 'Unassigned';
-            const seat = p.assignedSeat || 'Unassigned';
-            const key = `${lab}::${seat}`;
-
-            if (!seatGroups.has(key)) seatGroups.set(key, []);
-            seatGroups.get(key)!.push(p);
+            const teamId = p.teamId || 'UnknownTeam';
+            if (!teamGroups.has(teamId)) teamGroups.set(teamId, []);
+            teamGroups.get(teamId)!.push(p);
         });
 
-        // 2. Sort Seats
-        // Order: Lab -> Team Size (Desc) -> Seat Alpha (Asc)
-        // This effectively creates a linear walk through the lab seats
-        const sortedKeys = Array.from(seatGroups.keys()).sort((keyA, keyB) => {
-            const [labA, seatA] = keyA.split('::');
-            const [labB, seatB] = keyB.split('::');
-
-            if (labA !== labB) return labA.localeCompare(labB);
-
-            // Parse Seat: "5A" -> size 5, alpha A
-            const getSeatParts = (s: string) => {
-                const match = s?.match(/^(\d+)([A-Z]+)$/);
-                if (match) return { size: parseInt(match[1]), alpha: match[2] };
-                return { size: 0, alpha: s || '' };
-            };
-
-            const pA = getSeatParts(seatA);
-            const pB = getSeatParts(seatB);
-
-            if (pA.size !== pB.size) return pB.size - pA.size; // Size Desc
-            return pA.alpha.localeCompare(pB.alpha); // Alpha Asc
+        // 2. Prepare Data Source
+        // Flatten all problems into a single array
+        const allProblems: { domainIndex: number; problemIndex: number; domain: string; problem: string }[] = [];
+        PROBLEM_STATEMENTS.forEach((domain, dIdx) => {
+            domain.problems.forEach((prob, pIdx) => {
+                allProblems.push({
+                    domainIndex: dIdx,
+                    problemIndex: pIdx,
+                    domain: domain.domain,
+                    problem: prob
+                });
+            });
         });
 
-        // 3. Allocate Problem Sets with Spatial Awareness (History Buffer)
-        // Buffer Size = 15. This assumes row widths < 15. 
-        // We ensure current set is distinct from ANY set in the last 15 seats.
-        const ROW_BUFFER_SIZE = 15;
-        const TOTAL_PROBLEMS = 50;
+        console.log(`[PROBLEM ALLOCATION] Processing ${teamGroups.size} teams...`);
 
-        const assignments = [];
-        const labHistory = new Map<string, string[][]>(); // LabName -> Array of lastSets
+        const bulkAssignments = [];
+        const updateOps = [];
 
-        console.log(`[PROBLEM ALLOCATION] Processing ${sortedKeys.length} seats (teams)...`);
+        // 3. Allocate
+        // Simple random allocation for now (Spatial separation requirement is tricky without Seat sorting, 
+        // but if we want strictly random "3 options" from the real list, shuffling is best).
+        // Since we have ~50-60 total problems, calling random for each team is fine.
 
-        for (const key of sortedKeys) {
-            const [lab, seat] = key.split('::');
-            const groupMembers = seatGroups.get(key)!;
+        for (const [teamId, members] of teamGroups) {
+            // Pick 3 unique random problems
+            // Fisher-Yates shuffle concept or simple splice clone
+            // Since we need only 3, a full shuffle is expensive if array is huge, but here it's small (~100 items).
 
-            if (!labHistory.has(lab)) labHistory.set(lab, []);
-            const history = labHistory.get(lab)!;
+            const shuffled = [...allProblems].sort(() => 0.5 - Math.random());
+            const offered = shuffled.slice(0, 3);
 
-            // Generate a set distinct from History Window
-            let offered: string[] = [];
-            let attempts = 0;
-            let isValid = false;
+            // Assign to ALL members of the team
+            for (const participant of members) {
+                // We need to know the _id of the inserted assignment to update Participant.
+                // However, bulkInsert doesn't easily return mapped _ids for subsequent updates unless we generate _id client-side.
+                // Mongoose can generate _id. 
+                // Better approach: Generate _id manually here.
+                const assignmentId = new mongoose.Types.ObjectId();
 
-            while (!isValid && attempts < 20) {
-                offered = [];
-                // Pick 3 random problems
-                while (offered.length < 3) {
-                    const pId = Math.floor(Math.random() * TOTAL_PROBLEMS) + 1;
-                    const pStr = `Problem ${pId}`;
-                    if (!offered.includes(pStr)) offered.push(pStr);
-                }
-                offered.sort();
-
-                // Use a 'soft' conflict check first (no intersection >= 2)
-                let closeConflict = false;
-                const lookback = history.slice(-ROW_BUFFER_SIZE);
-
-                for (const prevSet of lookback) {
-                    // Check overlap: if 2 or more problems are same, it's too similar
-                    const intersection = prevSet.filter(x => offered.includes(x));
-                    if (intersection.length >= 2) {
-                        closeConflict = true;
-                        break;
-                    }
-                }
-
-                if (!closeConflict) isValid = true;
-                attempts++;
-            }
-
-            // Record history
-            history.push(offered);
-            if (history.length > 50) history.shift();
-
-            // Assign to ALL members of this seat
-            for (const participant of groupMembers) {
-                const assignment = new ProblemAssignment({
+                // Prepare ProblemAssignment document
+                // Prepare ProblemAssignment document with EMPTY offeredProblems
+                const assignmentData = {
+                    _id: assignmentId,
                     participantId: participant.participantId,
                     teamId: participant.teamId,
-                    offeredProblems: offered,
+                    offeredProblems: [], // Empty to trigger Domain Selection UI
                     isConfirmed: false,
                     assignedBy: adminEmail,
                     assignedAt: new Date()
-                });
+                };
 
-                const saved = await assignment.save();
+                bulkAssignments.push(assignmentData);
 
-                await Participant.updateOne(
-                    { participantId: participant.participantId },
-                    {
-                        problemAssignmentId: saved._id,
-                        hasConfirmedProblem: false
+                updateOps.push({
+                    updateOne: {
+                        filter: { participantId: participant.participantId },
+                        update: {
+                            problemAssignmentId: assignmentId,
+                            hasConfirmedProblem: false
+                        }
                     }
-                );
-
-                assignments.push({
-                    participantId: participant.participantId,
-                    teamId: participant.teamId,
-                    seatId: seat,
-                    assignedProblems: 3 // count
                 });
             }
         }
 
+        // 4. Batch Write
+        // A. Insert Assignments
+        if (bulkAssignments.length > 0) {
+            await ProblemAssignment.insertMany(bulkAssignments);
+        }
+
+        // B. Update Participants
+        // Participant.bulkWrite is efficient
+        if (updateOps.length > 0) {
+            await Participant.bulkWrite(updateOps);
+        }
+
         return NextResponse.json({
             success: true,
-            message: `Allocated problem statements to ${assignments.length} participants (${sortedKeys.length} Teams) with spatial separation.`,
-            allocated: assignments.length,
-            assignments: assignments.slice(0, 50)
+            message: `Allocated problem statements to ${bulkAssignments.length} participants (${teamGroups.size} Teams).`,
+            allocated: bulkAssignments.length,
+            sample: bulkAssignments.slice(0, 3)
         });
 
     } catch (error) {

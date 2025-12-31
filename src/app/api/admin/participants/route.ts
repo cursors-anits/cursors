@@ -19,32 +19,40 @@ export async function POST(request: NextRequest) {
     try {
         await dbConnect();
         const body = await request.json();
-        const { name, email, college, department, whatsapp, year, type, status, transactionId } = body;
+        const { name, email, college, department, whatsapp, year, type, status, transactionId, teamId: existingTeamId } = body;
 
-        // Generate IDs
-        const lastParticipant = await Participant.findOne().sort({ teamId: -1 });
-        let nextTeamNum = 1;
-        if (lastParticipant?.teamId) {
-            const match = lastParticipant.teamId.match(/VIBE-(\d+)/);
-            if (match) nextTeamNum = parseInt(match[1]) + 1;
+        let teamId = existingTeamId;
+
+        if (!teamId) {
+            // Generate IDs for new Team
+            const lastParticipant = await Participant.findOne().sort({ teamId: -1 });
+            let nextTeamNum = 1;
+            if (lastParticipant?.teamId) {
+                const match = lastParticipant.teamId.match(/VIBE-(\d+)/);
+                if (match) nextTeamNum = parseInt(match[1]) + 1;
+            }
+
+            teamId = `VIBE-${String(nextTeamNum).padStart(3, '0')}`;
+            const teamEmail = `${String(nextTeamNum).padStart(3, '0')}@vibe.com`;
+            const passkey = generatePasskey();
+
+            // Create Team User
+            await User.create({
+                email: teamEmail,
+                name: `Team ${teamId}`,
+                role: 'participant',
+                passkey: passkey,
+                teamId: teamId,
+            });
         }
 
-        const teamId = `VIBE-${String(nextTeamNum).padStart(3, '0')}`;
-        const teamEmail = `${String(nextTeamNum).padStart(3, '0')}@vibe.com`;
-        const passkey = generatePasskey();
-
-        // Create Team User
-        await User.create({
-            email: teamEmail,
-            name: `Team ${teamId}`,
-            role: 'participant',
-            passkey: passkey,
-            teamId: teamId,
-        });
+        // Determine Participant ID suffix
+        const teamMembersCount = await Participant.countDocuments({ teamId });
+        const participantId = `${teamId}-${teamMembersCount + 1}`;
 
         // Create Participant
         const newParticipant = await Participant.create({
-            participantId: `${teamId}-1`,
+            participantId,
             teamId,
             name,
             email,
@@ -52,10 +60,46 @@ export async function POST(request: NextRequest) {
             department,
             whatsapp,
             year,
-            type,
+            type: type || 'Hackathon',
             status: status || 'Confirmed',
             transactionId: transactionId || 'ADMIN_ADDED',
         });
+
+        // --- Send Event Pass Email to ALL Team Members ---
+        try {
+            // 1. Fetch all updated members
+            const allMembers = await Participant.find({ teamId });
+
+            // 2. Fetch Team Password (Passkey)
+            const teamUser = await User.findOne({ teamId });
+            const passkey = teamUser?.passkey || 'CONTACT_ADMIN';
+
+            // 3. Prepare Email Data
+            const emailMembers = allMembers.map(m => ({
+                name: m.name,
+                college: m.college || 'Unknown',
+                department: m.department || '',
+                year: m.year?.toString() || '',
+                passkey
+            }));
+
+            const collegeForEmail = allMembers[0]?.college || 'Unknown';
+            const teamEmail = teamUser?.email || `${teamId}@vibe.com`;
+
+            // 4. Send Emails in Background
+            const personalEmails = allMembers.map(m => m.email);
+
+            // Send to ALL members so everyone has the updated list/QR
+            await Promise.allSettled(personalEmails.map(email =>
+                import('@/lib/email').then(mod =>
+                    mod.sendEventPassEmail(email, teamId, emailMembers, collegeForEmail, 'hackathon', teamEmail, passkey)
+                )
+            ));
+
+        } catch (emailError) {
+            console.error('Failed to send update emails:', emailError);
+            // Don't fail the request, just log it
+        }
 
         return NextResponse.json({ success: true, participant: newParticipant }, { status: 201 });
     } catch (error: any) {

@@ -35,6 +35,19 @@ export async function PATCH(request: NextRequest) {
         const updateData: any = { status };
         if (resolvedBy) {
             updateData.resolvedBy = resolvedBy;
+            updateData.reply = body.reply;
+            updateData.repliedBy = resolvedBy;
+            updateData.replyTime = Date.now();
+        }
+
+        if (body.participantFollowUp) {
+            updateData.participantFollowUp = body.participantFollowUp;
+        }
+        if (typeof body.acknowledged === 'boolean') {
+            updateData.acknowledged = body.acknowledged;
+        }
+        if (body.participantReaction) {
+            updateData.participantReaction = body.participantReaction;
         }
 
         const supportRequest = await SupportRequest.findByIdAndUpdate(id, updateData, { new: true });

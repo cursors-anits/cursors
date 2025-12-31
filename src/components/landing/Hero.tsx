@@ -128,7 +128,10 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
     const minLeft = hackathonLeft;
 
     // Buffer Logic
-    const isBuffer = settings?.registrationClosed === false && (hackathonReal >= hackathonLimit);
+    const isDeadlinePassed = settings?.registrationDeadline ? new Date() > new Date(settings.registrationDeadline) : false;
+    const isRegistrationClosed = settings?.registrationClosed === true || isDeadlinePassed;
+
+    const isBuffer = !isRegistrationClosed && (hackathonReal >= hackathonLimit);
 
     const [timeLeft, setTimeLeft] = useState({
         days: 0,
@@ -178,7 +181,7 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
             <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center">
 
                 {/* Badge */}
-                {!settings?.registrationClosed && (
+                {!isRegistrationClosed && (
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-md hover:bg-white/10 transition-colors cursor-default">
                         <Flame className="w-4 h-4 text-brand-primary" />
                         <span className="text-sm font-medium text-gray-200 tracking-wide">
@@ -188,7 +191,7 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                         <span className="text-sm font-medium text-gray-400">ANITS</span>
                     </div>
                 )}
-                {settings?.registrationClosed && (
+                {isRegistrationClosed && (
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 border border-red-500/20 mb-8 backdrop-blur-md">
                         <Flame className="w-4 h-4 text-red-400" />
                         <span className="text-sm font-medium text-red-400">Registration Closed</span>
@@ -266,14 +269,14 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                 {/* CTA Section */}
                 <div className="mt-12 flex flex-col sm:flex-row gap-6 items-center w-full justify-center">
                     <div className="flex flex-col items-center gap-4">
-                        {!settings?.registrationClosed && (
+                        {!isRegistrationClosed && (
                             <div className={`px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${isBuffer ? 'bg-orange-500/10 border-orange-500 text-orange-400' : 'bg-green-500/10 border-green-500 text-green-400 animate-pulse'}`}>
                                 {isBuffer ? "High Demand • Request Slot" : `🔥 Only ${Math.max(5, Math.min(287, minLeft))} Spots Left`}
                             </div>
                         )}
 
 
-                        {!settings?.registrationClosed ? (
+                        {!isRegistrationClosed ? (
                             currentUser ? (
                                 <Button
                                     onClick={() => router.push(`/dashboard/${currentUser.role.toLowerCase()}`)}
@@ -313,7 +316,7 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                             ₹309 <span className="text-lg text-gray-500 font-normal">/ person</span>
                         </div>
 
-                        {!settings?.registrationClosed && (
+                        {!isRegistrationClosed && (
                             <Badge className="bg-brand-primary/20 text-brand-primary border-brand-primary/30 animate-pulse">
                                 Group Discounts available!
                             </Badge>

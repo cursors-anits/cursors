@@ -22,6 +22,19 @@ export async function POST(request: NextRequest) {
     try {
         await dbConnect();
 
+        // Check Registration Status
+        const settings = await import('@/lib/db/models/Settings').then(mod => mod.default.findOne());
+
+        if (settings) {
+            const isDeadlinePassed = settings.registrationDeadline ? new Date() > new Date(settings.registrationDeadline) : false;
+            if (settings.registrationClosed || isDeadlinePassed) {
+                return NextResponse.json(
+                    { error: 'Registration is currently closed.' },
+                    { status: 403 }
+                );
+            }
+        }
+
         let body: any;
         let screenshotSource: string | Buffer | undefined;
 

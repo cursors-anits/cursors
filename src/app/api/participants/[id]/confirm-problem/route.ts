@@ -68,16 +68,22 @@ export async function POST(
         }
 
         // Update assignment
-        assignment.selectedProblem = selectedProblem;
-        assignment.isConfirmed = true;
-        assignment.selectedAt = new Date();
-        assignment.confirmedAt = new Date();
+        // Update assignment for ALL team members to ensure data consistency
+        await ProblemAssignment.updateMany(
+            { teamId: assignment.teamId },
+            {
+                $set: {
+                    selectedProblem: selectedProblem,
+                    isConfirmed: true,
+                    selectedAt: new Date(),
+                    confirmedAt: new Date()
+                }
+            }
+        );
 
-        await assignment.save();
-
-        // Update participant domain and status
-        await Participant.updateOne(
-            { participantId: id },
+        // Update ALL participants in the team
+        await Participant.updateMany(
+            { teamId: assignment.teamId },
             {
                 hasConfirmedProblem: true,
                 domain: selectedProblem.domain // Update domain to match selection
