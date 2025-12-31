@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
             type: type || 'Hackathon',
             status: status || 'Confirmed',
             transactionId: transactionId || 'ADMIN_ADDED',
+            isManual: true, // Flag as manually added
         });
 
         // --- Send Event Pass Email to ALL Team Members ---

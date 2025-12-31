@@ -18,6 +18,7 @@ export interface IParticipant {
     amountPaid?: number;
     type: 'Hackathon';
     status: 'pending' | 'approved' | 'rejected';
+    isManual?: boolean;
     assignedLab?: string;
 
     assignedHackathonLab?: string;
@@ -134,6 +135,10 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
             type: String,
             enum: ['pending', 'approved', 'rejected', 'Pending', 'Approved', 'Rejected'],
             default: 'approved'
+        },
+        isManual: {
+            type: Boolean,
+            default: false
         },
         assignedLab: {
             type: String,

@@ -938,7 +938,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                                 <Plus className="w-4 h-4 mr-2" /> Add Participant
                             </Button>
                         </div>
-                        <Button variant="outline" onClick={() => exportCSV(participants, 'participants')} className="border-white/10 bg-white/5">
+                        <Button variant="outline" onClick={() => exportCSV(participants.filter(p => !p.isManual), 'participants')} className="border-white/10 bg-white/5">
                             <Download className="w-4 h-4 mr-2" /> Export CSV
                         </Button>
                     </div>

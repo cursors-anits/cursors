@@ -131,6 +131,7 @@ export interface Participant {
     submissionStatus?: 'pending' | 'verified' | 'flagged';
     submissionTime?: Date | string;
     status?: 'pending' | 'approved' | 'rejected';
+    isManual?: boolean;
     createdAt: string;
 }
 

@@ -91,13 +91,16 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
     };
 
     const ticketDist = [
-        { name: 'Combo', value: participants.filter(p => p.type.toLowerCase().includes('combo')).length },
-        { name: 'Hackathon', value: participants.filter(p => p.type.toLowerCase().includes('hackathon')).length },
+        { name: 'Combo', value: participants.filter(p => !p.isManual && p.type.toLowerCase().includes('combo')).length },
+        { name: 'Hackathon', value: participants.filter(p => !p.isManual && p.type.toLowerCase().includes('hackathon')).length },
     ];
 
     const totalRevenue = React.useMemo(() => {
+        // Filter out manual participants
+        const validParticipants = participants.filter(p => !p.isManual);
+
         // Group by team
-        const teams = participants.reduce((acc, p) => {
+        const teams = validParticipants.reduce((acc, p) => {
             if (!acc[p.teamId]) acc[p.teamId] = [];
             acc[p.teamId].push(p);
             return acc;
@@ -189,7 +192,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
                 <TabsContent value="overview" className="mt-8 space-y-8">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         {[
-                            { label: 'Total Registration', value: participants.length, icon: Users, color: 'text-blue-400' },
+                            { label: 'Total Registration', value: participants.filter(p => !p.isManual).length, icon: Users, color: 'text-blue-400' },
                             { label: 'Event Coordinators', value: coordinators.length, icon: UserCog, color: 'text-purple-400' },
                             { label: 'Revenue Generated', value: `₹${(totalRevenue / 1000).toFixed(1)}k`, icon: TrendingUp, color: 'text-green-400' },
                             { label: 'System Health', value: '100%', icon: Activity, color: 'text-orange-400' },
@@ -268,7 +271,7 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
                             <div className="flex justify-end mb-3">
                                 <Button
                                     variant="outline"
-                                    onClick={() => exportCSV(participants, 'participants')}
+                                    onClick={() => exportCSV(participants.filter(p => !p.isManual), 'participants')}
                                     className="border-white/10 bg-white/5 hover:bg-white/10"
                                     size="sm"
                                 >

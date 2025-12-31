@@ -10,8 +10,9 @@ export function AnalyticsTab() {
     const { participants, labs } = useData();
 
     // Key Metrics
-    const totalParticipants = participants.length;
-    const allocatedParticipants = participants.filter(p => p.assignedHackathonLab).length;
+    const validParticipants = participants.filter(p => !p.isManual);
+    const totalParticipants = validParticipants.length;
+    const allocatedParticipants = validParticipants.filter(p => p.assignedHackathonLab).length;
     const unallocatedParticipants = totalParticipants - allocatedParticipants;
     const allocationRate = totalParticipants > 0 ? Math.round((allocatedParticipants / totalParticipants) * 100) : 0;
 
@@ -19,10 +20,10 @@ export function AnalyticsTab() {
     const labData = useMemo(() => {
         return labs.map(lab => ({
             name: lab.name,
-            count: participants.filter(p => p.assignedHackathonLab === lab.name).length,
+            count: validParticipants.filter(p => p.assignedHackathonLab === lab.name).length,
             capacity: lab.capacity
         }));
-    }, [labs, participants]);
+    }, [labs, validParticipants]);
 
     // Allocation Status Data
     const allocationData = [
@@ -33,14 +34,14 @@ export function AnalyticsTab() {
     // Registration Timeline (Last 7 days or all time)
     const timelineData = useMemo(() => {
         const data: Record<string, number> = {};
-        participants.forEach(p => {
+        validParticipants.forEach(p => {
             if (p.createdAt) {
                 const date = new Date(p.createdAt).toLocaleDateString();
                 data[date] = (data[date] || 0) + 1;
             }
         });
         return Object.entries(data).map(([date, count]) => ({ date, count })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    }, [participants]);
+    }, [validParticipants]);
 
     return (
         <div className="space-y-6">
