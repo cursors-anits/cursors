@@ -217,22 +217,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Offline Queue
     const [offlineQueue, setOfflineQueue] = useState<{ fn: () => Promise<any>, name: string }[]>([]);
-    const [isOnline, setIsOnline] = useState(true);
-
-    useEffect(() => {
-        setIsOnline(navigator.onLine);
-        const handleOnline = () => {
-            setIsOnline(true);
-            processOfflineQueue();
-        };
-        const handleOffline = () => setIsOnline(false);
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-        return () => {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-        };
-    }, [offlineQueue]);
+    const [, setIsOnline] = useState(true);
 
     const processOfflineQueue = async () => {
         if (offlineQueue.length === 0) return;
@@ -253,11 +238,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast.success('Offline actions synced');
     };
 
+    useEffect(() => {
+        setIsOnline(navigator.onLine);
+        const handleOnline = () => {
+            setIsOnline(true);
+            processOfflineQueue();
+        };
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, [offlineQueue, processOfflineQueue]);
+
     // Helper to revert state on error
-    const revertOptimisticUpdate = (errorMsg: string, refetchFn: () => Promise<void>) => {
-        toast.error(errorMsg);
-        refetchFn();
-    };
 
     // CRUD Operations - Optimized with Logging & Optimistic Updates
     const addParticipant = async (p: Omit<Participant, '_id' | 'createdAt'>) => {
@@ -519,7 +515,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // We rely on refreshData() at the end.
 
         await apiCall(async () => {
-            const isFood = mode === 'snacks';
 
             if (mode === 'snacks') {
                 if (isTeam) {

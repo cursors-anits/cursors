@@ -47,7 +47,7 @@ const BaseLayout = (content: string) => `
 `;
 
 // 1. Welcome Greeting Email (On Entry Scan)
-export const getWelcomeEmailTemplate = (name: string, teamId: string) => {
+export const getWelcomeEmailTemplate = (name: string) => {
     const content = `
         <div style="${styles.highlightBox}">
             <div style="font-size: 40px; margin-bottom: 10px;">👋</div>

@@ -1,4 +1,3 @@
-import * as React from "react"
 import { toast as sonnerToast, type ExternalToast } from "sonner"
 
 export function useToast() {

@@ -84,10 +84,10 @@ export function getNeighbors(
 /**
  * Check if two problem sets have any overlap
  */
-function hasOverlap(problems1: number[][], problems2: number[][]): boolean {
-    const set1 = new Set(problems1.map(p => `${p[0]}-${p[1]}`));
-    return problems2.some(p => set1.has(`${p[0]}-${p[1]}`));
-}
+// function hasOverlap(problems1: number[][], problems2: number[][]): boolean {
+//     const set1 = new Set(problems1.map(p => `${p[0]}-${p[1]}`));
+//     return problems2.some(p => set1.has(`${p[0]}-${p[1]}`));
+// }
 
 /**
  * Allocate 1 problem statement to a participant initially

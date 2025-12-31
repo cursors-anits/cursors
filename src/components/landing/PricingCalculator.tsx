@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +15,7 @@ type TicketType = 'hackathon';
 
 export default function PricingCalculator() {
     const [teamSize, setTeamSize] = useState(1);
-    const [ticketType, setTicketType] = useState<TicketType>('hackathon');
+    const [ticketType] = useState<TicketType>('hackathon');
 
     const calculatePricing = () => {
         const basePrice = PRICES[ticketType];

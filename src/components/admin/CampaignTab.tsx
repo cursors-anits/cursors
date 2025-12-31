@@ -77,7 +77,7 @@ export const CampaignTab: React.FC<CampaignTabProps> = ({ participants, coordina
         switch (type) {
             case 'welcome':
                 setSubject('Welcome to Vibe Coding 2026! 🚀');
-                setBody(getWelcomeEmailTemplate('{{name}}', '{{teamId}}'));
+                setBody(getWelcomeEmailTemplate('{{name}}'));
                 break;
             case 'reminder':
                 setSubject('⏳ 5 Days Left: Vibe Coding 2026');

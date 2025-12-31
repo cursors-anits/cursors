@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
                             await sendEmail(
                                 p.email,
                                 'Welcome to Vibe Coding 2026! 🚀',
-                                getWelcomeEmailTemplate(p.name, p.teamId)
+                                getWelcomeEmailTemplate(p.name)
                             );
                         } else if (type === 'hackathon_exit') {
                             await sendEmail(

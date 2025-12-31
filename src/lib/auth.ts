@@ -9,7 +9,7 @@ export async function getServerSession() {
 
         const user = JSON.parse(decodeURIComponent(sessionCookie.value));
         return user;
-    } catch (error) {
+    } catch {
         return null;
     }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useData } from '@/lib/context/DataContext';
-import { AlertTriangle, TrendingUp } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LiveSpotsBanner() {

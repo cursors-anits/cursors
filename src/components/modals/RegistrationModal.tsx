@@ -20,7 +20,6 @@ import {
     Info,
     Zap,
     LayoutDashboard,
-    ShieldCheck,
     AlertCircle,
     AlertTriangle
 } from 'lucide-react';
@@ -47,7 +46,7 @@ interface RegistrationModalProps {
     onClose: () => void;
 }
 
-const PRICES = {
+const PRICES: Record<string, number> = {
     hackathon: 349
 };
 
