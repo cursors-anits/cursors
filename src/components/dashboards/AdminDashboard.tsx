@@ -100,8 +100,10 @@ import PendingRequestsTab from '@/components/admin/PendingRequestsTab';
 import { DashboardShell } from '@/components/dashboards/DashboardShell';
 import { NavItem } from '@/components/dashboards/DashboardNav';
 import { CampaignTab } from '@/components/admin/CampaignTab';
+import { FinanceTab } from '@/components/admin/FinanceTab';
 
 import { SOSAlertPopup } from '@/components/dashboards/SOSAlertPopup';
+import { useRevenue } from '@/hooks/useRevenue';
 
 interface AdminDashboardProps {
     user: User;
@@ -820,30 +822,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         setCurrentPage(1);
     }, [typeFilter, allocationFilter, searchQuery]);
 
-    const totalRevenue = React.useMemo(() => {
-        // Group by team to calculate team size and discounts
-        const teams = participants.reduce((acc, p) => {
-            if (!acc[p.teamId]) acc[p.teamId] = [];
-            acc[p.teamId].push(p);
-            return acc;
-        }, {} as Record<string, typeof participants>);
-
-        return Object.values(teams).reduce((acc, members) => {
-            const size = members.length;
-            const type = members[0].ticketType || (members[0].type === 'Hackathon' ? 'hackathon' : 'combo'); // Fallback
-
-            let basePrice = 349;
-            if (type === 'combo') basePrice = 499;
-
-            const discountPerPerson = size > 1 ? (size - 1) * 10 : 0;
-            const finalPricePerPerson = basePrice - discountPerPerson;
-
-            // Count paid members
-            const paidMembers = members.filter(m => m.paymentScreenshotUrl).length;
-
-            return acc + (paidMembers * finalPricePerPerson);
-        }, 0);
-    }, [participants]);
+    const totalRevenue = useRevenue(participants);
 
     const revenueDisplay = (totalRevenue / 1000).toFixed(3) + 'k';
 
@@ -855,6 +834,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         { label: 'Problem Statements', icon: FileText, value: 'problems', group: 'Operations' },
         { label: 'Campaigns', icon: Mail, value: 'campaigns', group: 'Operations' },
         { label: 'Support Requests', icon: AlertTriangle, value: 'support', group: 'Operations' },
+        { label: 'Finance', icon: Download, value: 'finance', group: 'Operations' }, // Added Finance tab
         { label: 'Analytics', icon: BarChart3, value: 'analytics', group: 'Monitoring' },
         { label: 'System Logs', icon: FileText, value: 'logs', group: 'Monitoring' },
         { label: 'System Config', icon: Globe, value: 'system', group: 'Settings' },
@@ -1577,6 +1557,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
 
                 <TabsContent value="campaigns" className="mt-6">
                     <CampaignTab participants={participants} coordinators={coordinators} />
+                </TabsContent>
+
+                <TabsContent value="finance" className="mt-6">
+                    <FinanceTab />
                 </TabsContent>
 
                 <TabsContent value="coordinators" className="mt-6 space-y-4">

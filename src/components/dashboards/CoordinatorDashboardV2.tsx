@@ -27,7 +27,8 @@ import {
     Download,
     Utensils,
     Moon,
-    Loader2
+    Loader2,
+    RefreshCw
 } from 'lucide-react';
 import { User, Participant } from '@/types';
 import { useData } from '@/lib/context/DataContext';
@@ -244,7 +245,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
 
         if (all) {
             targets = targets.filter(member => {
-                if (mode === 'snacks') return !member.foodAttendance?.some(s => s.toLowerCase().includes('snacks'));
+                if (mode === 'snacks') return !member.foodAttendance?.some((s: string) => s.toLowerCase().includes('snacks'));
                 if (mode === 'hackathon') return !member.hackathonAttendance;
                 if (mode === 'entry') return !member.entryGateTimestamp;
                 if (mode === 'exit') return !member.exitGateTimestamp;
@@ -800,8 +801,11 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                 variant="outline"
                                 size="sm"
                                 className="bg-white/5 border-white/10 hover:bg-white/10"
-                                onClick={() => fetchSupportRequests(user.assignedLab)}
+                                onClick={() => fetchSupportRequests(user.assignedLab, true)}
                             >
+                                <span className={isLoading ? "animate-spin mr-2" : ""}>
+                                    <RefreshCw className={`w-3 h-3 ${isLoading ? "animate-spin" : ""}`} />
+                                </span>
                                 Refresh
                             </Button>
                         </div>
@@ -1006,7 +1010,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                             {scannedTeam?.members.filter(member => {
                                 // Filter logic: Show only NOT marked
                                 if (mode === 'snacks') {
-                                    return !member.foodAttendance?.some(s => s.toLowerCase().includes('snacks'));
+                                    return !member.foodAttendance?.some((s: string) => s.toLowerCase().includes('snacks'));
                                 }
                                 if (mode === 'hackathon') return !member.hackathonAttendance;
                                 if (mode === 'entry') return !member.entryGateTimestamp;
@@ -1033,7 +1037,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                                 </div>
                             ))}
                             {scannedTeam && scannedTeam.members.filter(member => {
-                                if (mode === 'snacks') return !member.foodAttendance?.some(s => s.toLowerCase().includes('snacks'));
+                                if (mode === 'snacks') return !member.foodAttendance?.some((s: string) => s.toLowerCase().includes('snacks'));
                                 if (mode === 'hackathon') return !member.hackathonAttendance;
                                 if (mode === 'entry') return !member.entryGateTimestamp;
                                 if (mode === 'exit') return !member.exitGateTimestamp;
@@ -1057,7 +1061,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                             className="flex-1 bg-brand-primary text-white hover:bg-brand-primary/80"
                             onClick={() => handleAction(true)} // Marks all UNMARKED (filtered)
                             disabled={scannedTeam?.members.filter(member => {
-                                if (mode === 'snacks') return !member.foodAttendance?.some(s => s.toLowerCase().includes('snacks'));
+                                if (mode === 'snacks') return !member.foodAttendance?.some((s: string) => s.toLowerCase().includes('snacks'));
                                 if (mode === 'hackathon') return !member.hackathonAttendance;
                                 if (mode === 'entry') return !member.entryGateTimestamp;
                                 if (mode === 'exit') return !member.exitGateTimestamp;
@@ -1066,7 +1070,7 @@ const CoordinatorDashboardV2: React.FC<CoordinatorDashboardProps> = ({ user }) =
                         >
                             <CheckCircle2 className="w-4 h-4 mr-2" />
                             Mark Remaining ({scannedTeam?.members.filter(member => {
-                                if (mode === 'snacks') return !member.foodAttendance?.some(s => s.toLowerCase().includes('snacks'));
+                                if (mode === 'snacks') return !member.foodAttendance?.some((s: string) => s.toLowerCase().includes('snacks'));
                                 if (mode === 'hackathon') return !member.hackathonAttendance;
                                 if (mode === 'entry') return !member.entryGateTimestamp;
                                 if (mode === 'exit') return !member.exitGateTimestamp;

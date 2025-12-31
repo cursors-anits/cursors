@@ -10,7 +10,7 @@ export function AnalyticsTab() {
     const { participants, labs } = useData();
 
     // Key Metrics
-    const validParticipants = participants.filter(p => !p.isManual);
+    const validParticipants = participants; // Include all participants (manual + regular)
     const totalParticipants = validParticipants.length;
     const allocatedParticipants = validParticipants.filter(p => p.assignedHackathonLab).length;
     const unallocatedParticipants = totalParticipants - allocatedParticipants;

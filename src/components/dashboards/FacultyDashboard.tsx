@@ -45,6 +45,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { FinanceTab } from '@/components/admin/FinanceTab';
+import { useRevenue } from '@/hooks/useRevenue';
 import { SettingsTab } from '@/components/dashboards/SettingsTab';
 import { DashboardShell } from '@/components/dashboards/DashboardShell';
 import { NavItem } from '@/components/dashboards/DashboardNav';
@@ -57,7 +59,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-
 import { SOSAlertPopup } from '@/components/dashboards/SOSAlertPopup';
 
 interface FacultyDashboardProps {
@@ -95,38 +96,13 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
         { name: 'Hackathon', value: participants.filter(p => !p.isManual && p.type.toLowerCase().includes('hackathon')).length },
     ];
 
-    const totalRevenue = React.useMemo(() => {
-        // Filter out manual participants
-        const validParticipants = participants.filter(p => !p.isManual);
-
-        // Group by team
-        const teams = validParticipants.reduce((acc, p) => {
-            if (!acc[p.teamId]) acc[p.teamId] = [];
-            acc[p.teamId].push(p);
-            return acc;
-        }, {} as Record<string, typeof participants>);
-
-        return Object.values(teams).reduce((acc, members) => {
-            const size = members.length;
-            const type = members[0].ticketType || (members[0].type.toLowerCase().includes('combo') ? 'combo' : 'hackathon');
-
-            let basePrice = 349;
-            if (type === 'combo') basePrice = 499;
-
-            const discountPerPerson = size > 1 ? (size - 1) * 10 : 0;
-            const finalPricePerPerson = basePrice - discountPerPerson;
-
-            // Count paid members
-            const paidMembers = members.filter(m => m.paymentScreenshotUrl).length;
-
-            return acc + (paidMembers * finalPricePerPerson);
-        }, 0);
-    }, [participants]);
+    const totalRevenue = useRevenue(participants);
 
     const navItems: NavItem[] = [
         { label: 'Overview', icon: TrendingUp, value: 'overview', group: 'Management' },
         { label: 'Teams List', icon: Users, value: 'participants', group: 'Management' },
         { label: 'Coordinators', icon: UserCog, value: 'coordinators', group: 'Management' },
+        { label: 'Finance', icon: Download, value: 'finance', group: 'Management' },
         { label: 'Account', icon: Lock, value: 'settings', group: 'Profile' },
     ];
 
@@ -547,6 +523,9 @@ const FacultyDashboard: React.FC<FacultyDashboardProps> = ({ user }) => {
 
                 <TabsContent value="settings" className="mt-8">
                     <SettingsTab user={user} />
+                </TabsContent>
+                <TabsContent value="finance" className="mt-8">
+                    <FinanceTab />
                 </TabsContent>
             </Tabs>
             {/* SOS Alert Popup */}
