@@ -632,12 +632,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
     };
 
     const filteredParticipants = participants.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.teamId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.whatsapp?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.college?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.members?.some(m => m.college?.toLowerCase().includes(searchQuery.toLowerCase()))
+        (p.type !== 'Online' && p.ticketType !== 'online') && (
+            p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.teamId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.whatsapp?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.college?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.members?.some(m => m.college?.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
     );
 
     // Group participants by teamId

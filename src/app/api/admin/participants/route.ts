@@ -25,12 +25,23 @@ export async function POST(request: NextRequest) {
 
         if (!teamId) {
             // Generate IDs for new Team
-            const lastParticipant = await Participant.findOne().sort({ teamId: -1 });
+            const [lastParticipant, lastUser] = await Promise.all([
+                Participant.findOne().sort({ teamId: -1 }),
+                User.findOne({ role: 'participant' }).sort({ teamId: -1 })
+            ]);
+
             let nextTeamNum = 1;
-            if (lastParticipant?.teamId) {
-                const match = lastParticipant.teamId.match(/VIBE-(\d+)/);
-                if (match) nextTeamNum = parseInt(match[1]) + 1;
-            }
+
+            const getNum = (id: string | undefined): number => {
+                if (!id) return 0;
+                const match = id.match(/VIBE-(\d+)/);
+                return match ? parseInt(match[1]) : 0;
+            };
+
+            const lastParticipantNum = getNum(lastParticipant?.teamId);
+            const lastUserNum = getNum(lastUser?.teamId);
+
+            nextTeamNum = Math.max(lastParticipantNum, lastUserNum) + 1;
 
             teamId = `VIBE-${String(nextTeamNum).padStart(3, '0')}`;
             const teamEmail = `${String(nextTeamNum).padStart(3, '0')}@vibe.com`;

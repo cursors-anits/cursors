@@ -38,7 +38,7 @@ export const AddParticipantModal: React.FC<AddParticipantModalProps> = ({ isOpen
         whatsapp: '',
         year: '1',
         type: 'Hackathon',
-        status: 'Confirmed',
+        status: 'approved',
         transactionId: 'PARTICIPANT_ADDED'
     });
 
