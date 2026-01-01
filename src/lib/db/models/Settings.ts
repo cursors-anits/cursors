@@ -121,7 +121,7 @@ const SettingsSchema = new Schema<ISettings, SettingsModel>(
         },
         onlineQrImageUrl: {
             type: String,
-            default: ''
+            default: '/qr.jpeg'
         },
         onlineRegistrationOpen: {
             type: Boolean,
