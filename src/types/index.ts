@@ -30,7 +30,7 @@ export const TeamMemberSchema = z.object({
 });
 
 export const RegistrationSchema = z.object({
-    ticketType: z.enum(['hackathon']),
+    ticketType: z.enum(['hackathon', 'online']),
     teamSize: z.number().min(1).max(5),
 
     members: z.array(TeamMemberSchema),
@@ -84,13 +84,13 @@ export interface Participant {
     department?: string;
     whatsapp?: string;
     year?: number;
-    type: string;
+    type: 'Hackathon' | 'Online' | 'Combo';
     assignedLab?: string;
     assignedHackathonLab?: string;
     assignedSeat?: string;
     avatarUrl?: string;
     paymentScreenshotUrl?: string;
-    ticketType?: 'hackathon' | 'combo';
+    ticketType?: 'hackathon' | 'combo' | 'online';
     amountPaid?: number;
 
     foodAttendance?: string[]; // Array of sessions claimed
@@ -213,4 +213,13 @@ export interface Settings {
     certificateDriveUrl?: string;
     registrationDeadline?: Date | string;
 
+    onlineBasePrice?: number;
+    onlineUpiId?: string;
+    onlineQrImageUrl?: string;
+    onlineRegistrationOpen?: boolean;
+    onlineSubmissionUrl?: string;
+    onlineMeetUrl?: string;
+    onlineWhatsappUrl?: string;
+    onlineProblemSelectionOpen?: boolean;
+    onlineSubmissionOpen?: boolean;
 }

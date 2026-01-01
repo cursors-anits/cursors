@@ -8,14 +8,14 @@ import { Separator } from '@/components/ui/separator';
 import { Info } from 'lucide-react';
 
 const PRICES = {
-    hackathon: 349
+    online: 299
 };
 
-type TicketType = 'hackathon';
+type TicketType = 'online';
 
 export default function PricingCalculator() {
     const [teamSize, setTeamSize] = useState(1);
-    const [ticketType] = useState<TicketType>('hackathon');
+    const [ticketType] = useState<TicketType>('online');
 
     const calculatePricing = () => {
         const basePrice = PRICES[ticketType];
@@ -60,7 +60,7 @@ export default function PricingCalculator() {
                                     <label className="text-sm font-semibold text-gray-400 mb-3 block">Select Ticket Type</label>
                                     <div className="grid grid-cols-1 gap-3">
                                         {[
-                                            { type: 'hackathon' as TicketType, name: 'Hackathon Pass', price: 349, desc: '24H Hackathon Only' }
+                                            { type: 'online' as TicketType, name: 'Online Participation', price: 299, desc: 'Remote Access • 2 Rounds' }
                                         ].map(ticket => (
                                             <button
                                                 key={ticket.type}

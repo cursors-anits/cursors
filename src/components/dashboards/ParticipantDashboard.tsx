@@ -43,7 +43,7 @@ interface ParticipantDashboardProps {
 }
 
 const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => {
-    const { participants, fetchParticipants } = useData();
+    const { participants, fetchParticipants, settings } = useData();
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -81,6 +81,8 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
     const participantData = useMemo(() => {
         return participants.find(p => p.email === user.email || p.teamId === user.teamId) || null;
     }, [participants, user]);
+
+    const isOnline = participantData?.type === 'Online' || participantData?.ticketType === 'online';
 
     const avatarFallback = useMemo(() => {
         if (user.teamId) {
@@ -232,57 +234,73 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                                     onClick={() => setShowIdCard(true)}
                                     className="bg-white text-brand-dark hover:bg-gray-100 font-bold px-8 py-6 rounded-2xl shadow-xl hover:scale-105 transition-transform"
                                 >
-                                    <QrCode className="w-5 h-5 mr-2" /> View Digital ID
+                                    <QrCode className="w-5 h-5 mr-2" /> View {isOnline ? 'Event Pass' : 'Digital ID'}
                                 </Button>
                             </div>
 
                             <div className="mt-8 space-y-3">
-                                {/* Hackathon Allocation */}
-                                {participantData?.assignedHackathonLab && (
-                                    <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-2xl flex items-center justify-between text-left">
+                                {/* Online Status */}
+                                {isOnline ? (
+                                    <div className="p-4 bg-brand-primary/10 border border-brand-primary/20 rounded-2xl flex items-center justify-between text-left">
                                         <div className="flex items-center gap-4">
-                                            <MapPin className="w-6 h-6 text-purple-400" />
+                                            <Zap className="w-6 h-6 text-brand-primary" />
                                             <div>
-                                                <p className="text-xs text-purple-300 font-bold uppercase">Hackathon Station</p>
-                                                <p className="text-white font-bold">{participantData.assignedHackathonLab} • {participantData.assignedSeat || 'Gen Seat'}</p>
+                                                <p className="text-xs text-brand-primary font-bold uppercase">Participation Mode</p>
+                                                <p className="text-white font-bold">Online / Remote</p>
                                             </div>
                                         </div>
-                                        <Badge className="bg-purple-500 text-white">Day 1-2</Badge>
+                                        <Badge className="bg-brand-primary text-brand-dark">Active</Badge>
                                     </div>
-                                )}
-
-                                {/* Legacy/Generic Allocation (Fallback) */}
-                                {!participantData?.assignedHackathonLab && participantData?.assignedLab && (
-                                    <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-between text-left">
-                                        <div className="flex items-center gap-4">
-                                            <MapPin className="w-6 h-6 text-green-400" />
-                                            <div>
-                                                <p className="text-xs text-green-300 font-bold uppercase">Allocated Workstation</p>
-                                                <p className="text-white font-bold">{participantData.assignedLab} • {participantData.assignedSeat}</p>
+                                ) : (
+                                    <>
+                                        {/* Hackathon Allocation */}
+                                        {participantData?.assignedHackathonLab && (
+                                            <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-2xl flex items-center justify-between text-left">
+                                                <div className="flex items-center gap-4">
+                                                    <MapPin className="w-6 h-6 text-purple-400" />
+                                                    <div>
+                                                        <p className="text-xs text-purple-300 font-bold uppercase">Hackathon Station</p>
+                                                        <p className="text-white font-bold">{participantData.assignedHackathonLab} • {participantData.assignedSeat || 'Gen Seat'}</p>
+                                                    </div>
+                                                </div>
+                                                <Badge className="bg-purple-500 text-white">Day 1-2</Badge>
                                             </div>
-                                        </div>
-                                        <Badge className="bg-green-500 text-white">Active</Badge>
-                                    </div>
-                                )}
+                                        )}
 
-                                {/* Pending State */}
-                                {!participantData?.assignedHackathonLab && !participantData?.assignedLab && (
-                                    <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-3">
-                                        <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
-                                        <p className="text-sm text-gray-400">Lab allocation in progress...</p>
-                                    </div>
+                                        {/* Legacy/Generic Allocation (Fallback) */}
+                                        {!participantData?.assignedHackathonLab && participantData?.assignedLab && (
+                                            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-2xl flex items-center justify-between text-left">
+                                                <div className="flex items-center gap-4">
+                                                    <MapPin className="w-6 h-6 text-green-400" />
+                                                    <div>
+                                                        <p className="text-xs text-green-300 font-bold uppercase">Allocated Workstation</p>
+                                                        <p className="text-white font-bold">{participantData.assignedLab} • {participantData.assignedSeat}</p>
+                                                    </div>
+                                                </div>
+                                                <Badge className="bg-green-500 text-white">Active</Badge>
+                                            </div>
+                                        )}
+
+                                        {/* Pending State */}
+                                        {!participantData?.assignedHackathonLab && !participantData?.assignedLab && (
+                                            <div className="p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center gap-3">
+                                                <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />
+                                                <p className="text-sm text-gray-400">Lab allocation in progress...</p>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </CardContent>
                     </Card>
 
                     {/* Quick Actions */}
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {[
                             { label: 'Help', icon: HelpCircle, color: 'text-blue-400', action: 'Help', description: 'Ask a question' },
                             { label: 'Issue', icon: AlertTriangle, color: 'text-orange-400', action: 'Complaint', description: 'Report a problem' },
-                            { label: 'SOS', icon: Zap, color: 'text-red-500', action: 'SOS', pulse: true, description: 'EMERGENCY ONLY' },
-                        ].map((item, i) => (
+                            { label: 'SOS', icon: Zap, color: 'text-red-500', action: 'SOS', pulse: true, description: 'EMERGENCY ONLY', onlineHidden: true },
+                        ].filter(item => !isOnline || !item.onlineHidden).map((item, i) => (
                             <Button
                                 key={i}
                                 variant="outline"
@@ -366,34 +384,82 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                         </div>
                     </Card>
 
-                    {/* Accommodation Info */}
-                    <Card className="bg-brand-surface border-brand-primary/20">
-                        <CardContent className="p-6 flex items-start gap-4">
-                            <div className="bg-yellow-500/10 p-3 rounded-full">
-                                <AlertTriangle className="w-6 h-6 text-yellow-500" />
-                            </div>
-                            <div className="space-y-2">
-                                <h3 className="font-bold text-lg text-white">Accommodation & Food Information</h3>
-                                <p className="text-gray-400 text-sm leading-relaxed">
-                                    Accommodation is <span className="text-red-400 font-bold">NOT provided</span> for the event (except for Hackathon night for participants).
-                                    <br />
-                                    <br />
-                                    <span className="text-white font-semibold">Food:</span> Snacks will be provided. Dinner is NOT included - available at college canteen or via Swiggy/Zomato at your expense.
-                                    <br />
-                                    For nearby hostels and stay assistance, please contact:
-                                </p>
-                                <div className="flex items-center gap-3 pt-2">
-                                    <Badge variant="outline" className="border-brand-primary text-brand-primary font-mono text-sm px-3 py-1">
-                                        <Phone className="w-4 h-4 mr-1" /> <Link href="tel:8897892720">8897892720</Link>
-                                    </Badge>
-                                    <span className="text-xs text-gray-500 uppercase tracking-widest">Coordinator</span>
+                    {/* Accommodation Info - Hide for Online */}
+                    {!isOnline && (
+                        <Card className="bg-brand-surface border-brand-primary/20">
+                            <CardContent className="p-6 flex items-start gap-4">
+                                <div className="bg-yellow-500/10 p-3 rounded-full">
+                                    <AlertTriangle className="w-6 h-6 text-yellow-500" />
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                                <div className="space-y-2">
+                                    <h3 className="font-bold text-lg text-white">Accommodation & Food Information</h3>
+                                    <p className="text-gray-400 text-sm leading-relaxed">
+                                        Accommodation is <span className="text-red-400 font-bold">NOT provided</span> for the event (except for Hackathon night for participants).
+                                        <br />
+                                        <br />
+                                        <span className="text-white font-semibold">Food:</span> Snacks will be provided. Dinner is NOT included - available at college canteen or via Swiggy/Zomato at your expense.
+                                        <br />
+                                        For nearby hostels and stay assistance, please contact:
+                                    </p>
+                                    <div className="flex items-center gap-3 pt-2">
+                                        <Badge variant="outline" className="border-brand-primary text-brand-primary font-mono text-sm px-3 py-1">
+                                            <Phone className="w-4 h-4 mr-1" /> <Link href="tel:8897892720">8897892720</Link>
+                                        </Badge>
+                                        <span className="text-xs text-gray-500 uppercase tracking-widest">Coordinator</span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
 
-                    {/* Event Preparation Checklist */}
-                    {participantData && (
+                    {/* Online Hub - Show only for Online */}
+                    {isOnline && (
+                        <Card className="bg-brand-surface border-brand-primary/20">
+                            <div className="p-4 flex items-center justify-between relative border-b border-white/5">
+                                <h3 className="font-bold flex items-center gap-2">
+                                    <Zap className="w-4 h-4 text-brand-primary" />
+                                    Online Participation Hub
+                                </h3>
+                            </div>
+                            <CardContent className="p-6 space-y-6">
+                                <div className="space-y-4">
+                                    <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                                        <h4 className="font-bold text-white mb-2">Instructions</h4>
+                                        <ul className="list-disc list-inside text-sm text-gray-400 space-y-1">
+                                            <li>Join the WhatsApp Group for updates (Check your Email).</li>
+                                            <li>Join the Google Meet at least 15 minutes before your scheduled slot.</li>
+                                            <li>Ensure your internet connection is stable.</li>
+                                            <li>Keep your camera and microphone ready.</li>
+                                            <li>Submissions must be uploaded before the deadline.</li>
+                                        </ul>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {settings?.onlineSubmissionUrl && (
+                                            <Button
+                                                onClick={() => window.open(settings.onlineSubmissionUrl, '_blank')}
+                                                className="w-full bg-brand-primary text-brand-dark hover:bg-white"
+                                            >
+                                                Submit Project
+                                            </Button>
+                                        )}
+                                        {settings?.onlineMeetUrl && (
+                                            <Button
+                                                onClick={() => window.open(settings.onlineMeetUrl, '_blank')}
+                                                variant="outline"
+                                                className="w-full border-blue-500 text-blue-400 hover:bg-blue-500/10"
+                                            >
+                                                Join Live Meeting
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Event Preparation Checklist - Show ONLY for Offline */}
+                    {participantData && !isOnline && (
                         <EventChecklist
                             participantId={participantData.participantId}
                             initialCheckedItems={participantData.eventChecklist || []}
@@ -500,14 +566,14 @@ const ParticipantDashboard: React.FC<ParticipantDashboardProps> = ({ user }) => 
                             </div>
 
                             <div className="flex items-center justify-center gap-2 text-green-400 font-bold text-xs uppercase tracking-widest">
-                                <ShieldCheck className="w-4 h-4" /> Verified Attendee
+                                <ShieldCheck className="w-4 h-4" /> {isOnline ? 'Verified Online Participant' : 'Verified Attendee'}
                             </div>
                         </div>
                     </div>
 
                     <div className="bg-black/60 p-4 text-center text-[8px] text-gray-600 font-mono relative">
                         <Separator className="bg-white/5 absolute top-0 left-0 w-full" />
-                        OFFICIAL ENTRY PASS • VIBE CODING 2026
+                        {isOnline ? 'OFFICIAL ONLINE PASS • VIBE CODING 2026' : 'OFFICIAL ENTRY PASS • VIBE CODING 2026'}
                     </div>
                 </DialogContent>
             </Dialog >

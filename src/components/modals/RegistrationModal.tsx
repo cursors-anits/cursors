@@ -47,7 +47,8 @@ interface RegistrationModalProps {
 }
 
 const PRICES: Record<string, number> = {
-    hackathon: 349
+    hackathon: 349,
+    online: 299
 };
 
 const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }) => {
@@ -115,7 +116,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     } = useForm<IFormData>({
         resolver: zodResolver(RegistrationSchema), // We will bypass for buffer mode in step validation
         defaultValues: {
-            ticketType: 'hackathon',
+            ticketType: (settings?.onlineRegistrationOpen === true || (settings?.registrationClosed && settings?.onlineRegistrationOpen !== false)) ? 'online' : 'hackathon',
             teamSize: 1,
 
             members: [{ fullName: '', email: '', college: '', city: '', department: '', whatsapp: '', year: '3rd Year' }],
@@ -154,7 +155,13 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     }, [ticketType, settings, participants, hackathonCount]);
 
     useEffect(() => {
-        if (!isOpen) {
+        if (isOpen) {
+            // Force set correct ticket type based on latest settings when opening
+            // If online is NOT explicitly closed, default to online. 
+            // This aligns with Admin Tab treating 'undefined' as true.
+            const shouldBeOnline = settings?.onlineRegistrationOpen !== false;
+            setValue('ticketType', shouldBeOnline ? 'online' : 'hackathon');
+        } else {
             setStep(1);
             setIsSuccess(false);
             reset();
@@ -162,7 +169,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
             setScreenshotPreview(null);
             setSelectedFile(null);
         }
-    }, [isOpen, reset]);
+    }, [isOpen, reset, settings, setValue]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -193,7 +200,11 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
     };
 
     const calculatePricing = () => {
-        const basePrice = PRICES[ticketType] || 499;
+        const isOnline = ticketType === 'online';
+        // Use settings price if available, fallback to constant
+        const basePrice = isOnline
+            ? (settings?.onlineBasePrice || PRICES.online || 299)
+            : (PRICES[ticketType] || 499);
 
         // Group discount: Each member gets ₹10 OFF per additional member
         const discountPerPerson = (teamSize - 1) * 10;
@@ -396,7 +407,58 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                             <div className="space-y-8">
                                 {step === 1 && (
                                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-                                        {isBufferMode && (
+                                        <div className="flex gap-4 justify-center mb-6">
+                                            <div
+                                                onClick={() => {
+                                                    // Disable Offline if Online is explicitly OPEN or if Global is Closed
+                                                    const isOnlineMode = settings?.onlineRegistrationOpen === true;
+                                                    if (!settings?.registrationClosed && !isOnlineMode) {
+                                                        setValue('ticketType', 'hackathon');
+                                                    }
+                                                }}
+                                                className={`cursor-pointer p-4 rounded-xl border-2 transition-all w-1/2 text-center ${ticketType === 'hackathon'
+                                                    ? 'border-brand-primary bg-brand-primary/10'
+                                                    : (settings?.registrationClosed || settings?.onlineRegistrationOpen === true)
+                                                        ? 'border-white/5 bg-white/5 opacity-50 cursor-not-allowed'
+                                                        : 'border-white/10 bg-brand-dark hover:border-white/20'
+                                                    }`}
+                                            >
+                                                <div className="text-xl font-bold mb-1">Offline</div>
+                                                <div className="text-xs text-gray-400">
+                                                    {(settings?.registrationClosed || settings?.onlineRegistrationOpen === true) ? 'Closed' : 'At Venue (VIBE)'}
+                                                </div>
+                                            </div>
+                                            <div
+                                                onClick={() => {
+                                                    if (settings?.onlineRegistrationOpen !== false) {
+                                                        setValue('ticketType', 'online');
+                                                    }
+                                                }}
+                                                className={`cursor-pointer p-4 rounded-xl border-2 transition-all w-1/2 text-center ${ticketType === 'online'
+                                                    ? 'border-brand-primary bg-brand-primary/10'
+                                                    : settings?.onlineRegistrationOpen === false
+                                                        ? 'border-white/5 bg-white/5 opacity-50 cursor-not-allowed'
+                                                        : 'border-white/10 bg-brand-dark hover:border-white/20'
+                                                    }`}
+                                            >
+                                                <div className="text-xl font-bold mb-1">Online</div>
+                                                <div className="text-xs text-gray-400">
+                                                    {settings?.onlineRegistrationOpen === false ? 'Closed' : 'Remote Participation'}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Global Closed Warning for Online Users */}
+                                        {settings?.registrationClosed && ticketType === 'online' && (
+                                            <Alert className="mb-6 bg-blue-500/10 border-blue-500/20 text-blue-400">
+                                                <Info className="h-4 w-4" />
+                                                <AlertDescription className="text-xs">
+                                                    <strong>Note:</strong> Offline registration is closed. You are registering for the <strong>Online</strong> event.
+                                                </AlertDescription>
+                                            </Alert>
+                                        )}
+
+                                        {isBufferMode && ticketType === 'hackathon' && (
                                             <Alert className="mb-6 bg-orange-500/10 border-orange-500/20 text-orange-400">
                                                 <AlertTriangle className="h-4 w-4" />
                                                 <AlertDescription className="text-xs">
@@ -409,7 +471,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                 <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center text-brand-dark">
                                                     <Zap className="w-6 h-6" />
                                                 </div>
-                                                <h3 className="text-xl font-bold">What Awaits You!</h3>
+                                                <h3 className="text-xl font-bold">What Awaits You! ({ticketType === 'online' ? 'Online' : 'Offline'})</h3>
                                             </div>
 
                                             <div className="space-y-4 text-gray-200">
@@ -419,25 +481,29 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                         <span className="text-green-400 mt-0.5">✅</span>
                                                         <span><strong className="text-white">24-Hour Hackathon</strong> • Build real projects, solve challenges</span>
                                                     </li>
-                                                    <li className="flex items-start gap-2">
-                                                        <span className="text-green-400 mt-0.5">✅</span>
-                                                        <span><strong className="text-white">Snacks & Refreshments</strong> • Throughout the event</span>
-                                                    </li>
-                                                    <li className="flex items-start gap-2">
-                                                        <span className="text-green-400 mt-0.5">✅</span>
-                                                        <span><strong className="text-white">Overnight Accommodation</strong> • For hackathon night participants</span>
-                                                    </li>
-                                                    <li className="flex items-start gap-2">
-                                                        <span className="text-green-400 mt-0.5">✅</span>
-                                                        <span><strong className="text-white">High-Tech Labs</strong> • State-of-the-art workstations</span>
-                                                    </li>
+                                                    {ticketType === 'hackathon' && (
+                                                        <>
+                                                            <li className="flex items-start gap-2">
+                                                                <span className="text-green-400 mt-0.5">✅</span>
+                                                                <span><strong className="text-white">Snacks & Refreshments</strong> • Throughout the event</span>
+                                                            </li>
+                                                            <li className="flex items-start gap-2">
+                                                                <span className="text-green-400 mt-0.5">✅</span>
+                                                                <span><strong className="text-white">Overnight Accommodation</strong> • For hackathon night participants</span>
+                                                            </li>
+                                                            <li className="flex items-start gap-2">
+                                                                <span className="text-green-400 mt-0.5">✅</span>
+                                                                <span><strong className="text-white">High-Tech Labs</strong> • State-of-the-art workstations</span>
+                                                            </li>
+                                                        </>
+                                                    )}
                                                     <li className="flex items-start gap-2">
                                                         <span className="text-green-400 mt-0.5">✅</span>
                                                         <span><strong className="text-white">Mentorship</strong> • Guidance from industry experts</span>
                                                     </li>
                                                     <li className="flex items-start gap-2">
                                                         <span className="text-green-400 mt-0.5">✅</span>
-                                                        <span><strong className="text-white">60K+ Prize Pool</strong> • Win big! 🏆</span>
+                                                        <span><strong className="text-white">30K+ Prize Pool</strong> • Win big! 🏆</span>
                                                     </li>
                                                     <li className="flex items-start gap-2">
                                                         <span className="text-green-400 mt-0.5">✅</span>
@@ -447,21 +513,40 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
 
                                                 <Separator className="bg-white/10 my-4" />
 
-                                                <p className="text-white font-semibold">📌 What to Arrange <span className="text-gray-400">(at your own cost)</span>:</p>
-                                                <ul className="space-y-2 text-sm">
-                                                    <li className="flex items-start gap-2">
-                                                        <span className="text-blue-400 mt-0.5">🍽️</span>
-                                                        <span><strong>Food:</strong> Not provided. Food is available at the college canteen at your own cost. The menu includes both Tiffins and Main Course. Note: For dinner, Thalis/Meals are not available; however, Biryani, Starters, Fried Rice, and other items will be served.</span>
-                                                    </li>
-                                                    <li className="flex items-start gap-2">
-                                                        <span className="text-blue-400 mt-0.5">🏨</span>
-                                                        <span><strong>Extra Accommodation:</strong> If needed beyond hackathon night, at nearby hostels</span>
-                                                    </li>
-                                                    <li className="flex items-start gap-2">
-                                                        <span className="text-blue-400 mt-0.5">📶</span>
-                                                        <span><strong>Internet (Backup):</strong> High-speed Wi-Fi is provided. However, we recommend bringing an Airtel SIM (other networks have poor signal) with a data pack as a backup.</span>
-                                                    </li>
-                                                </ul>
+                                                {ticketType === 'hackathon' ? (
+                                                    <>
+                                                        <p className="text-white font-semibold">📌 What to Arrange <span className="text-gray-400">(at your own cost)</span>:</p>
+                                                        <ul className="space-y-2 text-sm">
+                                                            <li className="flex items-start gap-2">
+                                                                <span className="text-blue-400 mt-0.5">🍽️</span>
+                                                                <span><strong>Food:</strong> Not provided. Food is available at the college canteen at your own cost. The menu includes both Tiffins and Main Course. Note: For dinner, Thalis/Meals are not available; however, Biryani, Starters, Fried Rice, and other items will be served.</span>
+                                                            </li>
+                                                            <li className="flex items-start gap-2">
+                                                                <span className="text-blue-400 mt-0.5">🏨</span>
+                                                                <span><strong>Extra Accommodation:</strong> If needed beyond hackathon night, at nearby hostels</span>
+                                                            </li>
+                                                            <li className="flex items-start gap-2">
+                                                                <span className="text-blue-400 mt-0.5">📶</span>
+                                                                <span><strong>Internet (Backup):</strong> High-speed Wi-Fi is provided. However, we recommend bringing an Airtel SIM (other networks have poor signal) with a data pack as a backup.</span>
+                                                            </li>
+                                                        </ul>
+                                                    </>
+                                                ) : (
+                                                    <div className="bg-blue-500/10 p-4 rounded-lg border border-blue-500/20">
+                                                        <p className="text-blue-300 font-semibold mb-2">🌐 Online Policy:</p>
+                                                        <ul className="list-disc list-inside text-sm text-blue-200 space-y-1">
+                                                            <li>Participation goes in two rounds:
+                                                                <ul className="ml-10 mt-1 list-disc">
+                                                                    <li>Project and PPT/Doc submission (no elimination)</li>
+                                                                    <li>Live presentation with evaluator.</li>
+                                                                </ul>
+                                                            </li>
+                                                            <li>Prizes are same as offline participants and will be shipped to your college.</li>
+                                                            <li>Recognition in social media and internship opportunities are extra perks.</li>
+                                                            <li>Must join the call at given schedule.</li>
+                                                        </ul>
+                                                    </div>
+                                                )}
 
                                                 <div className="bg-brand-dark p-4 rounded-xl border border-white/5 flex items-center justify-between mt-4">
                                                     <div>
@@ -654,7 +739,11 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                             <div className="bg-white p-4 rounded-xl flex flex-col items-center justify-center max-w-[200px] mx-auto overflow-hidden">
                                                 <div className="relative w-full aspect-square mb-4">
                                                     <Image
-                                                        src={settings?.qrImageUrl && settings.qrImageUrl !== '/payment qr.jpg' ? settings.qrImageUrl : '/payment qr.jpg'}
+                                                        src={
+                                                            (ticketType === 'online' && settings?.onlineQrImageUrl)
+                                                                ? settings.onlineQrImageUrl
+                                                                : (settings?.qrImageUrl && settings.qrImageUrl !== '/payment qr.jpg' ? settings.qrImageUrl : '/payment qr.jpg')
+                                                        }
                                                         alt="Payment QR"
                                                         fill
                                                         className="object-contain"
@@ -664,7 +753,9 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose }
                                                 <div className="text-black font-bold text-center w-full">
                                                     <Separator className="bg-gray-100 mb-3" />
                                                     <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">UPI ID</p>
-                                                    <p className="text-xs select-all text-black">{settings?.upiId || "8897892720@ybl"}</p>
+                                                    <p className="text-xs select-all text-black">
+                                                        {ticketType === 'online' ? (settings?.onlineUpiId || "omkar@vibe.com") : (settings?.upiId || "8897892720@ybl")}
+                                                    </p>
                                                 </div>
                                             </div>
                                             <div className="space-y-4">

@@ -23,12 +23,12 @@ interface EmailMember {
     passkey: string;
 }
 
-type TicketType = 'hackathon';
+type TicketType = 'hackathon' | 'online';
 
-// Helper to convert ticket type to reporting time format
-function toReportingTimeType(type: TicketType): 'Hackathon' {
-    const typeMap: Record<TicketType, 'Hackathon'> = {
-        hackathon: 'Hackathon'
+function toReportingTimeType(type: TicketType): 'Hackathon' | 'Online' {
+    const typeMap: Record<TicketType, 'Hackathon' | 'Online'> = {
+        hackathon: 'Hackathon',
+        online: 'Online'
     };
     return typeMap[type];
 }
@@ -39,7 +39,8 @@ function getTemplate(
     members: EmailMember[],
     college: string,
     teamEmail: string,
-    teamPasskey: string
+    teamPasskey: string,
+    whatsappLink?: string
 ): string {
     const colors = {
         hackathon: {
@@ -47,13 +48,20 @@ function getTemplate(
             secondary: '#6b21a8', // purple-800
             bg: '#faf5ff', // purple-50
             border: '#d8b4fe'
+        },
+        online: {
+            primary: '#0ea5e9', // blue-500
+            secondary: '#0369a1', // blue-700
+            bg: '#f0f9ff', // blue-50
+            border: '#7dd3fc'
         }
     };
 
     const theme = colors[type];
 
     const titleMap = {
-        hackathon: '24H HACKATHON PASS'
+        hackathon: '24H HACKATHON PASS',
+        online: 'ONLINE EVENT PASS'
     };
 
     const membersHtml = members.map(m => `
@@ -162,8 +170,8 @@ function getTemplate(
             <div style="text-align: center; margin-top: 30px;">
                 <a href="${loginUrl}" style="display: inline-block; background-color: ${theme.primary}; color: #fff; text-decoration: none; font-weight: bold; padding: 14px 30px; border-radius: 30px; margin: 0 5px 15px; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">LOGIN TO DASHBOARD</a>
                 
-                ${(type === 'hackathon') ? `
-                <a href="${process.env.WHATSAPP_HACKATHON_LINK || '#'}" style="display: inline-block; background-color: #25D366; color: #fff; text-decoration: none; font-weight: bold; padding: 14px 30px; border-radius: 30px; margin: 0 5px 15px; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">JOIN HACKATHON GROUP</a>
+                ${(type === 'hackathon' || type === 'online') ? `
+                <a href="${whatsappLink || '#'}" style="display: inline-block; background-color: #25D366; color: #fff; text-decoration: none; font-weight: bold; padding: 14px 30px; border-radius: 30px; margin: 0 5px 15px; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">JOIN WHATSAPP GROUP</a>
                 ` : ''}
             </div>
         </div>
@@ -185,9 +193,10 @@ export async function sendEventPassEmail(
     college: string,
     ticketType: TicketType,
     teamEmail: string,
-    teamPasskey: string
+    teamPasskey: string,
+    whatsappLink?: string
 ) {
-    const html = getTemplate(ticketType, teamId, members, college, teamEmail, teamPasskey);
+    const html = getTemplate(ticketType, teamId, members, college, teamEmail, teamPasskey, whatsappLink);
     const subject = `🎟️ Event Pass: ${teamId} | Vibe Coding`;
 
     try {

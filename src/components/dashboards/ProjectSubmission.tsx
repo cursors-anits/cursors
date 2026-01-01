@@ -34,6 +34,7 @@ const ProjectSubmission: React.FC<ProjectSubmissionProps> = ({ participantId }) 
     const [windowStatus, setWindowStatus] = useState<'waiting' | 'open' | 'closed'>('waiting');
 
     const participant = participants.find(p => p.participantId === participantId);
+    const isOnline = participant?.type === 'Online' || participant?.ticketType === 'online';
 
     useEffect(() => {
         if (!participant) return;
@@ -48,6 +49,18 @@ const ProjectSubmission: React.FC<ProjectSubmissionProps> = ({ participantId }) 
         const calculateTimeLeft = () => {
             // Fallback dates if settings aren't loaded yet
             if (!settings) return;
+
+            // Online User Override
+            if (isOnline) {
+                if (settings.onlineSubmissionOpen) {
+                    setWindowStatus('open');
+                    setTimeLeft('Manual Open');
+                } else {
+                    setWindowStatus('closed');
+                    setTimeLeft('Closed');
+                }
+                return;
+            }
 
             const now = new Date().getTime();
             const submissionStart = settings.submissionWindowStartTime ? new Date(settings.submissionWindowStartTime).getTime() : 0;
@@ -93,7 +106,7 @@ const ProjectSubmission: React.FC<ProjectSubmissionProps> = ({ participantId }) 
         calculateTimeLeft(); // Initial call
 
         return () => clearInterval(timer);
-    }, [settings]);
+    }, [settings, isOnline]);
 
 
     const handleInitialSubmit = async () => {

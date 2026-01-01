@@ -27,6 +27,15 @@ export interface ISettings {
     submissionWindowStartTime?: Date;
     certificateDriveUrl?: string;
     registrationDeadline?: Date;
+    onlineBasePrice?: number;
+    onlineUpiId?: string;
+    onlineQrImageUrl?: string;
+    onlineRegistrationOpen?: boolean;
+    onlineSubmissionUrl?: string;
+    onlineMeetUrl?: string;
+    onlineWhatsappUrl?: string;
+    onlineProblemSelectionOpen?: boolean;
+    onlineSubmissionOpen?: boolean;
     updatedAt?: Date;
 }
 
@@ -56,16 +65,16 @@ const SettingsSchema = new Schema<ISettings, SettingsModel>(
         },
         prizePool: {
             type: String,
-            default: '₹60,000',
+            default: '₹30,000',
         },
         showInternships: {
             type: Boolean,
             default: false,
         },
         fomoConfig: {
-            hackathonCount: { type: Number, default: 488 },
+            hackathonCount: { type: Number, default: 200 },
             showFakeCounts: { type: Boolean, default: true },
-            fomoDecayRate: { type: Number, default: 2 }, // Spots dropping per hour
+            fomoDecayRate: { type: Number, default: 25 }, // Spots dropping per hour
             fomoDecayStart: { type: Date, default: () => new Date() }, // When the decay starts
         },
         bufferConfig: {
@@ -101,6 +110,42 @@ const SettingsSchema = new Schema<ISettings, SettingsModel>(
         },
         registrationDeadline: {
             type: Date, // If not set, use eventDate or manual toggle
+        },
+        onlineBasePrice: {
+            type: Number,
+            default: 299 // Default price for online
+        },
+        onlineUpiId: {
+            type: String,
+            default: ''
+        },
+        onlineQrImageUrl: {
+            type: String,
+            default: ''
+        },
+        onlineRegistrationOpen: {
+            type: Boolean,
+            default: true
+        },
+        onlineSubmissionUrl: {
+            type: String,
+            default: ''
+        },
+        onlineMeetUrl: {
+            type: String,
+            default: ''
+        },
+        onlineWhatsappUrl: {
+            type: String,
+            default: ''
+        },
+        onlineProblemSelectionOpen: {
+            type: Boolean,
+            default: false
+        },
+        onlineSubmissionOpen: {
+            type: Boolean,
+            default: false
         },
     },
     {

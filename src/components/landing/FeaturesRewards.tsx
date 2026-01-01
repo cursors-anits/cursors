@@ -9,6 +9,7 @@ const FeaturesRewards: React.FC = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
 
                 {/* The Vibe Check */}
+                {/* 
                 <section id="about" className="mb-32">
                     <div className="text-center mb-16">
                         <h2 className="text-3xl md:text-5xl font-bold mb-6">The Vibe Check</h2>
@@ -16,7 +17,6 @@ const FeaturesRewards: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {/* Feature 1 */}
                         <div className="p-8 rounded-3xl bg-brand-dark border border-white/5 hover:border-brand-primary/30 transition-colors group">
                             <div className="w-14 h-14 bg-brand-primary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-primary group-hover:text-brand-dark transition-all text-brand-primary">
                                 <Wifi className="w-7 h-7" />
@@ -25,7 +25,6 @@ const FeaturesRewards: React.FC = () => {
                             <p className="text-gray-400 leading-relaxed">Dedicated high-speed connectivity ensuring your development flow is never interrupted.</p>
                         </div>
 
-                        {/* Feature 2 */}
                         <div className="p-8 rounded-3xl bg-brand-dark border border-white/5 hover:border-brand-secondary/30 transition-colors group">
                             <div className="w-14 h-14 bg-brand-secondary/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-secondary group-hover:text-brand-dark transition-all text-brand-secondary">
                                 <Coffee className="w-7 h-7" />
@@ -34,7 +33,6 @@ const FeaturesRewards: React.FC = () => {
                             <p className="text-gray-400 leading-relaxed">Stay energized with high-quality snacks and beverages served throughout the event.</p>
                         </div>
 
-                        {/* Feature 3 */}
                         <div className="p-8 rounded-3xl bg-brand-dark border border-white/5 hover:border-gray-500/30 transition-colors group">
                             <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-white group-hover:text-black transition-all text-white">
                                 <Music className="w-7 h-7" />
@@ -44,6 +42,7 @@ const FeaturesRewards: React.FC = () => {
                         </div>
                     </div>
                 </section>
+                */}
 
                 {/* Rewards Section */}
                 <section id="rewards" className="relative rounded-[2.5rem] overflow-hidden">

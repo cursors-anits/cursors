@@ -51,7 +51,7 @@ interface ParticipantDashboardProps {
 }
 
 const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) => {
-    const { participants, currentUser, labs, logout, fetchParticipants, supportRequests, fetchSupportRequests, updateSupportRequest } = useData();
+    const { participants, currentUser, labs, logout, fetchParticipants, supportRequests, fetchSupportRequests, updateSupportRequest, settings } = useData();
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -94,6 +94,8 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
         return participants.find(p => p.email === user.email || p.teamId === user.teamId) || null;
     }, [participants, user]);
 
+    const isOnline = participantData?.type === 'Online' || participantData?.ticketType === 'online';
+
     const avatarFallback = useMemo(() => {
         if (user.teamId) {
             const match = user.teamId.match(/\d+$/);
@@ -103,7 +105,6 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
     }, [user]);
 
     // Memoize lab details lookup for better performance
-
 
     const hackathonLabDetails = useMemo(() => {
         return participantData?.assignedHackathonLab
@@ -391,57 +392,63 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                         </CardContent>
                     </Card>
 
-                    {/* Event Checklist Card */}
-                    <Card
-                        className="bg-brand-surface border-blue-500/20 hover:border-blue-500/40 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/20 transition-all cursor-pointer group"
-                        onClick={() => setIsChecklistModalOpen(true)}
-                    >
-                        <CardContent className="p-6">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="p-3 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                                    <LayoutDashboard className="w-6 h-6 text-blue-400" />
+                    {/* Event Checklist Card - OFFLINE ONLY */}
+                    {!isOnline && (
+                        <Card
+                            className="bg-brand-surface border-blue-500/20 hover:border-blue-500/40 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/20 transition-all cursor-pointer group"
+                            onClick={() => setIsChecklistModalOpen(true)}
+                        >
+                            <CardContent className="p-6">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="p-3 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                                        <LayoutDashboard className="w-6 h-6 text-blue-400" />
+                                    </div>
+                                    <Badge className="bg-blue-500/20 text-blue-300">
+                                        {participantData?.eventChecklist?.length || 0}/8
+                                    </Badge>
                                 </div>
-                                <Badge className="bg-blue-500/20 text-blue-300">
-                                    {participantData?.eventChecklist?.length || 0}/8
-                                </Badge>
-                            </div>
-                            <h3 className="font-bold text-white mb-1 flex items-center justify-between">
-                                Event Checklist
-                                <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
-                            </h3>
-                            <p className="text-xs text-gray-400 mb-3">Prepare for the event</p>
-                            <p className="text-xs text-blue-400 font-medium flex items-center gap-1">
-                                Open <ChevronRight className="w-3 h-3" />
-                            </p>
-                        </CardContent>
-                    </Card>
+                                <h3 className="font-bold text-white mb-1 flex items-center justify-between">
+                                    Event Checklist
+                                    <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
+                                </h3>
+                                <p className="text-xs text-gray-400 mb-3">Prepare for the event</p>
+                                <p className="text-xs text-blue-400 font-medium flex items-center gap-1">
+                                    Open <ChevronRight className="w-3 h-3" />
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
 
-                    {/* Problem Statement Card */}
-                    <Card
-                        className="bg-brand-surface border-purple-500/20 hover:border-purple-500/40 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/20 transition-all cursor-pointer group"
-                        onClick={() => setIsProblemModalOpen(true)}
-                    >
-                        <CardContent className="p-6">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="p-3 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
-                                    <Zap className="w-6 h-6 text-purple-400" />
+
+
+                    {/* Problem Statement Card - OFFLINE ONLY */}
+                    {!isOnline && (
+                        <Card
+                            className="bg-brand-surface border-purple-500/20 hover:border-purple-500/40 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/20 transition-all cursor-pointer group"
+                            onClick={() => setIsProblemModalOpen(true)}
+                        >
+                            <CardContent className="p-6">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="p-3 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
+                                        <Zap className="w-6 h-6 text-purple-400" />
+                                    </div>
+                                    <Badge className={participantData?.hasConfirmedProblem ? "bg-green-500/20 text-green-300" : (participantData?.problemAssignmentId ? "bg-brand-primary/20 text-brand-primary animate-pulse" : "bg-orange-500/20 text-orange-300")}>
+                                        {participantData?.hasConfirmedProblem ? '✓ Done' : (participantData?.problemAssignmentId ? 'Action Needed' : 'Pending')}
+                                    </Badge>
                                 </div>
-                                <Badge className={participantData?.hasConfirmedProblem ? "bg-green-500/20 text-green-300" : (participantData?.problemAssignmentId ? "bg-brand-primary/20 text-brand-primary animate-pulse" : "bg-orange-500/20 text-orange-300")}>
-                                    {participantData?.hasConfirmedProblem ? '✓ Done' : (participantData?.problemAssignmentId ? 'Action Needed' : 'Pending')}
-                                </Badge>
-                            </div>
-                            <h3 className="font-bold text-white mb-1 flex items-center justify-between">
-                                Problem Statement
-                                <ChevronRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform" />
-                            </h3>
-                            <p className="text-xs text-gray-400 mb-3">Select your challenge</p>
-                            <p className="text-xs text-purple-400 font-medium flex items-center gap-1">
-                                Open <ChevronRight className="w-3 h-3" />
-                            </p>
-                        </CardContent>
-                    </Card>
+                                <h3 className="font-bold text-white mb-1 flex items-center justify-between">
+                                    Problem Statement
+                                    <ChevronRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform" />
+                                </h3>
+                                <p className="text-xs text-gray-400 mb-3">Select your challenge</p>
+                                <p className="text-xs text-purple-400 font-medium flex items-center gap-1">
+                                    Open <ChevronRight className="w-3 h-3" />
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
 
-                    {participantData && (
+                    {participantData && !isOnline && (
                         <Card
                             className="bg-brand-surface border-blue-500/20 hover:border-blue-500/40 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/20 transition-all cursor-pointer group"
                             onClick={() => setIsSubmissionModalOpen(true)}
@@ -493,35 +500,93 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
 
                 {/* Information Cards Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Lab Allocation Card */}
-                    <Card className="bg-brand-surface border-brand-primary/20">
+                    {/* Lab Allocation Card / Online Info */}
+                    <Card className="bg-brand-surface border-brand-primary/20" id="online-hub-section">
                         <CardContent className="p-6">
                             <div className="flex items-center gap-2 mb-4">
-                                <MapPin className="w-5 h-5 text-brand-primary" />
-                                <h3 className="font-bold text-white">Lab Allocation</h3>
+                                {isOnline ? <Zap className="w-5 h-5 text-brand-primary" /> : <MapPin className="w-5 h-5 text-brand-primary" />}
+                                <h3 className="font-bold text-white">{isOnline ? 'Online Participation' : 'Lab Allocation'}</h3>
                             </div>
                             <div className="space-y-3">
-
-
-                                {/* Hackathon Lab */}
-                                {participantData?.assignedHackathonLab ? (
-                                    <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs text-purple-300 font-semibold uppercase">Hackathon</p>
-                                                <p className="text-white font-bold">{participantData.assignedHackathonLab}</p>
-                                                {hackathonLabDetails?.roomNumber && (
-                                                    <p className="text-xs text-gray-400">Room: {hackathonLabDetails.roomNumber}</p>
-                                                )}
-                                                <p className="text-xs text-gray-400">Seat: {participantData.assignedSeat || 'TBD'}</p>
-                                            </div>
-                                            <Badge className="bg-purple-500 text-white">Day 1-2</Badge>
+                                {isOnline ? (
+                                    <div className="space-y-4">
+                                        <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
+                                            <p className="text-sm text-cyan-200">
+                                                You are participating remotely. Use the options below to manage your hackathon participation.
+                                            </p>
                                         </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {/* Problem Statement Button */}
+                                            <div
+                                                className={`p-3 border rounded-lg cursor-pointer transition-colors ${settings?.onlineProblemSelectionOpen ? 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20' : 'bg-gray-500/5 border-white/5 opacity-50 cursor-not-allowed'}`}
+                                                onClick={() => {
+                                                    if (settings?.onlineProblemSelectionOpen) {
+                                                        setIsProblemModalOpen(true);
+                                                    } else {
+                                                        toast.error('Problem selection is currently closed for online participants.');
+                                                    }
+                                                }}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <Zap className={`w-5 h-5 ${settings?.onlineProblemSelectionOpen ? 'text-purple-400' : 'text-gray-500'}`} />
+                                                    <Badge className={`${settings?.onlineProblemSelectionOpen ? 'bg-purple-500/20 text-purple-300' : 'bg-gray-500/20 text-gray-400'} text-[10px]`}>
+                                                        {participantData?.hasConfirmedProblem ? 'Confirmed' : 'Action'}
+                                                    </Badge>
+                                                </div>
+                                                <p className="font-bold text-white text-sm">Select Problem</p>
+                                                <p className="text-xs text-gray-400">Choose your domain</p>
+                                            </div>
+
+                                            {/* Submission Button */}
+                                            <div
+                                                className={`p-3 border rounded-lg cursor-pointer transition-colors ${settings?.onlineSubmissionOpen ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20' : 'bg-gray-500/5 border-white/5 opacity-50 cursor-not-allowed'}`}
+                                                onClick={() => {
+                                                    if (settings?.onlineSubmissionOpen) {
+                                                        setIsSubmissionModalOpen(true);
+                                                    } else {
+                                                        toast.error('Project submission is currently closed for online participants.');
+                                                    }
+                                                }}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <Upload className={`w-5 h-5 ${settings?.onlineSubmissionOpen ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                    <Badge className={`${settings?.onlineSubmissionOpen ? 'bg-blue-500/20 text-blue-300' : 'bg-gray-500/20 text-gray-400'} text-[10px]`}>Final</Badge>
+                                                </div>
+                                                <p className="font-bold text-white text-sm">Submit Project</p>
+                                                <p className="text-xs text-gray-400">Post repository link</p>
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            className="w-full bg-brand-primary text-brand-dark hover:bg-white mt-2"
+                                            onClick={() => window.open(settings?.onlineMeetUrl || 'https://meet.google.com/xxx-xxxx-xxx', '_blank')}
+                                        >
+                                            Join Meeting
+                                        </Button>
                                     </div>
                                 ) : (
-                                    <div className="p-3 bg-white/5 border border-white/10 rounded-lg">
-                                        <p className="text-sm text-gray-400">Hackathon lab assignment pending...</p>
-                                    </div>
+                                    <>
+                                        {/* Hackathon Lab */}
+                                        {participantData?.assignedHackathonLab ? (
+                                            <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-xs text-purple-300 font-semibold uppercase">Hackathon</p>
+                                                        <p className="text-white font-bold">{participantData.assignedHackathonLab}</p>
+                                                        {hackathonLabDetails?.roomNumber && (
+                                                            <p className="text-xs text-gray-400">Room: {hackathonLabDetails.roomNumber}</p>
+                                                        )}
+                                                        <p className="text-xs text-gray-400">Seat: {participantData.assignedSeat || 'TBD'}</p>
+                                                    </div>
+                                                    <Badge className="bg-purple-500 text-white">Day 1-2</Badge>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 bg-white/5 border border-white/10 rounded-lg">
+                                                <p className="text-sm text-gray-400">Hackathon lab assignment pending...</p>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </CardContent>
@@ -611,9 +676,9 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                 <div
                                     className="h-full bg-brand-primary transition-all"
                                     style={{
-                                        width: participantData?.hasConfirmedProblem ? '80%' :
-                                            participantData?.assignedLab ? '60%' :
-                                                (participantData?.eventChecklist?.length || 0) >= 4 ? '40%' : '20%'
+                                        width: participantData?.projectRepo ? '80%' :
+                                            (participantData?.hasConfirmedProblem ? '60%' :
+                                                (isOnline || participantData?.assignedLab ? '40%' : '20%'))
                                     }}
                                 />
                             </div>
@@ -629,33 +694,20 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                 </div>
                             </div>
 
-                            {/* Stage 2: Checklist (Optional) */}
+                            {/* Stage 2: Access / Lab Allocation */}
                             <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
-                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${(participantData?.eventChecklist?.length || 0) >= 4 ? 'bg-brand-primary' : 'bg-white/10'}`}>
-                                    <LayoutDashboard className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                                </div>
-                                <div className="flex-1 sm:flex-none text-left sm:text-center">
-                                    <Badge className={(participantData?.eventChecklist?.length || 0) >= 4 ? "bg-green-500/20 text-green-300 mb-1" : "bg-gray-500/20 text-gray-300 mb-1"}>
-                                        {(participantData?.eventChecklist?.length || 0) >= 4 ? '✓ Ready' : '📝 Optional'}
-                                    </Badge>
-                                    <span className="block text-xs text-gray-400">Checklist</span>
-                                </div>
-                            </div>
-
-                            {/* Stage 3: Allocation */}
-                            <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
-                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${participantData?.assignedLab ? 'bg-brand-primary' : 'bg-white/10'}`}>
+                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${(isOnline || participantData?.assignedLab) ? 'bg-brand-primary' : 'bg-white/10'}`}>
                                     <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                                 </div>
                                 <div className="flex-1 sm:flex-none text-left sm:text-center">
-                                    <Badge className={participantData?.assignedLab ? "bg-green-500/20 text-green-300 mb-1" : "bg-orange-500/20 text-orange-300 mb-1"}>
-                                        {participantData?.assignedLab ? '✓ Assigned' : '⏳ Pending'}
+                                    <Badge className={(isOnline || participantData?.assignedLab) ? "bg-green-500/20 text-green-300 mb-1" : "bg-orange-500/20 text-orange-300 mb-1"}>
+                                        {(isOnline || participantData?.assignedLab) ? '✓ Ready' : '⏳ Pending'}
                                     </Badge>
-                                    <span className="block text-xs text-gray-400">Lab Allocation</span>
+                                    <span className="block text-xs text-gray-400">{isOnline ? 'Online Access' : 'Lab Allocation'}</span>
                                 </div>
                             </div>
 
-                            {/* Stage 4: Problem */}
+                            {/* Stage 3: Problem */}
                             <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
                                 <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${participantData?.hasConfirmedProblem ? 'bg-brand-primary' : 'bg-white/10'}`}>
                                     <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
@@ -668,14 +720,27 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                 </div>
                             </div>
 
-                            {/* Stage 5: Submission */}
+                            {/* Stage 4: Submission */}
                             <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${participantData?.projectRepo ? 'bg-brand-primary' : 'bg-white/10'}`}>
                                     <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                                 </div>
                                 <div className="flex-1 sm:flex-none text-left sm:text-center">
-                                    <Badge className="bg-purple-500/20 text-purple-300 mb-1">🚀 Final</Badge>
+                                    <Badge className={participantData?.projectRepo ? "bg-green-500/20 text-green-300 mb-1" : "bg-purple-500/20 text-purple-300 mb-1"}>
+                                        {participantData?.projectRepo ? '✓ Submitted' : '🚀 Upload'}
+                                    </Badge>
                                     <span className="block text-xs text-gray-400">Submission</span>
+                                </div>
+                            </div>
+
+                            {/* Stage 5: Presentation */}
+                            <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                                    <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                                </div>
+                                <div className="flex-1 sm:flex-none text-left sm:text-center">
+                                    <Badge className="bg-gray-500/20 text-gray-300 mb-1">Coming Soon</Badge>
+                                    <span className="block text-xs text-gray-400">Presentation</span>
                                 </div>
                             </div>
                         </div>
@@ -789,26 +854,28 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                             </CardContent>
                         </Card>
 
-                        {/* SOS Emergency Option */}
-                        <Card
-                            className="bg-brand-surface border-red-500/20 hover:border-red-500/40 transition-all cursor-pointer group"
-                            onClick={() => {
-                                setIsSupportMenuOpen(false);
-                                handleAction('SOS');
-                            }}
-                        >
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
-                                        <AlertTriangle className="w-6 h-6 text-red-400" />
+                        {/* SOS Emergency Option - HIDE FOR ONLINE */}
+                        {!isOnline && (
+                            <Card
+                                className="bg-brand-surface border-red-500/20 hover:border-red-500/40 transition-all cursor-pointer group"
+                                onClick={() => {
+                                    setIsSupportMenuOpen(false);
+                                    handleAction('SOS');
+                                }}
+                            >
+                                <CardContent className="p-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
+                                            <AlertTriangle className="w-6 h-6 text-red-400" />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-white mb-1">Emergency SOS</h4>
+                                            <p className="text-xs text-gray-400">Urgent help needed immediately</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className="font-bold text-white mb-1">Emergency SOS</h4>
-                                        <p className="text-xs text-gray-400">Urgent help needed immediately</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* View My Requests History */}
                         <Button
@@ -1041,6 +1108,14 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                                     </div>
                                     <p className="text-xs text-brand-dark font-mono font-bold mt-2">{user.teamId}</p>
                                 </div>
+
+                                {/* Online Text or ID Buttons */}
+                                {isOnline ? (
+                                    <div className="mb-4 bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                                        <p className="text-center text-white font-bold text-sm">REMOTE PARTICIPANT</p>
+                                        <p className="text-center text-gray-300 text-xs">Official Digital Pass</p>
+                                    </div>
+                                ) : null}
 
                                 <div className="flex gap-2">
                                     <Button

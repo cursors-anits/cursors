@@ -15,6 +15,34 @@ export async function GET(
         });
 
         if (!assignment) {
+            // Check if Online User & Window is Open -> Return Virtual Assignment
+            const { default: Settings } = await import('@/lib/db/models/Settings');
+            const { default: Participant } = await import('@/lib/db/models/Participant');
+
+            const [participant, settings] = await Promise.all([
+                Participant.findOne({ participantId: id }),
+                Settings.findOne({})
+            ]);
+
+            const isOnline = participant?.type === 'Online' || participant?.ticketType === 'online';
+
+            if (isOnline && settings?.onlineProblemSelectionOpen) {
+                return NextResponse.json({
+                    success: true,
+                    assignment: {
+                        participantId: id,
+                        teamId: participant?.teamId || '',
+                        offeredProblems: [], // Empty means "INITIAL_CHOICE" view in frontend
+                        selectedProblem: undefined,
+                        isConfirmed: false,
+                        refreshCount: 0,
+                        maxRefreshes: 0,
+                        canRefresh: false,
+                        assignedAt: new Date().toISOString(),
+                    }
+                });
+            }
+
             return NextResponse.json(
                 { error: 'No problem assignment found for this participant' },
                 { status: 404 }

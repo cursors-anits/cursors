@@ -101,6 +101,7 @@ import { DashboardShell } from '@/components/dashboards/DashboardShell';
 import { NavItem } from '@/components/dashboards/DashboardNav';
 import { CampaignTab } from '@/components/admin/CampaignTab';
 import { FinanceTab } from '@/components/admin/FinanceTab';
+import { OnlineUsersTab } from '@/components/admin/OnlineUsersTab';
 
 import { SOSAlertPopup } from '@/components/dashboards/SOSAlertPopup';
 import { useRevenue } from '@/hooks/useRevenue';
@@ -835,6 +836,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         { label: 'Campaigns', icon: Mail, value: 'campaigns', group: 'Operations' },
         { label: 'Support Requests', icon: AlertTriangle, value: 'support', group: 'Operations' },
         { label: 'Finance', icon: Download, value: 'finance', group: 'Operations' }, // Added Finance tab
+        ...(user.email === 'omkar@vibe.com' ? [{ label: 'Online Users', icon: Globe, value: 'online', group: 'Operations' }] : []),
         { label: 'Analytics', icon: BarChart3, value: 'analytics', group: 'Monitoring' },
         { label: 'System Logs', icon: FileText, value: 'logs', group: 'Monitoring' },
         { label: 'System Config', icon: Globe, value: 'system', group: 'Settings' },
@@ -918,7 +920,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                                 <Plus className="w-4 h-4 mr-2" /> Add Participant
                             </Button>
                         </div>
-                        <Button variant="outline" onClick={() => exportCSV(participants.filter(p => !p.isManual), 'participants')} className="border-white/10 bg-white/5">
+                        <Button variant="outline" onClick={() => exportCSV(participants.filter(p => !p.isManual && p.ticketType !== 'online'), 'participants')} className="border-white/10 bg-white/5">
                             <Download className="w-4 h-4 mr-2" /> Export CSV
                         </Button>
                     </div>
@@ -1562,6 +1564,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                 <TabsContent value="finance" className="mt-6">
                     <FinanceTab />
                 </TabsContent>
+
+                {user.email === 'omkar@vibe.com' && (
+                    <TabsContent value="online" className="mt-6">
+                        <OnlineUsersTab />
+                    </TabsContent>
+                )}
 
                 <TabsContent value="coordinators" className="mt-6 space-y-4">
                     <div className="flex gap-2">

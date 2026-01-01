@@ -97,8 +97,8 @@ export default function Home() {
         <Hero onRegisterClick={() => setIsRegisterOpen(true)} />
         <Sponsors />
         <PricingCalculator />
-        <WhatToBring />
-        <TravelGuide />
+        {/* <WhatToBring /> */}
+        {/* <TravelGuide /> */}
 
         <ProblemStatements />
         <FeaturesRewards />

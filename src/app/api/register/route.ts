@@ -4,6 +4,7 @@ import Participant from '@/lib/db/models/Participant';
 import User from '@/lib/db/models/User';
 import { sendEventPassEmail } from '@/lib/email';
 import { uploadToDrive } from '@/lib/gdrive';
+import Settings from '@/lib/db/models/Settings';
 
 function generateParticipantId(teamId: string, memberIndex: number): string {
     return `${teamId}-${memberIndex + 1}`;
@@ -18,100 +19,134 @@ function generatePasskey(): string {
     return passkey;
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
     try {
         await dbConnect();
 
-        // Check Registration Status
-        const settings = await import('@/lib/db/models/Settings').then(mod => mod.default.findOne());
-
-        if (settings) {
-            const isDeadlinePassed = settings.registrationDeadline ? new Date() > new Date(settings.registrationDeadline) : false;
-            if (settings.registrationClosed || isDeadlinePassed) {
-                return NextResponse.json(
-                    { error: 'Registration is currently closed.' },
-                    { status: 403 }
-                );
-            }
-        }
-
+        // 1. Initial Parsing to check Ticket Type
         let body: any;
         let screenshotSource: string | Buffer | undefined;
 
-        const contentType = request.headers.get('content-type') || '';
+        const contentType = req.headers.get('content-type') || '';
         if (contentType.includes('multipart/form-data')) {
-            const formData = await request.formData();
-            const jsonData = formData.get('data') as string;
-            body = JSON.parse(jsonData);
-
+            const formData = await req.formData();
+            const dataStr = formData.get('data') as string;
+            if (!dataStr) {
+                return NextResponse.json({ error: 'Invalid registration data' }, { status: 400 });
+            }
+            body = JSON.parse(dataStr);
             const file = formData.get('screenshot') as File;
             if (file) {
                 const arrayBuffer = await file.arrayBuffer();
                 screenshotSource = Buffer.from(arrayBuffer);
             }
         } else {
-            body = await request.json();
+            body = await req.json();
             screenshotSource = body.screenshot;
         }
 
-        const { members, college, ticketType, transactionId } = body;
+        const { ticketType, transactionId, members } = body;
 
-        if (!members || members.length === 0) {
-            return NextResponse.json(
-                { error: 'At least one team member is required' },
-                { status: 400 }
-            );
+        // 2. Settings & Validation Override Logic
+        const settings = await Settings.findOne().lean();
+
+        if (settings) {
+            const isDeadlinePassed = settings.registrationDeadline ? new Date() > new Date(settings.registrationDeadline) : false;
+            const isGlobalClosed = settings.registrationClosed || isDeadlinePassed;
+
+            if (ticketType === 'online') {
+                // Online Config: If explicit false, it's closed. Otherwise open.
+                if (settings.onlineRegistrationOpen === false) {
+                    return NextResponse.json({ error: 'Online registration is currently closed.' }, { status: 403 });
+                }
+            } else {
+                // Hackathon (Offline) Config
+                if (isGlobalClosed) {
+                    return NextResponse.json({ error: 'Registration is currently closed.' }, { status: 403 });
+                }
+            }
         }
 
-        // Generate IDs - Find the last team ID from both collections to increment properly
+        if (!members || members.length === 0) {
+            return NextResponse.json({ error: 'At least one team member is required' }, { status: 400 });
+        }
+
+        // 3. Generate IDs
         const [lastParticipant, lastUser] = await Promise.all([
             Participant.findOne().sort({ teamId: -1 }),
             User.findOne({ role: 'participant' }).sort({ teamId: -1 })
         ]);
 
         let nextTeamNum = 1;
-        const lastTeamId = lastParticipant?.teamId || lastUser?.teamId;
 
-        if (lastTeamId) {
-            const match = lastTeamId.match(/VIBE-(\d+)/);
-            if (match) {
-                nextTeamNum = parseInt(match[1]) + 1;
-            }
-        }
+        const getNum = (id: string | undefined): number => {
+            if (!id) return 0;
+            const match = id.match(/VIBE-(\d+)/);
+            return match ? parseInt(match[1]) : 0;
+        };
+
+        const lastParticipantNum = getNum(lastParticipant?.teamId);
+        const lastUserNum = getNum(lastUser?.teamId);
+
+        nextTeamNum = Math.max(lastParticipantNum, lastUserNum) + 1;
 
         const teamId = `VIBE-${String(nextTeamNum).padStart(3, '0')}`;
         const teamEmail = `${String(nextTeamNum).padStart(3, '0')}@vibe.com`;
         const passkey = generatePasskey();
 
-        // Determine ticket type - Default to Hackathon
-        const mappedType = 'Hackathon';
+        // Determine ticket type details
+        const mappedType = ticketType === 'online' ? 'Online' : 'Hackathon';
+        const isOnline = ticketType === 'online';
+        const whatsappLink = isOnline
+            ? (settings?.onlineWhatsappUrl || '#')
+            : (process.env.WHATSAPP_HACKATHON_LINK || '#');
 
-        // 1. Check for Duplicate Transaction ID
+        // 4. Duplicate Checks
         const existingTransaction = await Participant.findOne({ transactionId });
         if (existingTransaction) {
-            return NextResponse.json(
-                { error: 'This Transaction ID has already been used for registration.' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'This Transaction ID has already been used for registration.' }, { status: 400 });
         }
 
-        // 2. Upload Screenshot to Google Drive FIRST
+        // 5. Upload Screenshot
         let driveUrl = '';
-        if (screenshotSource) {
+        if (screenshotSource && screenshotSource !== 'BUFFER-REQUEST') {
             try {
-                driveUrl = await uploadToDrive(screenshotSource, `Payment_${teamId}`);
+                // Using uploadToFolder instead of uploadToDrive to support dynamic folder selection
+                const { uploadToFolder, ensureFolderExists } = await import('@/lib/gdrive');
+
+                let folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+
+                if (!folderId) {
+                    console.error("Missing Google Drive Folder ID");
+                    throw new Error("Server Configuration Error: Missing Drive Folder ID");
+                }
+
+                if (isOnline) {
+                    try {
+                        // Create or get 'Online Payments' subfolder
+                        folderId = await ensureFolderExists('Online Payments', folderId);
+                    } catch (folderError) {
+                        console.error('Failed to ensure Online Payments folder, falling back to root:', folderError);
+                        // Fallback to root folderId which is already set
+                    }
+                }
+
+                driveUrl = await uploadToFolder(
+                    screenshotSource,
+                    `Payment_${teamId}.jpg`, // Ensure extension is added as uploadToFolder might expect it or we add it
+                    folderId,
+                    'image/jpeg'
+                );
+
                 if (!driveUrl) throw new Error('GDrive upload returned empty URL');
             } catch (driveError: any) {
                 console.error('Registration aborted: GDrive Upload failed:', driveError);
-                return NextResponse.json(
-                    { error: 'Payment verification failed. Please try again later.' },
-                    { status: 500 }
-                );
+                return NextResponse.json({ error: 'Payment verification failed. Please try again later.' }, { status: 500 });
             }
         }
 
-        // 3. Create ONE User for the Team
-        const teamUser = await User.create({
+        // 6. Create User
+        await User.create({
             email: teamEmail,
             name: `Team ${teamId}`,
             role: 'participant',
@@ -119,38 +154,27 @@ export async function POST(request: NextRequest) {
             teamId: teamId,
         });
 
-        // 2. Create Participant Details for each member
+        // 7. Create Participants
         const participantsToCreate = members.map((m: any, index: number) => ({
             participantId: generateParticipantId(teamId, index),
             teamId,
             name: m.fullName,
             email: m.email,
-            college: m.college || 'Unknown', // Use member's college, not team-level
+            college: m.college || 'Unknown',
             city: m.city || '',
             department: m.department,
             whatsapp: m.whatsapp,
             year: m.year,
             linkedin: m.linkedin,
             type: mappedType,
+            ticketType: isOnline ? 'online' : 'hackathon',
             paymentScreenshotUrl: driveUrl || (typeof screenshotSource === 'string' ? screenshotSource : ''),
             transactionId: transactionId,
         }));
 
         const createdParticipants = await Participant.insertMany(participantsToCreate);
 
-        const response = NextResponse.json(
-            {
-                success: true,
-                teamId,
-                teamEmail,
-                passkey,
-                participants: createdParticipants,
-                message: 'Registration successful!',
-            },
-            { status: 201 }
-        );
-
-        // Send Email to all members PERSONAL emails
+        // 8. Send Emails
         const emailMembers = members.map((m: any) => ({
             name: m.fullName,
             college: m.college || 'Unknown',
@@ -160,49 +184,34 @@ export async function POST(request: NextRequest) {
         }));
 
         const personalEmails = members.map((m: any) => m.email);
-        // Use first member's college for email template
         const collegeForEmail = members[0]?.college || 'Unknown';
 
         const results = await Promise.allSettled(personalEmails.map((email: string) =>
-            // Force 'hackathon' as the ticket type for email purposes
-            sendEventPassEmail(email, teamId, emailMembers, collegeForEmail, 'hackathon', teamEmail, passkey)
+            sendEventPassEmail(email, teamId, emailMembers, collegeForEmail, isOnline ? 'online' : 'hackathon', teamEmail, passkey, whatsappLink)
         ));
 
         const wasAnyEmailScheduled = results.some((r: any) => r.value?.scheduled);
-        if (wasAnyEmailScheduled) {
-            console.warn(`Emails for team ${teamId} have been scheduled due to mail limit.`);
-        }
+        if (wasAnyEmailScheduled) console.warn(`Emails for team ${teamId} have been scheduled due to mail limit.`);
 
-        return NextResponse.json(
-            {
-                success: true,
-                teamId,
-                teamEmail,
-                passkey,
-                participants: createdParticipants,
-                message: wasAnyEmailScheduled
-                    ? 'Registration successful! Your pass will be emailed within 24 hours due to server limits.'
-                    : 'Registration successful! Check your email for the pass.',
-                scheduled: wasAnyEmailScheduled
-            },
-            { status: 201 }
-        );
+        return NextResponse.json({
+            success: true,
+            teamId,
+            teamEmail,
+            passkey,
+            participants: createdParticipants,
+            message: wasAnyEmailScheduled
+                ? 'Registration successful! Your pass will be emailed within 24 hours due to server limits.'
+                : 'Registration successful! Check your email for the pass.',
+            scheduled: wasAnyEmailScheduled
+        }, { status: 201 });
+
     } catch (error) {
         console.error('Registration error:', error);
-
-        // Handle duplicate email error (User or Participant)
         if (error && typeof error === 'object' && 'code' in error && (error as any).code === 11000) {
             const key = Object.keys((error as any).keyPattern || {})[0];
             const message = key === 'transactionId' ? 'This Transaction ID has already been used.' : 'Team ID or Email collision. Please try again.';
-            return NextResponse.json(
-                { error: message },
-                { status: 409 }
-            );
+            return NextResponse.json({ error: message }, { status: 409 });
         }
-
-        return NextResponse.json(
-            { error: 'Registration failed. Please try again.' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Registration failed. Please try again.' }, { status: 500 });
     }
 }

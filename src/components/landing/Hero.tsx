@@ -129,7 +129,7 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
 
     // Buffer Logic
     const isDeadlinePassed = settings?.registrationDeadline ? new Date() > new Date(settings.registrationDeadline) : false;
-    const isRegistrationClosed = settings?.registrationClosed === true || isDeadlinePassed;
+    const isRegistrationClosed = (settings?.registrationClosed === true || isDeadlinePassed) && !settings?.onlineRegistrationOpen;
 
     const isBuffer = !isRegistrationClosed && (hackathonReal >= hackathonLimit);
 
@@ -184,11 +184,13 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                 {!isRegistrationClosed && (
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-md hover:bg-white/10 transition-colors cursor-default">
                         <Flame className="w-4 h-4 text-brand-primary" />
-                        <span className="text-sm font-medium text-gray-200 tracking-wide">
-                            {settings?.eventDate ? new Date(settings.eventDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Jan 5th'} - 6th, 2026
+                        <span className="flex flex-col text-sm font-medium text-gray-200 tracking-wide">
+                            <span className="text-sm font-medium text-gray-200 tracking-wide">
+                                Jan 5th - 7th, 2026
+                            </span>
+                            {/* <div className="w-1 h-1 rounded-full bg-gray-500"></div> */}
+                            <span className="text-sm font-medium text-gray-400">Online Event</span>
                         </span>
-                        <div className="w-1 h-1 rounded-full bg-gray-500"></div>
-                        <span className="text-sm font-medium text-gray-400">ANITS</span>
                     </div>
                 )}
                 {isRegistrationClosed && (
@@ -241,28 +243,34 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                         <div>
                             <h4 className="text-yellow-400 font-bold text-sm mb-1">Important Update</h4>
                             <p className="text-gray-300 text-sm">
-                                The Gen AI Workshop component has been <strong className="text-yellow-300">cancelled</strong>.
-                                This event is now exclusively a <strong className="text-brand-primary">24-Hour Hackathon</strong> on Jan 5-6, 2026.
+                                We have reached <strong className="text-yellow-300">Maximum Capacity</strong> for offline spots.
+                                Online participation is now open at <strong className="text-brand-primary">Starts from ₹259</strong>. Join us remotely!
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Cross-College Collaboration Badge */}
-                <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-md">
-                    <span className="text-2xl">🤝</span>
-                    <span className="text-sm font-medium text-emerald-300">Cross-College Teams Welcome!</span>
+                {/* Important Dates Banner */}
+                <div className="mt-4 flex flex-wrap justify-center gap-4 text-sm text-gray-400">
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                        <span className="text-red-400 font-bold">Jan 4th:</span> Reg Closes
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                        <span className="text-blue-400 font-bold">Jan 6th:</span> Submission
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                        <span className="text-green-400 font-bold">Jan 7th:</span> Final Eval
+                    </div>
                 </div>
 
-                {/* Live Activity Badge */}
-                <RecentActivityBadge />
+
 
                 {/* Registration Deadline Banner */}
                 <div className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-red-500/10 border-2 border-red-500/30 backdrop-blur-md">
                     <span className="text-lg">⏰</span>
                     <div className="flex flex-col">
                         <span className="text-xs font-bold text-red-400 uppercase tracking-wider">Registration Closes</span>
-                        <span className="text-sm font-bold text-white">Dec 31st, 2025</span>
+                        <span className="text-sm font-bold text-white">Jan 4th, 2026</span>
                     </div>
                 </div>
 
@@ -272,6 +280,12 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                         {!isRegistrationClosed && (
                             <div className={`px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider ${isBuffer ? 'bg-orange-500/10 border-orange-500 text-orange-400' : 'bg-green-500/10 border-green-500 text-green-400 animate-pulse'}`}>
                                 {isBuffer ? "High Demand • Request Slot" : `🔥 Only ${Math.max(5, Math.min(287, minLeft))} Spots Left`}
+                            </div>
+                        )}
+
+                        {settings?.onlineRegistrationOpen && !isRegistrationClosed && (
+                            <div className="px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                                <span className="text-lg leading-none">🌐</span> Online Option Available
                             </div>
                         )}
 
@@ -294,7 +308,10 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                                 >
                                     <div className="absolute inset-0 bg-linear-to-r from-brand-primary to-white opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                     <span className="relative flex items-center gap-3">
-                                        Register Now <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                        {(settings?.onlineRegistrationOpen === true || (settings?.onlineRegistrationOpen !== false && settings?.registrationClosed))
+                                            ? "Register for Online Event"
+                                            : "Register Now"
+                                        } <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                     </span>
                                 </Button>
                             )
@@ -313,7 +330,7 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                             Starts From
                         </div>
                         <div className="text-3xl font-bold text-white font-mono">
-                            ₹309 <span className="text-lg text-gray-500 font-normal">/ person</span>
+                            ₹259 <span className="text-lg text-gray-500 font-normal">/ person</span>
                         </div>
 
                         {!isRegistrationClosed && (
@@ -337,7 +354,7 @@ const Hero: React.FC<HeroProps> = ({ onRegisterClick }) => {
                         <div className="h-10 flex items-center justify-center mb-1">
                             <span className="text-2xl font-bold text-white font-mono group-hover:text-brand-primary transition-colors">
                                 {(() => {
-                                    if (!settings?.prizePool) return '60K+';
+                                    if (!settings?.prizePool) return '30K+';
                                     const num = parseInt(settings.prizePool.replace(/[^0-9]/g, ''), 10);
                                     return !isNaN(num) && num >= 1000 ? `${Math.floor(num / 1000)}K+` : settings.prizePool;
                                 })()}

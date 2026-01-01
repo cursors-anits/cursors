@@ -14,9 +14,9 @@ export interface IParticipant {
     linkedin?: string;
     domain?: string;
     transactionId: string;
-    ticketType?: 'hackathon' | 'combo';
+    ticketType?: 'hackathon' | 'combo' | 'online';
     amountPaid?: number;
-    type: 'Hackathon';
+    type: 'Hackathon' | 'Online' | 'Combo';
     status: 'pending' | 'approved' | 'rejected';
     isManual?: boolean;
     assignedLab?: string;
@@ -128,8 +128,12 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
         },
         type: {
             type: String,
-            enum: ['Hackathon'],
+            enum: ['Hackathon', 'Online'],
             required: true,
+        },
+        ticketType: {
+            type: String,
+            enum: ['hackathon', 'combo', 'online'],
         },
         status: {
             type: String,
@@ -267,6 +271,11 @@ const ParticipantSchema = new Schema<IParticipant, ParticipantModel>(
 
 // Indexes for performance
 ParticipantSchema.index({ status: 1 });
+
+// Force model rebuild in development to pick up schema changes
+if (process.env.NODE_ENV === 'development' && mongoose.models.Participant) {
+    delete mongoose.models.Participant;
+}
 
 const Participant = (mongoose.models.Participant as ParticipantModel) || mongoose.model<IParticipant, ParticipantModel>('Participant', ParticipantSchema);
 

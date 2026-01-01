@@ -28,33 +28,43 @@ export async function POST(
 
         await dbConnect();
 
-        // 1. Check Submission Window
-        const settings = await Settings.findOne();
-        if (!settings?.submissionWindowOpen && !process.env.NEXT_PUBLIC_DEV_MODE) {
-            // Strict check
-        }
-
-        if (!settings?.submissionWindowOpen) {
-            return NextResponse.json({ error: 'Submissions are not currently open.' }, { status: 403 });
-        }
-
-        if (settings.submissionWindowStartTime) {
-            const ONE_HOUR = 60 * 60 * 1000;
-            const now = Date.now();
-            const start = new Date(settings.submissionWindowStartTime).getTime();
-            if (now > start + ONE_HOUR) {
-                return NextResponse.json({ error: 'Submission window has closed (1 hour limit expired).' }, { status: 403 });
-            }
-        }
-
+        // Fetch Participant Early to check for Online Status
         let participant = await Participant.findOne({ participantId: id });
-
         if (!participant && mongoose.Types.ObjectId.isValid(id)) {
             participant = await Participant.findById(id);
         }
 
         if (!participant) {
             return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+        }
+
+        const isOnline = participant.type === 'Online' || participant.ticketType === 'online';
+        const settings = await Settings.findOne();
+
+        // 1. Check Submission Window
+        if (isOnline) {
+            if (!settings?.onlineSubmissionOpen) {
+                return NextResponse.json({ error: 'Online submissions are not currently open.' }, { status: 403 });
+            }
+            // Bypass other time checks for online users when their specific toggle is ON
+        } else {
+            // Offline Users - Strict Checks
+            if (!settings?.submissionWindowOpen && !process.env.NEXT_PUBLIC_DEV_MODE) {
+                // Strict check implicit fallthrough
+            }
+
+            if (!settings?.submissionWindowOpen) {
+                return NextResponse.json({ error: 'Submissions are not currently open.' }, { status: 403 });
+            }
+
+            if (settings.submissionWindowStartTime) {
+                const ONE_HOUR = 60 * 60 * 1000;
+                const now = Date.now();
+                const start = new Date(settings.submissionWindowStartTime).getTime();
+                if (now > start + ONE_HOUR) {
+                    return NextResponse.json({ error: 'Submission window has closed (1 hour limit expired).' }, { status: 403 });
+                }
+            }
         }
 
         if (participant.submissionStatus === 'verified') {

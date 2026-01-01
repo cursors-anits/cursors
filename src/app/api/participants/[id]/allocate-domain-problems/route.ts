@@ -35,11 +35,36 @@ export async function POST(
             return NextResponse.json({ error: 'Domain is required' }, { status: 400 });
         }
 
-        // 1. Get Assignment
-        const assignment = await ProblemAssignment.findOne({ participantId: id });
+        // 1. Get Assignment & Participant
+        let assignment = await ProblemAssignment.findOne({ participantId: id });
+        const participant = await Participant.findOne({ participantId: id });
+
+        if (!participant) return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+
         if (!assignment) {
-            // Should usually exist if "Allocated" state is true, but handle case where it doesn't
-            return NextResponse.json({ error: 'Assignment not found. Please wait for admin allocation.' }, { status: 404 });
+            // Check for Online User Scenario
+            if (participant.type === 'Online' || participant.ticketType === 'online') {
+                const { default: Settings } = await import('@/lib/db/models/Settings');
+                const settings = await Settings.findOne({});
+
+                if (settings?.onlineProblemSelectionOpen) {
+                    // Create new assignment for online user
+                    assignment = new ProblemAssignment({
+                        participantId: id,
+                        teamId: participant.teamId || '',
+                        offeredProblems: [],
+                        isConfirmed: false,
+                        refreshCount: 0,
+                        maxRefreshes: 0,
+                        assignedAt: new Date()
+                    });
+                    await assignment.save();
+                } else {
+                    return NextResponse.json({ error: 'Online problem selection is currently closed' }, { status: 403 });
+                }
+            } else {
+                return NextResponse.json({ error: 'Assignment not found. Please wait for admin allocation.' }, { status: 404 });
+            }
         }
 
         if (assignment.isConfirmed) {
@@ -47,8 +72,7 @@ export async function POST(
         }
 
         // 2. Neighbor Logic Setup
-        const participant = await Participant.findOne({ participantId: id });
-        if (!participant) return NextResponse.json({ error: 'Participant not found' }, { status: 404 });
+        // Participant already fetched above
 
         // Update participant domain preference immediately
         participant.domain = domain;
