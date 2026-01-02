@@ -31,10 +31,10 @@ export async function GET(request: Request) {
 
         // 3. Calculate Days Left (Static or Dynamic)
         // Ideally calculate `daysLeft` based on `settings.hackathonStartDate`
-        const startDate = settings.hackathonStartDate || new Date('2026-01-05');
+        const startDate = settings.eventDate || new Date('2026-01-05');
         const now = new Date();
-        const diffTime = Math.abs(startDate.getTime() - now.getTime());
-        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const diffTime = Math.max(0, startDate.getTime() - now.getTime());
+        const daysLeft = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
         const template = getEventReminderTemplate(daysLeft);
         const subject = `⏳ ${daysLeft} Days Left: Vibe Coding 2026`;

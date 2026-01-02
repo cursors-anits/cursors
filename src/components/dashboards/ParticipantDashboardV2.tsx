@@ -5,8 +5,8 @@ import Image from 'next/image';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { User } from '@/types';
 import {
-    QrCode,
     AlertTriangle,
+    QrCode,
     HelpCircle,
     MessageSquare,
     MapPin,
@@ -24,7 +24,12 @@ import {
     Download,
     Upload,
     ThumbsUp,
-    ThumbsDown
+    ThumbsDown,
+    Bus,
+    Train,
+    Plane,
+    Navigation,
+    Instagram
 } from 'lucide-react';
 import { useData } from '@/lib/context/DataContext';
 import { Button } from '@/components/ui/button';
@@ -45,6 +50,7 @@ import EventChecklist from '@/components/dashboards/EventChecklist';
 import ProblemSelection from '@/components/dashboards/ProblemSelection';
 import Link from 'next/link';
 import ProjectSubmission from '@/components/dashboards/ProjectSubmission';
+import SocialFeed from '@/components/social/SocialFeed';
 
 interface ParticipantDashboardProps {
     user: User;
@@ -57,6 +63,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
     const searchParams = useSearchParams();
     const pathname = usePathname();
 
+    const [activeTab, setActiveTab] = useState('dashboard');
     const showIdCard = searchParams.get('idcard') === 'true';
 
     const setShowIdCard = (show: boolean) => {
@@ -138,6 +145,7 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                 scale: 3, // High resolution
                 backgroundColor: '#0a0a0a',
                 logging: false,
+                useCORS: true,
             });
 
             const link = document.createElement('a');
@@ -243,21 +251,30 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
         }
     }, [participantData?.participantId, reportType, reportMessage, user.teamId, fetchSupportRequests]);
 
+    const teamMembers = useMemo(() => {
+        return participants.filter(p => p.teamId === user.teamId);
+    }, [participants, user.teamId]);
+
     const navItems: NavItem[] = [
         {
             label: 'Dashboard',
             value: 'dashboard',
             icon: LayoutDashboard
+        },
+        {
+            label: 'Social Feed',
+            value: 'social',
+            icon: Instagram
         }
     ];
 
     return (
         <DashboardShell
-            title="Participant Hub"
-            description="Your event control center"
+            title={activeTab === 'dashboard' ? "Participant Hub" : "Social Feed"}
+            description={activeTab === 'dashboard' ? "Your event control center" : "Share moments with other teams"}
             items={navItems}
-            activeTab="dashboard"
-            onTabChange={() => { }}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
             user={{
                 name: user.name,
                 email: user.email,
@@ -266,903 +283,1018 @@ const ParticipantDashboardV2: React.FC<ParticipantDashboardProps> = ({ user }) =
                 teamId: user.teamId
             }}
         >
-            <div className="space-y-6">
-                {/* Hero Welcome Section */}
-                <Card className="bg-linear-to-br from-brand-primary/20 via-brand-surface to-brand-dark border-brand-primary/30 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/10 rounded-full blur-3xl" />
-                    <CardContent className="p-8 relative z-10">
-                        <div className="flex items-start justify-between flex-wrap gap-6">
-                            <div className="flex items-start gap-4">
-                                {/* Avatar with Upload */}
-                                <div className="relative group shrink-0">
-                                    <div className="w-20 h-20 rounded-xl bg-brand-dark border-2 border-brand-primary/30 flex items-center justify-center overflow-hidden relative">
-                                        {participantData?.avatarUrl ? (
-                                            <Image
-                                                src={participantData.avatarUrl}
-                                                alt="Avatar"
-                                                fill
-                                                sizes="80px"
-                                                className="object-cover"
-                                            />
-                                        ) : (
-                                            <span className="text-3xl font-bold text-brand-primary">{avatarFallback}</span>
-                                        )}
+            {activeTab === 'dashboard' ? (
+                <div>
+                    <div className="space-y-6">
+                        {/* Hero Welcome Section */}
+                        <Card className="bg-linear-to-br from-brand-primary/20 via-brand-surface to-brand-dark border-brand-primary/30 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-brand-primary/10 rounded-full blur-3xl" />
+                            <CardContent className="p-8 relative z-10">
+                                <div className="flex items-start justify-between flex-wrap gap-6">
+                                    <div className="flex items-start gap-4">
+                                        {/* Avatar with Upload */}
+                                        <div className="relative group shrink-0">
+                                            <div className="w-20 h-20 rounded-xl bg-brand-dark border-2 border-brand-primary/30 flex items-center justify-center overflow-hidden relative">
+                                                {participantData?.avatarUrl ? (
+                                                    <Image
+                                                        src={participantData.avatarUrl}
+                                                        alt="Avatar"
+                                                        fill
+                                                        sizes="80px"
+                                                        className="object-cover"
+                                                    />
+                                                ) : (
+                                                    <span className="text-3xl font-bold text-brand-primary">{avatarFallback}</span>
+                                                )}
+                                            </div>
+                                            {/* Upload Button Overlay */}
+                                            <Label
+                                                htmlFor="avatar-upload-hero"
+                                                className="absolute bottom-0 right-0 w-7 h-7 bg-brand-dark rounded-full flex items-center justify-center cursor-pointer hover:bg-brand-dark/80 transition-colors shadow-lg"
+                                            >
+                                                {isAvatarUploading ? (
+                                                    <Loader2 className="w-4 h-4 text-white animate-spin" />
+                                                ) : (
+                                                    <Camera className="w-4 h-4 text-white" />
+                                                )}
+                                                <Input
+                                                    id="avatar-upload-hero"
+                                                    type="file"
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    disabled={isAvatarUploading}
+                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) handleAvatarUpload(file);
+                                                    }}
+                                                />
+                                            </Label>
+                                        </div>
+
+                                        <div>
+                                            <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+                                                Welcome back, <span className="text-brand-primary">{user.name.split(' ')[0]}</span>! 🎉
+                                            </h1>
+                                            <div className="flex flex-wrap gap-2 items-center">
+                                                <Badge variant="outline" className="bg-brand-primary/20 text-brand-primary border-brand-primary/50 font-mono">
+                                                    {user.teamId || 'N/A'}
+                                                </Badge>
+                                                <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">
+                                                    {participantData?.type || 'Participant'}
+                                                </Badge>
+                                            </div>
+                                        </div>
                                     </div>
-                                    {/* Upload Button Overlay */}
-                                    <Label
-                                        htmlFor="avatar-upload-hero"
-                                        className="absolute bottom-0 right-0 w-7 h-7 bg-brand-dark rounded-full flex items-center justify-center cursor-pointer hover:bg-brand-dark/80 transition-colors shadow-lg"
-                                    >
-                                        {isAvatarUploading ? (
-                                            <Loader2 className="w-4 h-4 text-white animate-spin" />
-                                        ) : (
-                                            <Camera className="w-4 h-4 text-white" />
-                                        )}
-                                        <Input
-                                            id="avatar-upload-hero"
-                                            type="file"
-                                            className="hidden"
-                                            accept="image/*"
-                                            disabled={isAvatarUploading}
-                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                                const file = e.target.files?.[0];
-                                                if (file) handleAvatarUpload(file);
-                                            }}
-                                        />
-                                    </Label>
-                                </div>
-
-                                <div>
-                                    <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-                                        Welcome back, <span className="text-brand-primary">{user.name.split(' ')[0]}</span>! 🎉
-                                    </h1>
-                                    <div className="flex flex-wrap gap-2 items-center">
-                                        <Badge variant="outline" className="bg-brand-primary/20 text-brand-primary border-brand-primary/50 font-mono">
-                                            {user.teamId || 'N/A'}
-                                        </Badge>
-                                        <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">
-                                            {participantData?.type || 'Participant'}
-                                        </Badge>
+                                    {/* Countdown Timer */}
+                                    <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+                                        <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Event Starts In</div>
+                                        <div className="text-2xl font-bold text-brand-primary font-mono">
+                                            {(() => {
+                                                const eventDate = new Date('2026-01-05T10:00:00'); // Updated start time to morning? Or just keep date and ensure logic.
+                                                const now = new Date();
+                                                const diff = eventDate.getTime() - now.getTime();
+                                                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                                                return days > 0 ? `${days} Days` : 'Starting Soon!';
+                                            })()}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            {/* Countdown Timer */}
-                            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
-                                <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Event Starts In</div>
-                                <div className="text-2xl font-bold text-brand-primary font-mono">
-                                    {(() => {
-                                        const eventDate = new Date('2026-01-05T10:00:00'); // Updated start time to morning? Or just keep date and ensure logic.
-                                        const now = new Date();
-                                        const diff = eventDate.getTime() - now.getTime();
-                                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                                        return days > 0 ? `${days} Days` : 'Starting Soon!';
-                                    })()}
-                                </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Hint Banner - First Time Users */}
-                {showHintBanner && (
-                    <Card className="bg-blue-500/10 border-blue-500/30">
-                        <CardContent className="p-4">
-                            <div className="flex items-start gap-3">
-                                <Lightbulb className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                                <div className="flex-1">
-                                    <p className="text-sm text-blue-200 font-medium">
-                                        💡 <strong>Tip:</strong> Click any card below to access features and manage your event experience!
-                                    </p>
-                                </div>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 shrink-0"
-                                    onClick={dismissHintBanner}
-                                >
-                                    <X className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Quick Actions Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {/* Digital Pass Card */}
-                    <Card
-                        className="bg-brand-surface border-green-500/20 hover:border-green-500/40 hover:scale-105 hover:shadow-xl hover:shadow-green-500/20 transition-all cursor-pointer group"
-                        onClick={() => setShowIdCard(true)}
-                    >
-                        <CardContent className="p-6">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="p-3 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
-                                    <QrCode className="w-6 h-6 text-green-400" />
-                                </div>
-                                <Badge className="bg-green-500/20 text-green-300">Ready</Badge>
-                            </div>
-                            <h3 className="font-bold text-white mb-1 flex items-center justify-between">
-                                Digital Pass
-                                <ChevronRight className="w-4 h-4 text-green-400 group-hover:translate-x-1 transition-transform" />
-                            </h3>
-                            <p className="text-xs text-gray-400 mb-3">View your ID card</p>
-                            <p className="text-xs text-green-400 font-medium flex items-center gap-1">
-                                Open <ChevronRight className="w-3 h-3" />
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    {/* Event Checklist Card - OFFLINE ONLY */}
-                    {!isOnline && (
-                        <Card
-                            className="bg-brand-surface border-blue-500/20 hover:border-blue-500/40 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/20 transition-all cursor-pointer group"
-                            onClick={() => setIsChecklistModalOpen(true)}
-                        >
-                            <CardContent className="p-6">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="p-3 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                                        <LayoutDashboard className="w-6 h-6 text-blue-400" />
-                                    </div>
-                                    <Badge className="bg-blue-500/20 text-blue-300">
-                                        {participantData?.eventChecklist?.length || 0}/8
-                                    </Badge>
-                                </div>
-                                <h3 className="font-bold text-white mb-1 flex items-center justify-between">
-                                    Event Checklist
-                                    <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
-                                </h3>
-                                <p className="text-xs text-gray-400 mb-3">Prepare for the event</p>
-                                <p className="text-xs text-blue-400 font-medium flex items-center gap-1">
-                                    Open <ChevronRight className="w-3 h-3" />
-                                </p>
                             </CardContent>
                         </Card>
-                    )}
 
-
-
-                    {/* Problem Statement Card - OFFLINE ONLY */}
-                    {!isOnline && (
-                        <Card
-                            className="bg-brand-surface border-purple-500/20 hover:border-purple-500/40 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/20 transition-all cursor-pointer group"
-                            onClick={() => setIsProblemModalOpen(true)}
-                        >
-                            <CardContent className="p-6">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="p-3 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
-                                        <Zap className="w-6 h-6 text-purple-400" />
-                                    </div>
-                                    <Badge className={participantData?.hasConfirmedProblem ? "bg-green-500/20 text-green-300" : (participantData?.problemAssignmentId ? "bg-brand-primary/20 text-brand-primary animate-pulse" : "bg-orange-500/20 text-orange-300")}>
-                                        {participantData?.hasConfirmedProblem ? '✓ Done' : (participantData?.problemAssignmentId ? 'Action Needed' : 'Pending')}
-                                    </Badge>
-                                </div>
-                                <h3 className="font-bold text-white mb-1 flex items-center justify-between">
-                                    Problem Statement
-                                    <ChevronRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform" />
-                                </h3>
-                                <p className="text-xs text-gray-400 mb-3">Select your challenge</p>
-                                <p className="text-xs text-purple-400 font-medium flex items-center gap-1">
-                                    Open <ChevronRight className="w-3 h-3" />
-                                </p>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {participantData && !isOnline && (
-                        <Card
-                            className="bg-brand-surface border-blue-500/20 hover:border-blue-500/40 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/20 transition-all cursor-pointer group"
-                            onClick={() => setIsSubmissionModalOpen(true)}
-                        >
-                            <CardContent className="p-6">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="p-3 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                                        <Upload className="w-6 h-6 text-blue-400" />
-                                    </div>
-                                    <Badge className={`${participantData?.projectRepo ? (participantData.submissionStatus === 'verified' ? "bg-green-500/20 text-green-300" : "bg-yellow-500/20 text-yellow-300") : "bg-blue-500/20 text-blue-300"}`}>
-                                        {participantData?.projectRepo ? (participantData.submissionStatus === 'verified' ? '✓ Verified' : '⚠ Flagged') : 'Submit'}
-                                    </Badge>
-                                </div>
-                                <h3 className="font-bold text-white mb-1 flex items-center justify-between">
-                                    Project Submission
-                                    <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
-                                </h3>
-                                <p className="text-xs text-gray-400 mb-3">Submit your repository</p>
-                                <p className="text-xs text-blue-400 font-medium flex items-center gap-1">
-                                    Open <ChevronRight className="w-3 h-3" />
-                                </p>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* Get Support Card */}
-                    <Card
-                        className="bg-brand-surface border-orange-500/20 hover:border-orange-500/40 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/20 transition-all cursor-pointer group"
-                        onClick={() => setIsSupportMenuOpen(true)}
-                    >
-                        <CardContent className="p-6">
-                            <div className="flex items-start justify-between mb-4">
-                                <div className="p-3 bg-orange-500/10 rounded-lg group-hover:bg-orange-500/20 transition-colors">
-                                    <HelpCircle className="w-6 h-6 text-orange-400" />
-                                </div>
-                                <Badge className="bg-orange-500/20 text-orange-300">24/7</Badge>
-                            </div>
-                            <h3 className="font-bold text-white mb-1 flex items-center justify-between">
-                                Get Support
-                                <ChevronRight className="w-4 h-4 text-orange-400 group-hover:translate-x-1 transition-transform" />
-                            </h3>
-                            <p className="text-xs text-gray-400 mb-3">Need help? Ask us</p>
-                            <p className="text-xs text-orange-400 font-medium flex items-center gap-1">
-                                Open <ChevronRight className="w-3 h-3" />
-                            </p>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Information Cards Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Lab Allocation Card / Online Info */}
-                    <Card className="bg-brand-surface border-brand-primary/20" id="online-hub-section">
-                        <CardContent className="p-6">
-                            <div className="flex items-center gap-2 mb-4">
-                                {isOnline ? <Zap className="w-5 h-5 text-brand-primary" /> : <MapPin className="w-5 h-5 text-brand-primary" />}
-                                <h3 className="font-bold text-white">{isOnline ? 'Online Participation' : 'Lab Allocation'}</h3>
-                            </div>
-                            <div className="space-y-3">
-                                {isOnline ? (
-                                    <div className="space-y-4">
-                                        <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
-                                            <p className="text-sm text-cyan-200">
-                                                You are participating remotely. Use the options below to manage your hackathon participation.
+                        {/* Hint Banner - First Time Users */}
+                        {showHintBanner && (
+                            <Card className="bg-blue-500/10 border-blue-500/30">
+                                <CardContent className="p-4">
+                                    <div className="flex items-start gap-3">
+                                        <Lightbulb className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                                        <div className="flex-1">
+                                            <p className="text-sm text-blue-200 font-medium">
+                                                💡 <strong>Tip:</strong> Click any card below to access features and manage your event experience!
                                             </p>
                                         </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            {/* Problem Statement Button */}
-                                            <div
-                                                className={`p-3 border rounded-lg cursor-pointer transition-colors ${settings?.onlineProblemSelectionOpen ? 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20' : 'bg-gray-500/5 border-white/5 opacity-50 cursor-not-allowed'}`}
-                                                onClick={() => {
-                                                    if (settings?.onlineProblemSelectionOpen) {
-                                                        setIsProblemModalOpen(true);
-                                                    } else {
-                                                        toast.error('Problem selection is currently closed for online participants.');
-                                                    }
-                                                }}
-                                            >
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <Zap className={`w-5 h-5 ${settings?.onlineProblemSelectionOpen ? 'text-purple-400' : 'text-gray-500'}`} />
-                                                    <Badge className={`${settings?.onlineProblemSelectionOpen ? 'bg-purple-500/20 text-purple-300' : 'bg-gray-500/20 text-gray-400'} text-[10px]`}>
-                                                        {participantData?.hasConfirmedProblem ? 'Confirmed' : 'Action'}
-                                                    </Badge>
-                                                </div>
-                                                <p className="font-bold text-white text-sm">Select Problem</p>
-                                                <p className="text-xs text-gray-400">Choose your domain</p>
-                                            </div>
-
-                                            {/* Submission Button */}
-                                            <div
-                                                className={`p-3 border rounded-lg cursor-pointer transition-colors ${settings?.onlineSubmissionOpen ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20' : 'bg-gray-500/5 border-white/5 opacity-50 cursor-not-allowed'}`}
-                                                onClick={() => {
-                                                    if (settings?.onlineSubmissionOpen) {
-                                                        setIsSubmissionModalOpen(true);
-                                                    } else {
-                                                        toast.error('Project submission is currently closed for online participants.');
-                                                    }
-                                                }}
-                                            >
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <Upload className={`w-5 h-5 ${settings?.onlineSubmissionOpen ? 'text-blue-400' : 'text-gray-500'}`} />
-                                                    <Badge className={`${settings?.onlineSubmissionOpen ? 'bg-blue-500/20 text-blue-300' : 'bg-gray-500/20 text-gray-400'} text-[10px]`}>Final</Badge>
-                                                </div>
-                                                <p className="font-bold text-white text-sm">Submit Project</p>
-                                                <p className="text-xs text-gray-400">Post repository link</p>
-                                            </div>
-                                        </div>
-
                                         <Button
-                                            className="w-full bg-brand-primary text-brand-dark hover:bg-white mt-2"
-                                            onClick={() => window.open(settings?.onlineMeetUrl || 'https://meet.google.com/xxx-xxxx-xxx', '_blank')}
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-6 w-6 p-0 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 shrink-0"
+                                            onClick={dismissHintBanner}
                                         >
-                                            Join Meeting
+                                            <X className="w-4 h-4" />
                                         </Button>
-                                    </div>
-                                ) : (
-                                    <>
-                                        {/* Hackathon Lab */}
-                                        {participantData?.assignedHackathonLab ? (
-                                            <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="text-xs text-purple-300 font-semibold uppercase">Hackathon</p>
-                                                        <p className="text-white font-bold">{participantData.assignedHackathonLab}</p>
-                                                        {hackathonLabDetails?.roomNumber && (
-                                                            <p className="text-xs text-gray-400">Room: {hackathonLabDetails.roomNumber}</p>
-                                                        )}
-                                                        <p className="text-xs text-gray-400">Seat: {participantData.assignedSeat || 'TBD'}</p>
-                                                    </div>
-                                                    <Badge className="bg-purple-500 text-white">Day 1-2</Badge>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="p-3 bg-white/5 border border-white/10 rounded-lg">
-                                                <p className="text-sm text-gray-400">Hackathon lab assignment pending...</p>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Team Info Card */}
-                    <Card className="bg-brand-surface border-brand-primary/20">
-                        <CardContent className="p-6">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Users className="w-5 h-5 text-brand-primary" />
-                                <h3 className="font-bold text-white">Team Information</h3>
-                            </div>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-400">Team ID</span>
-                                    <span className="font-mono font-bold text-white">{user.teamId}</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-400">Ticket Type</span>
-                                    <Badge className="bg-brand-primary/20 text-brand-primary">{participantData?.type || 'N/A'}</Badge>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-400">Team Size</span>
-                                    <span className="font-bold text-white">{participants.filter(p => p.teamId === user.teamId).length} members</span>
-                                </div>
-
-                                {/* Aggregated College */}
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-sm text-gray-400">College(s)</span>
-                                    <span className="text-sm font-medium text-white text-right">
-                                        {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.college))].join(', ')}
-                                    </span>
-                                </div>
-
-                                {/* Aggregated Department */}
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-sm text-gray-400">Department(s)</span>
-                                    <span className="text-sm font-medium text-white text-right">
-                                        {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.department))].join(', ')}
-                                    </span>
-                                </div>
-
-                                {/* Aggregated Year */}
-                                <div className="flex flex-col gap-1">
-                                    <span className="text-sm text-gray-400">Year(s)</span>
-                                    <span className="text-sm font-medium text-white text-right">
-                                        {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.year))].join(', ')}
-                                    </span>
-                                </div>
-
-                                <Separator className="bg-white/10" />
-                                <div>
-                                    <p className="text-xs text-gray-400 mb-2">Team Members</p>
-                                    <div className="space-y-1">
-                                        {participants.filter(p => p.teamId === user.teamId).map((member, idx) => (
-                                            <div key={member.participantId} className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-full bg-brand-primary/20 flex items-center justify-center text-xs font-bold text-brand-primary">
-                                                    {idx + 1}
-                                                </div>
-                                                <span className="text-sm text-white">{member.name}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <Separator className="bg-white/10" />
-                                <div>
-                                    <p className="text-xs text-gray-400 mb-2">Contact Coordinator</p>
-                                    <div className="flex items-center gap-2">
-                                        <Phone className="w-4 h-4 text-brand-primary" />
-                                        <Link href="tel:8897892720" className="text-sm text-brand-primary hover:underline">
-                                            8897892720
-                                        </Link>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Progress Timeline */}
-                <Card className="bg-brand-surface border-brand-primary/20">
-                    <CardContent className="p-4 sm:p-6">
-                        <h3 className="font-bold text-white mb-4 sm:mb-6 text-center text-sm sm:text-base">Your Journey</h3>
-                        <div className="flex flex-col sm:flex-row items-center justify-between relative gap-4 sm:gap-0">
-                            {/* Progress Line */}
-                            <div className="absolute top-6 left-0 right-0 h-0.5 bg-white/10 hidden sm:block">
-                                <div
-                                    className="h-full bg-brand-primary transition-all"
-                                    style={{
-                                        width: participantData?.projectRepo ? '80%' :
-                                            (participantData?.hasConfirmedProblem ? '60%' :
-                                                (isOnline || participantData?.assignedLab ? '40%' : '20%'))
-                                    }}
-                                />
-                            </div>
-
-                            {/* Stage 1: Registration */}
-                            <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-brand-primary flex items-center justify-center shrink-0">
-                                    <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                                </div>
-                                <div className="flex-1 sm:flex-none text-left sm:text-center">
-                                    <Badge className="bg-green-500/20 text-green-300 mb-1">✓ Complete</Badge>
-                                    <span className="block text-xs text-gray-400">Registration</span>
-                                </div>
-                            </div>
-
-                            {/* Stage 2: Access / Lab Allocation */}
-                            <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
-                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${(isOnline || participantData?.assignedLab) ? 'bg-brand-primary' : 'bg-white/10'}`}>
-                                    <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                                </div>
-                                <div className="flex-1 sm:flex-none text-left sm:text-center">
-                                    <Badge className={(isOnline || participantData?.assignedLab) ? "bg-green-500/20 text-green-300 mb-1" : "bg-orange-500/20 text-orange-300 mb-1"}>
-                                        {(isOnline || participantData?.assignedLab) ? '✓ Ready' : '⏳ Pending'}
-                                    </Badge>
-                                    <span className="block text-xs text-gray-400">{isOnline ? 'Online Access' : 'Lab Allocation'}</span>
-                                </div>
-                            </div>
-
-                            {/* Stage 3: Problem */}
-                            <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
-                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${participantData?.hasConfirmedProblem ? 'bg-brand-primary' : 'bg-white/10'}`}>
-                                    <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                                </div>
-                                <div className="flex-1 sm:flex-none text-left sm:text-center">
-                                    <Badge className={participantData?.hasConfirmedProblem ? "bg-green-500/20 text-green-300 mb-1" : (participantData?.problemAssignmentId ? "bg-brand-primary/20 text-brand-primary mb-1 animate-pulse" : "bg-blue-500/20 text-blue-300 mb-1")}>
-                                        {participantData?.hasConfirmedProblem ? '✓ Confirmed' : (participantData?.problemAssignmentId ? 'Action Needed' : 'Wait')}
-                                    </Badge>
-                                    <span className="block text-xs text-gray-400">Problem</span>
-                                </div>
-                            </div>
-
-                            {/* Stage 4: Submission */}
-                            <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
-                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${participantData?.projectRepo ? 'bg-brand-primary' : 'bg-white/10'}`}>
-                                    <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                                </div>
-                                <div className="flex-1 sm:flex-none text-left sm:text-center">
-                                    <Badge className={participantData?.projectRepo ? "bg-green-500/20 text-green-300 mb-1" : "bg-purple-500/20 text-purple-300 mb-1"}>
-                                        {participantData?.projectRepo ? '✓ Submitted' : '🚀 Upload'}
-                                    </Badge>
-                                    <span className="block text-xs text-gray-400">Submission</span>
-                                </div>
-                            </div>
-
-                            {/* Stage 5: Presentation */}
-                            <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
-                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                                    <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                                </div>
-                                <div className="flex-1 sm:flex-none text-left sm:text-center">
-                                    <Badge className="bg-gray-500/20 text-gray-300 mb-1">Coming Soon</Badge>
-                                    <span className="block text-xs text-gray-400">Presentation</span>
-                                </div>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Checklist Modal */}
-            <Dialog open={isChecklistModalOpen} onOpenChange={setIsChecklistModalOpen}>
-                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-brand-dark border-white/20">
-                    <DialogHeader>
-                        <DialogTitle className="text-white text-xl">Event Preparation Checklist</DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                            Make sure you have everything ready for the event
-                        </DialogDescription>
-                    </DialogHeader>
-                    {participantData && (
-                        <EventChecklist
-                            participantId={participantData.participantId}
-                            initialCheckedItems={participantData.eventChecklist || []}
-                        />
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Project Submission Modal */}
-            <Dialog open={isSubmissionModalOpen} onOpenChange={setIsSubmissionModalOpen}>
-                <DialogContent className="max-w-2xl bg-brand-dark border-white/20">
-                    <DialogHeader className="sr-only">
-                        <DialogTitle>Project Submission</DialogTitle>
-                        <DialogDescription>Submit your project repository</DialogDescription>
-                    </DialogHeader>
-                    {participantData && (
-                        <ProjectSubmission participantId={participantData.participantId} />
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Problem Selection Modal */}
-            <Dialog open={isProblemModalOpen} onOpenChange={setIsProblemModalOpen}>
-                <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-brand-dark border-white/20">
-                    <DialogHeader>
-                        <DialogTitle className="text-white text-xl">Problem Statement Selection</DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                            Choose your challenge for the hackathon
-                        </DialogDescription>
-                    </DialogHeader>
-                    {participantData && (
-                        <ProblemSelection
-                            participantId={participantData.participantId}
-                            onSuccess={() => {
-                                fetchParticipants(true);
-                                // Optional: Close modal if desired? Or let them see confirmation?
-                                // "Problem Statement Card ... should update".
-                                // Keeping modal open lets them see "Confirmed!" message inside too.
-                            }}
-                        />
-                    )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Support Menu Modal */}
-            <Dialog open={isSupportMenuOpen} onOpenChange={setIsSupportMenuOpen}>
-                <DialogContent className="bg-brand-dark border-white/20 max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="text-white text-xl">Get Support</DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                            Choose the type of assistance you need
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-3">
-                        {/* Help Option */}
-                        <Card
-                            className="bg-brand-surface border-blue-500/20 hover:border-blue-500/40 transition-all cursor-pointer group"
-                            onClick={() => {
-                                setIsSupportMenuOpen(false);
-                                handleAction('Help');
-                            }}
-                        >
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                                        <HelpCircle className="w-6 h-6 text-blue-400" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-white mb-1">Request Help</h4>
-                                        <p className="text-xs text-gray-400">General questions or assistance</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* Complaint Option */}
-                        <Card
-                            className="bg-brand-surface border-orange-500/20 hover:border-orange-500/40 transition-all cursor-pointer group"
-                            onClick={() => {
-                                setIsSupportMenuOpen(false);
-                                handleAction('Complaint');
-                            }}
-                        >
-                            <CardContent className="p-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-orange-500/10 rounded-lg group-hover:bg-orange-500/20 transition-colors">
-                                        <MessageSquare className="w-6 h-6 text-orange-400" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-white mb-1">Submit Complaint</h4>
-                                        <p className="text-xs text-gray-400">Report an issue or concern</p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        {/* SOS Emergency Option - HIDE FOR ONLINE */}
-                        {!isOnline && (
-                            <Card
-                                className="bg-brand-surface border-red-500/20 hover:border-red-500/40 transition-all cursor-pointer group"
-                                onClick={() => {
-                                    setIsSupportMenuOpen(false);
-                                    handleAction('SOS');
-                                }}
-                            >
-                                <CardContent className="p-4">
-                                    <div className="flex items-center gap-4">
-                                        <div className="p-3 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
-                                            <AlertTriangle className="w-6 h-6 text-red-400" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-bold text-white mb-1">Emergency SOS</h4>
-                                            <p className="text-xs text-gray-400">Urgent help needed immediately</p>
-                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
                         )}
 
-                        {/* View My Requests History */}
-                        <Button
-                            variant="outline"
-                            className="w-full border-white/10 hover:bg-white/5"
-                            onClick={() => {
-                                setIsSupportMenuOpen(false);
-                                setShowRequestsHistory(true);
-                            }}
-                        >
-                            View My Requests
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
+                        {/* Quick Actions Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            {/* Digital Pass Card */}
+                            <Card
+                                className="bg-brand-surface border-green-500/20 hover:border-green-500/40 hover:scale-105 hover:shadow-xl hover:shadow-green-500/20 transition-all cursor-pointer group"
+                                onClick={() => setShowIdCard(true)}
+                            >
+                                <CardContent className="p-6">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="p-3 bg-green-500/10 rounded-lg group-hover:bg-green-500/20 transition-colors">
+                                            <QrCode className="w-6 h-6 text-green-400" />
+                                        </div>
+                                        <Badge className="bg-green-500/20 text-green-300">Ready</Badge>
+                                    </div>
+                                    <h3 className="font-bold text-white mb-1 flex items-center justify-between">
+                                        Digital Pass
+                                        <ChevronRight className="w-4 h-4 text-green-400 group-hover:translate-x-1 transition-transform" />
+                                    </h3>
+                                    <p className="text-xs text-gray-400 mb-3">View your ID card</p>
+                                    <p className="text-xs text-green-400 font-medium flex items-center gap-1">
+                                        Open <ChevronRight className="w-3 h-3" />
+                                    </p>
+                                </CardContent>
+                            </Card>
 
-            {/* Requests History Dialog */}
-            <Dialog open={showRequestsHistory} onOpenChange={setShowRequestsHistory}>
-                <DialogContent className="bg-brand-surface border-white/20 text-white max-w-lg max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>My Support Requests</DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                            History of your help requests and SOS alerts
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        {supportRequests.filter(r => r.teamId === user.teamId).length === 0 ? (
-                            <div className="text-center py-8 text-gray-500">
-                                <p>No history found.</p>
-                            </div>
-                        ) : (
-                            supportRequests
-                                .filter(r => r.teamId === user.teamId)
-                                .sort((a, b) => b.timestamp - a.timestamp)
-                                .map(req => (
-                                    <div key={req._id} className="p-4 rounded-lg bg-brand-dark border border-white/5">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <Badge variant={req.status === 'Resolved' ? 'default' : 'secondary'} className={req.status === 'Resolved' ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"}>
-                                                {req.status}
-                                            </Badge>
-                                            <span className="text-xs text-gray-500">{new Date(req.timestamp).toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${req.type === 'SOS' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                                                {req.type}
-                                            </span>
-                                            {req.message && <span className="text-sm font-medium text-gray-300">{req.message}</span>}
-                                        </div>
-                                        {req.reply && (
-                                            <div className="mt-3 pl-3 border-l-2 border-brand-primary/30">
-                                                <p className="text-xs text-gray-500 mb-1">Reply from Coordinator:</p>
-                                                <p className="text-sm text-white">{req.reply}</p>
-                                                {!req.participantReaction && (
-                                                    <div className="flex gap-2 mt-2">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            className="h-6 px-2 text-xs text-green-400 hover:text-green-300 hover:bg-green-500/10"
-                                                            onClick={() => handleReaction(req._id!, 'Like')}
-                                                        >
-                                                            <ThumbsUp className="w-3 h-3 mr-1" /> Helpful
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            className="h-6 px-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                                                            onClick={() => handleReaction(req._id!, 'Dislike')}
-                                                        >
-                                                            <ThumbsDown className="w-3 h-3 mr-1" /> Not Helpful
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                                {req.participantReaction && (
-                                                    <p className="text-xs mt-2 text-gray-400 italic">
-                                                        You found this {req.participantReaction === 'Like' ? 'Helpful' : 'Not Helpful'}
-                                                    </p>
-                                                )}
+                            {/* Event Checklist Card - OFFLINE ONLY */}
+                            {!isOnline && (
+                                <Card
+                                    className="bg-brand-surface border-blue-500/20 hover:border-blue-500/40 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/20 transition-all cursor-pointer group"
+                                    onClick={() => setIsChecklistModalOpen(true)}
+                                >
+                                    <CardContent className="p-6">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="p-3 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                                                <LayoutDashboard className="w-6 h-6 text-blue-400" />
                                             </div>
-                                        )}
-                                        {req.reply && !req.participantFollowUp && req.status !== 'Resolved' && (
-                                            <div className="mt-3">
-                                                {followUpId === req._id ? (
-                                                    <div className="flex gap-2 items-center">
-                                                        <Input
-                                                            placeholder="Type your follow-up..."
-                                                            value={followUpMessage}
-                                                            onChange={(e) => setFollowUpMessage(e.target.value)}
-                                                            className="flex-1 bg-brand-dark/50 border-white/10"
-                                                        />
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={handleFollowUp}
-                                                            disabled={isFollowUpLoading}
-                                                        >
-                                                            {isFollowUpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            onClick={() => {
-                                                                setFollowUpId(null);
-                                                                setFollowUpMessage('');
-                                                            }}
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </Button>
+                                            <Badge className="bg-blue-500/20 text-blue-300">
+                                                {participantData?.eventChecklist?.length || 0}/8
+                                            </Badge>
+                                        </div>
+                                        <h3 className="font-bold text-white mb-1 flex items-center justify-between">
+                                            Event Checklist
+                                            <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
+                                        </h3>
+                                        <p className="text-xs text-gray-400 mb-3">Prepare for the event</p>
+                                        <p className="text-xs text-blue-400 font-medium flex items-center gap-1">
+                                            Open <ChevronRight className="w-3 h-3" />
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+
+
+                            {/* Problem Statement Card - OFFLINE ONLY */}
+                            {!isOnline && (
+                                <Card
+                                    className="bg-brand-surface border-purple-500/20 hover:border-purple-500/40 hover:scale-105 hover:shadow-xl hover:shadow-purple-500/20 transition-all cursor-pointer group"
+                                    onClick={() => setIsProblemModalOpen(true)}
+                                >
+                                    <CardContent className="p-6">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="p-3 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
+                                                <Zap className="w-6 h-6 text-purple-400" />
+                                            </div>
+                                            <Badge className={participantData?.hasConfirmedProblem ? "bg-green-500/20 text-green-300" : (participantData?.problemAssignmentId ? "bg-brand-primary/20 text-brand-primary animate-pulse" : "bg-orange-500/20 text-orange-300")}>
+                                                {participantData?.hasConfirmedProblem ? '✓ Done' : (participantData?.problemAssignmentId ? 'Action Needed' : 'Pending')}
+                                            </Badge>
+                                        </div>
+                                        <h3 className="font-bold text-white mb-1 flex items-center justify-between">
+                                            Problem Statement
+                                            <ChevronRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform" />
+                                        </h3>
+                                        <p className="text-xs text-gray-400 mb-3">Select your challenge</p>
+                                        <p className="text-xs text-purple-400 font-medium flex items-center gap-1">
+                                            Open <ChevronRight className="w-3 h-3" />
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {participantData && !isOnline && (
+                                <Card
+                                    className="bg-brand-surface border-blue-500/20 hover:border-blue-500/40 hover:scale-105 hover:shadow-xl hover:shadow-blue-500/20 transition-all cursor-pointer group"
+                                    onClick={() => setIsSubmissionModalOpen(true)}
+                                >
+                                    <CardContent className="p-6">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="p-3 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                                                <Upload className="w-6 h-6 text-blue-400" />
+                                            </div>
+                                            <Badge className={`${participantData?.projectRepo ? (participantData.submissionStatus === 'verified' ? "bg-green-500/20 text-green-300" : "bg-yellow-500/20 text-yellow-300") : "bg-blue-500/20 text-blue-300"}`}>
+                                                {participantData?.projectRepo ? (participantData.submissionStatus === 'verified' ? '✓ Verified' : '⚠ Flagged') : 'Submit'}
+                                            </Badge>
+                                        </div>
+                                        <h3 className="font-bold text-white mb-1 flex items-center justify-between">
+                                            Project Submission
+                                            <ChevronRight className="w-4 h-4 text-blue-400 group-hover:translate-x-1 transition-transform" />
+                                        </h3>
+                                        <p className="text-xs text-gray-400 mb-3">Submit your repository</p>
+                                        <p className="text-xs text-blue-400 font-medium flex items-center gap-1">
+                                            Open <ChevronRight className="w-3 h-3" />
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Get Support Card */}
+                            <Card
+                                className="bg-brand-surface border-orange-500/20 hover:border-orange-500/40 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/20 transition-all cursor-pointer group"
+                                onClick={() => setIsSupportMenuOpen(true)}
+                            >
+                                <CardContent className="p-6">
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="p-3 bg-orange-500/10 rounded-lg group-hover:bg-orange-500/20 transition-colors">
+                                            <HelpCircle className="w-6 h-6 text-orange-400" />
+                                        </div>
+                                        <Badge className="bg-orange-500/20 text-orange-300">24/7</Badge>
+                                    </div>
+                                    <h3 className="font-bold text-white mb-1 flex items-center justify-between">
+                                        Get Support
+                                        <ChevronRight className="w-4 h-4 text-orange-400 group-hover:translate-x-1 transition-transform" />
+                                    </h3>
+                                    <p className="text-xs text-gray-400 mb-3">Need help? Ask us</p>
+                                    <p className="text-xs text-orange-400 font-medium flex items-center gap-1">
+                                        Open <ChevronRight className="w-3 h-3" />
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Information Cards Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Lab Allocation Card / Online Info */}
+                            <Card className="bg-brand-surface border-brand-primary/20" id="online-hub-section">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        {isOnline ? <Zap className="w-5 h-5 text-brand-primary" /> : <MapPin className="w-5 h-5 text-brand-primary" />}
+                                        <h3 className="font-bold text-white">{isOnline ? 'Online Participation' : 'Lab Allocation'}</h3>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {isOnline ? (
+                                            <div className="space-y-4">
+                                                <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
+                                                    <p className="text-sm text-cyan-200">
+                                                        You are participating remotely. Use the options below to manage your hackathon participation.
+                                                    </p>
+                                                </div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    {/* Problem Statement Button */}
+                                                    <div
+                                                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${settings?.onlineProblemSelectionOpen ? 'bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/20' : 'bg-gray-500/5 border-white/5 opacity-50 cursor-not-allowed'}`}
+                                                        onClick={() => {
+                                                            if (settings?.onlineProblemSelectionOpen) {
+                                                                setIsProblemModalOpen(true);
+                                                            } else {
+                                                                toast.error('Problem selection is currently closed for online participants.');
+                                                            }
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <Zap className={`w-5 h-5 ${settings?.onlineProblemSelectionOpen ? 'text-purple-400' : 'text-gray-500'}`} />
+                                                            <Badge className={`${settings?.onlineProblemSelectionOpen ? 'bg-purple-500/20 text-purple-300' : 'bg-gray-500/20 text-gray-400'} text-[10px]`}>
+                                                                {participantData?.hasConfirmedProblem ? 'Confirmed' : 'Action'}
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="font-bold text-white text-sm">Select Problem</p>
+                                                        <p className="text-xs text-gray-400">Choose your domain</p>
+                                                    </div>
+
+                                                    {/* Submission Button */}
+                                                    <div
+                                                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${settings?.onlineSubmissionOpen ? 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20' : 'bg-gray-500/5 border-white/5 opacity-50 cursor-not-allowed'}`}
+                                                        onClick={() => {
+                                                            if (settings?.onlineSubmissionOpen) {
+                                                                setIsSubmissionModalOpen(true);
+                                                            } else {
+                                                                toast.error('Project submission is currently closed for online participants.');
+                                                            }
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <Upload className={`w-5 h-5 ${settings?.onlineSubmissionOpen ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                            <Badge className={`${settings?.onlineSubmissionOpen ? 'bg-blue-500/20 text-blue-300' : 'bg-gray-500/20 text-gray-400'} text-[10px]`}>Final</Badge>
+                                                        </div>
+                                                        <p className="font-bold text-white text-sm">Submit Project</p>
+                                                        <p className="text-xs text-gray-400">Post repository link</p>
+                                                    </div>
+                                                </div>
+
+                                                <Button
+                                                    className="w-full bg-brand-primary text-brand-dark hover:bg-white mt-2"
+                                                    onClick={() => window.open(settings?.onlineMeetUrl || 'https://meet.google.com/xxx-xxxx-xxx', '_blank')}
+                                                >
+                                                    Join Meeting
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {/* Hackathon Lab */}
+                                                {participantData?.assignedHackathonLab ? (
+                                                    <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <p className="text-xs text-purple-300 font-semibold uppercase">Hackathon</p>
+                                                                <p className="text-white font-bold">{participantData.assignedHackathonLab}</p>
+                                                                {hackathonLabDetails?.roomNumber && (
+                                                                    <p className="text-xs text-gray-400">Room: {hackathonLabDetails.roomNumber}</p>
+                                                                )}
+                                                                <p className="text-xs text-gray-400">Seat: {participantData.assignedSeat || 'TBD'}</p>
+                                                            </div>
+                                                            <Badge className="bg-purple-500 text-white">Day 1-2</Badge>
+                                                        </div>
                                                     </div>
                                                 ) : (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="text-xs text-brand-primary h-auto p-0 hover:bg-transparent hover:text-brand-primary/80"
-                                                        onClick={() => setFollowUpId(req._id || null)}
-                                                    >
-                                                        Reply to Coordinator
-                                                    </Button>
+                                                    <div className="p-3 bg-white/5 border border-white/10 rounded-lg">
+                                                        <p className="text-sm text-gray-400">Hackathon lab assignment pending...</p>
+                                                    </div>
                                                 )}
-                                            </div>
-                                        )}
-                                        {req.participantFollowUp && (
-                                            <div className="mt-2 pl-3 border-l-2 border-white/20">
-                                                <p className="text-xs text-gray-500 mb-1">Your Follow-up:</p>
-                                                <p className="text-sm text-white">{req.participantFollowUp}</p>
-                                            </div>
+                                            </>
                                         )}
                                     </div>
-                                ))
-                        )}
-                    </div>
-                </DialogContent>
-            </Dialog>
+                                </CardContent>
+                            </Card>
 
-            {/* ID Card Modal - Keep from original */}
-            <Dialog open={showIdCard} onOpenChange={setShowIdCard}>
-                <DialogContent className="max-w-sm p-0 bg-brand-dark border-white/20 rounded-3xl overflow-hidden shadow-2xl">
-                    <DialogTitle className="sr-only">Digital ID Card</DialogTitle>
-                    <DialogDescription className="sr-only">Digital ID Card with QR code</DialogDescription>
-                    {participantData && (
-                        <div ref={idCardRef} className="relative flex flex-col">
-                            <div className="h-32 bg-linear-to-br from-brand-primary via-brand-secondary to-purple-600 p-6 flex items-start justify-between relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.2),transparent)] opacity-50" />
-                                <div className="relative z-10">
-                                    <div className="flex items-center mb-1">
-                                        <Image
-                                            src="/sponsors/cursors.png"
-                                            alt="Cursors Logo"
-                                            width={40}
-                                            height={40}
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <span className="text-white font-bold tracking-tight">VIBE</span>
+                            {/* Team Info Card */}
+                            <Card className="bg-brand-surface border-brand-primary/20">
+                                <CardContent className="p-6">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <Users className="w-5 h-5 text-brand-primary" />
+                                        <h3 className="font-bold text-white">Team Information</h3>
                                     </div>
-                                    <Badge className="bg-white/10 backdrop-blur-md text-white border-white/20 uppercase text-[10px]">
-                                        {participantData?.type || 'Participant'}
-                                    </Badge>
-                                </div>
-                                <div className="text-right text-white relative z-10">
-                                    <Calendar className="w-5 h-5 ml-auto mb-1 opacity-70" />
-                                    <span className="text-[10px] font-mono font-bold">JAN 05-06</span>
-                                </div>
-                            </div>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-400">Team ID</span>
+                                            <span className="font-mono font-bold text-white">{user.teamId}</span>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-400">Ticket Type</span>
+                                            <Badge className="bg-brand-primary/20 text-brand-primary">{participantData?.type || 'N/A'}</Badge>
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-400">Team Size</span>
+                                            <span className="font-bold text-white">{participants.filter(p => p.teamId === user.teamId).length} members</span>
+                                        </div>
 
-                            <div className="absolute top-20 left-1/2 -translate-x-1/2">
-                                <div className="w-24 h-24 rounded-2xl bg-white p-1 shadow-lg relative group">
-                                    <div className="w-full h-full bg-brand-dark rounded-xl flex items-center justify-center overflow-hidden relative">
-                                        {participantData?.avatarUrl ? (
-                                            <Image
-                                                src={participantData.avatarUrl}
-                                                alt="Avatar"
-                                                fill
-                                                sizes="96px"
-                                                priority
-                                                className="object-cover"
-                                            />
-                                        ) : (
-                                            <span className="text-4xl font-bold text-brand-primary">{avatarFallback}</span>
-                                        )}
+                                        {/* Aggregated College */}
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-sm text-gray-400">College(s)</span>
+                                            <span className="text-sm font-medium text-white text-right">
+                                                {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.college))].join(', ')}
+                                            </span>
+                                        </div>
+
+                                        {/* Aggregated Department */}
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-sm text-gray-400">Department(s)</span>
+                                            <span className="text-sm font-medium text-white text-right">
+                                                {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.department))].join(', ')}
+                                            </span>
+                                        </div>
+
+                                        {/* Aggregated Year */}
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-sm text-gray-400">Year(s)</span>
+                                            <span className="text-sm font-medium text-white text-right">
+                                                {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.year))].join(', ')}
+                                            </span>
+                                        </div>
+
+                                        <Separator className="bg-white/10" />
+                                        <div>
+                                            <p className="text-xs text-gray-400 mb-2">Team Members</p>
+                                            <div className="space-y-1">
+                                                {participants.filter(p => p.teamId === user.teamId).map((member, idx) => (
+                                                    <div key={member.participantId} className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-full bg-brand-primary/20 flex items-center justify-center text-xs font-bold text-brand-primary">
+                                                            {idx + 1}
+                                                        </div>
+                                                        <span className="text-sm text-white">{member.name}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <Separator className="bg-white/10" />
+                                        <div>
+                                            <p className="text-xs text-gray-400 mb-2">Contact Coordinator</p>
+                                            <div className="flex items-center gap-2">
+                                                <Phone className="w-4 h-4 text-brand-primary" />
+                                                <Link href="tel:8897892720" className="text-sm text-brand-primary hover:underline">
+                                                    8897892720
+                                                </Link>
+                                            </div>
+                                        </div>
                                     </div>
-                                    {/* Upload Button Overlay */}
-                                    <Label
-                                        htmlFor="avatar-upload"
-                                        className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-2xl"
-                                    >
-                                        {isAvatarUploading ? (
-                                            <Loader2 className="w-6 h-6 text-white animate-spin" />
-                                        ) : (
-                                            <Camera className="w-6 h-6 text-white" />
-                                        )}
-                                        <Input
-                                            id="avatar-upload"
-                                            type="file"
-                                            className="hidden"
-                                            accept="image/*"
-                                            disabled={isAvatarUploading}
-                                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                                const file = e.target.files?.[0];
-                                                if (file) handleAvatarUpload(file);
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Progress Timeline */}
+                        <Card className="bg-brand-surface border-brand-primary/20">
+                            <CardContent className="p-4 sm:p-6">
+                                <h3 className="font-bold text-white mb-4 sm:mb-6 text-center text-sm sm:text-base">Your Journey</h3>
+                                <div className="flex flex-col sm:flex-row items-center justify-between relative gap-4 sm:gap-0">
+                                    {/* Progress Line */}
+                                    <div className="absolute top-6 left-0 right-0 h-0.5 bg-white/10 hidden sm:block">
+                                        <div
+                                            className="h-full bg-brand-primary transition-all"
+                                            style={{
+                                                width: participantData?.projectRepo ? '80%' :
+                                                    (participantData?.hasConfirmedProblem ? '60%' :
+                                                        (isOnline || participantData?.assignedLab ? '40%' : '20%'))
                                             }}
                                         />
-                                    </Label>
+                                    </div>
+
+                                    {/* Stage 1: Registration */}
+                                    <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
+                                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-brand-primary flex items-center justify-center shrink-0">
+                                            <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                                        </div>
+                                        <div className="flex-1 sm:flex-none text-left sm:text-center">
+                                            <Badge className="bg-green-500/20 text-green-300 mb-1">✓ Complete</Badge>
+                                            <span className="block text-xs text-gray-400">Registration</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Stage 2: Access / Lab Allocation */}
+                                    <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
+                                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${(isOnline || participantData?.assignedLab) ? 'bg-brand-primary' : 'bg-white/10'}`}>
+                                            <MapPin className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                                        </div>
+                                        <div className="flex-1 sm:flex-none text-left sm:text-center">
+                                            <Badge className={(isOnline || participantData?.assignedLab) ? "bg-green-500/20 text-green-300 mb-1" : "bg-orange-500/20 text-orange-300 mb-1"}>
+                                                {(isOnline || participantData?.assignedLab) ? '✓ Ready' : '⏳ Pending'}
+                                            </Badge>
+                                            <span className="block text-xs text-gray-400">{isOnline ? 'Online Access' : 'Lab Allocation'}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Stage 3: Problem */}
+                                    <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
+                                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${participantData?.hasConfirmedProblem ? 'bg-brand-primary' : 'bg-white/10'}`}>
+                                            <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                                        </div>
+                                        <div className="flex-1 sm:flex-none text-left sm:text-center">
+                                            <Badge className={participantData?.hasConfirmedProblem ? "bg-green-500/20 text-green-300 mb-1" : (participantData?.problemAssignmentId ? "bg-brand-primary/20 text-brand-primary mb-1 animate-pulse" : "bg-blue-500/20 text-blue-300 mb-1")}>
+                                                {participantData?.hasConfirmedProblem ? '✓ Confirmed' : (participantData?.problemAssignmentId ? 'Action Needed' : 'Wait')}
+                                            </Badge>
+                                            <span className="block text-xs text-gray-400">Problem</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Stage 4: Submission */}
+                                    <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
+                                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 ${participantData?.projectRepo ? 'bg-brand-primary' : 'bg-white/10'}`}>
+                                            <Upload className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                                        </div>
+                                        <div className="flex-1 sm:flex-none text-left sm:text-center">
+                                            <Badge className={participantData?.projectRepo ? "bg-green-500/20 text-green-300 mb-1" : "bg-purple-500/20 text-purple-300 mb-1"}>
+                                                {participantData?.projectRepo ? '✓ Submitted' : '🚀 Upload'}
+                                            </Badge>
+                                            <span className="block text-xs text-gray-400">Submission</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Stage 5: Presentation */}
+                                    <div className="flex sm:flex-col items-center gap-3 sm:gap-2 relative z-10 w-full sm:w-auto">
+                                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                                            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                                        </div>
+                                        <div className="flex-1 sm:flex-none text-left sm:text-center">
+                                            <Badge className="bg-gray-500/20 text-gray-300 mb-1">Coming Soon</Badge>
+                                            <span className="block text-xs text-gray-400">Presentation</span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                            <div className="pt-16 pb-6 px-6 text-center">
-                                <h3 className="text-xl font-bold text-white mb-1">{user.name}</h3>
-                                <p className="text-xs text-gray-400 mb-1 px-2 line-clamp-2">
-                                    {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.college))].join(', ')}
-                                </p>
-                                <p className="text-[10px] text-gray-500 mb-4 px-2">
-                                    {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.department))].join(', ')} • {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.year))].join(', ')}
-                                </p>
 
-                                <div className="bg-white p-4 rounded-2xl mb-4">
-                                    <div className="bg-white flex items-center justify-center h-32 w-32 mx-auto">
-                                        {participantData?.participantId ? (
-                                            <Image
-                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${participantData.participantId}&color=020617&bgcolor=ffffff`}
-                                                alt="QR Code"
-                                                width={128}
-                                                height={128}
-                                                className="w-full h-full"
-                                                unoptimized
-                                            />
-                                        ) : (
-                                            <div className="text-center text-brand-dark">
-                                                <QrCode className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                                <span className="text-[10px] font-bold">GENERATING...</span>
+                    <Dialog open={isChecklistModalOpen} onOpenChange={setIsChecklistModalOpen}>
+                        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-brand-dark border-white/20">
+                            <DialogHeader>
+                                <DialogTitle className="text-white text-xl">Event Preparation Checklist</DialogTitle>
+                                <DialogDescription className="text-gray-400">
+                                    Make sure you have everything ready for the event
+                                </DialogDescription>
+                            </DialogHeader>
+                            {participantData && (
+                                <EventChecklist
+                                    participantId={participantData.participantId}
+                                    initialCheckedItems={participantData.eventChecklist || []}
+                                />
+                            )}
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Project Submission Modal */}
+                    <Dialog open={isSubmissionModalOpen} onOpenChange={setIsSubmissionModalOpen}>
+                        <DialogContent className="max-w-2xl bg-brand-dark border-white/20">
+                            <DialogHeader className="sr-only">
+                                <DialogTitle>Project Submission</DialogTitle>
+                                <DialogDescription>Submit your project repository</DialogDescription>
+                            </DialogHeader>
+                            {participantData && (
+                                <ProjectSubmission participantId={participantData.participantId} />
+                            )}
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Problem Selection Modal */}
+                    <Dialog open={isProblemModalOpen} onOpenChange={setIsProblemModalOpen}>
+                        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-brand-dark border-white/20">
+                            <DialogHeader>
+                                <DialogTitle className="text-white text-xl">Problem Statement Selection</DialogTitle>
+                                <DialogDescription className="text-gray-400">
+                                    Choose your challenge for the hackathon
+                                </DialogDescription>
+                            </DialogHeader>
+                            {participantData && (
+                                <ProblemSelection
+                                    participantId={participantData.participantId}
+                                    onSuccess={() => {
+                                        fetchParticipants(true);
+                                        // Optional: Close modal if desired? Or let them see confirmation?
+                                        // "Problem Statement Card ... should update".
+                                        // Keeping modal open lets them see "Confirmed!" message inside too.
+                                    }}
+                                />
+                            )}
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Support Menu Modal */}
+                    <Dialog open={isSupportMenuOpen} onOpenChange={setIsSupportMenuOpen}>
+                        <DialogContent className="bg-brand-dark border-white/20 max-w-md">
+                            <DialogHeader>
+                                <DialogTitle className="text-white text-xl">Get Support</DialogTitle>
+                                <DialogDescription className="text-gray-400">
+                                    Choose the type of assistance you need
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-3">
+                                {/* Help Option */}
+                                <Card
+                                    className="bg-brand-surface border-blue-500/20 hover:border-blue-500/40 transition-all cursor-pointer group"
+                                    onClick={() => {
+                                        setIsSupportMenuOpen(false);
+                                        handleAction('Help');
+                                    }}
+                                >
+                                    <CardContent className="p-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-blue-500/10 rounded-lg group-hover:bg-blue-500/20 transition-colors">
+                                                <HelpCircle className="w-6 h-6 text-blue-400" />
                                             </div>
-                                        )}
+                                            <div>
+                                                <h4 className="font-bold text-white mb-1">Request Help</h4>
+                                                <p className="text-xs text-gray-400">General questions or assistance</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Complaint Option */}
+                                <Card
+                                    className="bg-brand-surface border-orange-500/20 hover:border-orange-500/40 transition-all cursor-pointer group"
+                                    onClick={() => {
+                                        setIsSupportMenuOpen(false);
+                                        handleAction('Complaint');
+                                    }}
+                                >
+                                    <CardContent className="p-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-3 bg-orange-500/10 rounded-lg group-hover:bg-orange-500/20 transition-colors">
+                                                <MessageSquare className="w-6 h-6 text-orange-400" />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-white mb-1">Submit Complaint</h4>
+                                                <p className="text-xs text-gray-400">Report an issue or concern</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* SOS Emergency Option - HIDE FOR ONLINE */}
+                                {!isOnline && (
+                                    <Card
+                                        className="bg-brand-surface border-red-500/20 hover:border-red-500/40 transition-all cursor-pointer group"
+                                        onClick={() => {
+                                            setIsSupportMenuOpen(false);
+                                            handleAction('SOS');
+                                        }}
+                                    >
+                                        <CardContent className="p-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="p-3 bg-red-500/10 rounded-lg group-hover:bg-red-500/20 transition-colors">
+                                                    <AlertTriangle className="w-6 h-6 text-red-400" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-white mb-1">Emergency SOS</h4>
+                                                    <p className="text-xs text-gray-400">Urgent help needed immediately</p>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
+
+                                {/* View My Requests History */}
+                                <Button
+                                    variant="outline"
+                                    className="w-full border-white/10 hover:bg-white/5"
+                                    onClick={() => {
+                                        setIsSupportMenuOpen(false);
+                                        setShowRequestsHistory(true);
+                                    }}
+                                >
+                                    View My Requests
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Requests History Dialog */}
+                    <Dialog open={showRequestsHistory} onOpenChange={setShowRequestsHistory}>
+                        <DialogContent className="bg-brand-surface border-white/20 text-white max-w-lg max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                                <DialogTitle>My Support Requests</DialogTitle>
+                                <DialogDescription className="text-gray-400">
+                                    History of your help requests and SOS alerts
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                {supportRequests.filter(r => r.teamId === user.teamId).length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <p>No history found.</p>
                                     </div>
-                                    <p className="text-xs text-brand-dark font-mono font-bold mt-2">{user.teamId}</p>
+                                ) : (
+                                    supportRequests
+                                        .filter(r => r.teamId === user.teamId)
+                                        .sort((a, b) => b.timestamp - a.timestamp)
+                                        .map(req => (
+                                            <div key={req._id} className="p-4 rounded-lg bg-brand-dark border border-white/5">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <Badge variant={req.status === 'Resolved' ? 'default' : 'secondary'} className={req.status === 'Resolved' ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"}>
+                                                        {req.status}
+                                                    </Badge>
+                                                    <span className="text-xs text-gray-500">{new Date(req.timestamp).toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${req.type === 'SOS' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                                        {req.type}
+                                                    </span>
+                                                    {req.message && <span className="text-sm font-medium text-gray-300">{req.message}</span>}
+                                                </div>
+                                                {req.reply && (
+                                                    <div className="mt-3 pl-3 border-l-2 border-brand-primary/30">
+                                                        <p className="text-xs text-gray-500 mb-1">Reply from Coordinator:</p>
+                                                        <p className="text-sm text-white">{req.reply}</p>
+                                                        {!req.participantReaction && (
+                                                            <div className="flex gap-2 mt-2">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="h-6 px-2 text-xs text-green-400 hover:text-green-300 hover:bg-green-500/10"
+                                                                    onClick={() => handleReaction(req._id!, 'Like')}
+                                                                >
+                                                                    <ThumbsUp className="w-3 h-3 mr-1" /> Helpful
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    className="h-6 px-2 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                                                    onClick={() => handleReaction(req._id!, 'Dislike')}
+                                                                >
+                                                                    <ThumbsDown className="w-3 h-3 mr-1" /> Not Helpful
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                        {req.participantReaction && (
+                                                            <p className="text-xs mt-2 text-gray-400 italic">
+                                                                You found this {req.participantReaction === 'Like' ? 'Helpful' : 'Not Helpful'}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {req.reply && !req.participantFollowUp && req.status !== 'Resolved' && (
+                                                    <div className="mt-3">
+                                                        {followUpId === req._id ? (
+                                                            <div className="flex gap-2 items-center">
+                                                                <Input
+                                                                    placeholder="Type your follow-up..."
+                                                                    value={followUpMessage}
+                                                                    onChange={(e) => setFollowUpMessage(e.target.value)}
+                                                                    className="flex-1 bg-brand-dark/50 border-white/10"
+                                                                />
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={handleFollowUp}
+                                                                    disabled={isFollowUpLoading}
+                                                                >
+                                                                    {isFollowUpLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="ghost"
+                                                                    onClick={() => {
+                                                                        setFollowUpId(null);
+                                                                        setFollowUpMessage('');
+                                                                    }}
+                                                                >
+                                                                    <X className="w-4 h-4" />
+                                                                </Button>
+                                                            </div>
+                                                        ) : (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className="text-xs text-brand-primary h-auto p-0 hover:bg-transparent hover:text-brand-primary/80"
+                                                                onClick={() => setFollowUpId(req._id || null)}
+                                                            >
+                                                                Reply to Coordinator
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {req.participantFollowUp && (
+                                                    <div className="mt-2 pl-3 border-l-2 border-white/20">
+                                                        <p className="text-xs text-gray-500 mb-1">Your Follow-up:</p>
+                                                        <p className="text-sm text-white">{req.participantFollowUp}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))
+                                )}
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* ID Card Modal - Keep from original */}
+                    <Dialog open={showIdCard} onOpenChange={setShowIdCard}>
+                        <DialogContent className="max-w-sm p-0 bg-brand-dark border-white/20 rounded-3xl overflow-hidden shadow-2xl">
+                            <DialogTitle className="sr-only">Digital ID Card</DialogTitle>
+                            <DialogDescription className="sr-only">Digital ID Card with QR code</DialogDescription>
+                            {participantData && (
+                                <div ref={idCardRef} className="relative flex flex-col">
+                                    <div className="h-32 bg-linear-to-br from-brand-primary via-brand-secondary to-purple-600 p-6 flex items-start justify-between relative overflow-hidden group">
+                                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.2),transparent)] opacity-50" />
+                                        <div className="relative z-10">
+                                            <div className="flex items-center mb-1">
+                                                <Image
+                                                    src="/sponsors/cursors.png"
+                                                    alt="Cursors Logo"
+                                                    width={40}
+                                                    height={40}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <span className="text-white font-bold tracking-tight">VIBE</span>
+                                            </div>
+                                            <Badge className="bg-white/10 backdrop-blur-md text-white border-white/20 uppercase text-[10px]">
+                                                {participantData?.type || 'Participant'}
+                                            </Badge>
+                                        </div>
+                                        <div className="text-right text-white relative z-10">
+                                            <Calendar className="w-5 h-5 ml-auto mb-1 opacity-70" />
+                                            <span className="text-[10px] font-mono font-bold">JAN 05-06</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="absolute top-20 left-1/2 -translate-x-1/2">
+                                        <div className="w-24 h-24 rounded-2xl bg-white p-1 shadow-lg relative group">
+                                            <div className="w-full h-full bg-brand-dark rounded-xl flex items-center justify-center overflow-hidden relative">
+                                                {participantData?.avatarUrl ? (
+                                                    <Image
+                                                        src={participantData.avatarUrl}
+                                                        alt="Avatar"
+                                                        fill
+                                                        sizes="96px"
+                                                        priority
+                                                        className="object-cover"
+                                                    />
+                                                ) : (
+                                                    <span className="text-4xl font-bold text-brand-primary">{avatarFallback}</span>
+                                                )}
+                                            </div>
+                                            {/* Upload Button Overlay */}
+                                            <Label
+                                                htmlFor="avatar-upload"
+                                                className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-2xl"
+                                            >
+                                                {isAvatarUploading ? (
+                                                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                                                ) : (
+                                                    <Camera className="w-6 h-6 text-white" />
+                                                )}
+                                                <Input
+                                                    id="avatar-upload"
+                                                    type="file"
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    disabled={isAvatarUploading}
+                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) handleAvatarUpload(file);
+                                                    }}
+                                                />
+                                            </Label>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-16 pb-6 px-6 text-center">
+                                        <h3 className="text-xl font-bold text-white mb-1">{user.name}</h3>
+                                        <p className="text-xs text-gray-400 mb-1 px-2 line-clamp-2">
+                                            {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.college))].join(', ')}
+                                        </p>
+                                        <p className="text-[10px] text-gray-500 mb-4 px-2">
+                                            {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.department))].join(', ')} • {[...new Set(participants.filter(p => p.teamId === user.teamId).map(p => p.year))].join(', ')}
+                                        </p>
+
+                                        <div className="bg-white p-4 rounded-2xl mb-4">
+                                            <div className="bg-white flex items-center justify-center h-32 w-32 mx-auto">
+                                                {participantData?.participantId ? (
+                                                    <Image
+                                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${participantData.participantId}&color=020617&bgcolor=ffffff`}
+                                                        alt="QR Code"
+                                                        width={128}
+                                                        height={128}
+                                                        className="w-full h-full"
+                                                        unoptimized
+                                                    />
+                                                ) : (
+                                                    <div className="text-center text-brand-dark">
+                                                        <QrCode className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                                        <span className="text-[10px] font-bold">GENERATING...</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-brand-dark font-mono font-bold mt-2">{user.teamId}</p>
+                                        </div>
+
+                                        {/* Online Text or ID Buttons */}
+                                        {isOnline ? (
+                                            <div className="mb-4 bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                                                <p className="text-center text-white font-bold text-sm">REMOTE PARTICIPANT</p>
+                                                <p className="text-center text-gray-300 text-xs">Official Digital Pass</p>
+                                            </div>
+                                        ) : null}
+
+                                        <div className="flex gap-2">
+                                            <Button
+                                                onClick={downloadIdCard}
+                                                className="flex-1 bg-brand-primary hover:bg-brand-primary/80 text-white"
+                                            >
+                                                <Download className="w-4 h-4 mr-2" />
+                                                Download
+                                            </Button>
+                                            <Button
+                                                onClick={() => setShowIdCard(false)}
+                                                variant="outline"
+                                                className="flex-1 bg-white/10 border-white/20 text-white hover:bg-white/20"
+                                            >
+                                                Close
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </div>
+                            )}
+                        </DialogContent>
+                    </Dialog>
 
-                                {/* Online Text or ID Buttons */}
-                                {isOnline ? (
-                                    <div className="mb-4 bg-white/10 p-2 rounded-lg backdrop-blur-sm">
-                                        <p className="text-center text-white font-bold text-sm">REMOTE PARTICIPANT</p>
-                                        <p className="text-center text-gray-300 text-xs">Official Digital Pass</p>
-                                    </div>
-                                ) : null}
+                    {/* Problem Selection Modal */}
+                    <Dialog open={isProblemModalOpen} onOpenChange={setIsProblemModalOpen}>
+                        <DialogContent className="bg-brand-dark border-purple-500/20 max-w-4xl max-h-[90vh] overflow-y-auto">
+                            <DialogHeader>
+                                <DialogTitle className="text-white flex items-center gap-2">
+                                    <Zap className="w-5 h-5 text-purple-400" /> Select Problem Statement
+                                </DialogTitle>
+                                <DialogDescription className="text-gray-400">
+                                    Choose your domain and select a problem statement for the hackathon.
+                                </DialogDescription>
+                            </DialogHeader>
+                            {participantData?.participantId && (
+                                <ProblemSelection
+                                    participantId={participantData.participantId}
+                                    onSuccess={() => {
+                                        // Close modal after short delay or let component handle it?
+                                        // Component calls onSuccess after confirmation.
+                                        fetchParticipants(); // Refresh data
+                                        setIsProblemModalOpen(false); // Optional: keep open to show success state
+                                    }}
+                                />
+                            )}
+                        </DialogContent>
+                    </Dialog>
 
-                                <div className="flex gap-2">
-                                    <Button
-                                        onClick={downloadIdCard}
-                                        className="flex-1 bg-brand-primary hover:bg-brand-primary/80 text-white"
-                                    >
-                                        <Download className="w-4 h-4 mr-2" />
-                                        Download
-                                    </Button>
-                                    <Button
-                                        onClick={() => setShowIdCard(false)}
-                                        variant="outline"
-                                        className="flex-1 bg-white/10 border-white/20 text-white hover:bg-white/20"
-                                    >
-                                        Close
-                                    </Button>
+                    {!isOnline && (
+                        <div className="mt-8 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-400">
+                                    <MapPin className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold text-white">Travel Guide</h2>
+                                    <p className="text-sm text-gray-400">How to reach the venue</p>
                                 </div>
                             </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                {/* Bus Info */}
+                                <Card className="bg-brand-surface/50 border-white/5 hover:border-brand-primary/20 transition-all group">
+                                    <CardContent className="p-6">
+                                        <div className="w-10 h-10 rounded-full bg-brand-primary/10 flex items-center justify-center mb-4 group-hover:bg-brand-primary/20 transition-colors">
+                                            <Bus className="w-5 h-5 text-brand-primary" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-white mb-3">By Bus</h3>
+                                        <div className="space-y-3 text-xs text-gray-300">
+                                            <div>
+                                                <span className="block text-brand-primary font-medium mb-0.5">Dwarakanagar</span>
+                                                Board <span className="text-white font-mono bg-white/10 px-1 rounded">222</span> on South Side bus bay.
+                                            </div>
+                                            <div>
+                                                <span className="block text-brand-primary font-medium mb-0.5">Gurudwara</span>
+                                                Board <span className="text-white font-mono bg-white/10 px-1 rounded">111</span> on Vizag-Srikakulam Highway.
+                                            </div>
+                                            <div>
+                                                <span className="block text-brand-primary font-medium mb-0.5">Maddilapalem</span>
+                                                Board <span className="text-white font-mono bg-white/10 px-1 rounded">111</span>, <span className="text-white font-mono bg-white/10 px-1 rounded">222</span>, <span className="text-white font-mono bg-white/10 px-1 rounded">411</span>
+                                            </div>
+                                            <div className="p-2 bg-brand-dark/50 rounded border border-white/5 mt-2 italic text-gray-500">
+                                                All buses towards Vizianagaram/Srikakulam via Tagarapuvalasa works.
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Train Info */}
+                                <Card className="bg-brand-surface/50 border-white/5 hover:border-brand-primary/20 transition-all group">
+                                    <CardContent className="p-6">
+                                        <div className="w-10 h-10 rounded-full bg-brand-primary/10 flex items-center justify-center mb-4 group-hover:bg-brand-primary/20 transition-colors">
+                                            <Train className="w-5 h-5 text-brand-primary" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-white mb-3">By Train</h3>
+                                        <div className="space-y-3 text-xs text-gray-300">
+                                            <div>
+                                                <span className="block text-brand-primary font-medium mb-0.5">Visakhapatnam Station</span>
+                                                <p>Board <span className="text-white font-mono bg-white/10 px-1 rounded">222</span> or <span className="text-white font-mono bg-white/10 px-1 rounded">411</span> at bus stop outside Pf-1.</p>
+                                            </div>
+                                            <div>
+                                                <span className="block text-brand-primary font-medium mb-0.5">Vizianagaram Station</span>
+                                                <p>Board <span className="text-white font-mono bg-white/10 px-1 rounded">111</span>, <span className="text-white font-mono bg-white/10 px-1 rounded">211</span> towards Vizag via Tagarapuvalasa.</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Flight Info */}
+                                <Card className="bg-brand-surface/50 border-white/5 hover:border-brand-primary/20 transition-all group">
+                                    <CardContent className="p-6">
+                                        <div className="w-10 h-10 rounded-full bg-brand-primary/10 flex items-center justify-center mb-4 group-hover:bg-brand-primary/20 transition-colors">
+                                            <Plane className="w-5 h-5 text-brand-primary" />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-white mb-3">By Flight</h3>
+                                        <div className="space-y-3 text-xs text-gray-300">
+                                            <div>
+                                                <span className="block text-brand-primary font-medium mb-0.5">From Airport</span>
+                                                <p>Reach the Highway and board <span className="text-white font-mono bg-white/10 px-1 rounded">111</span> towards Srikakulam.</p>
+                                                <p className="mt-2 text-gray-500 italic">Uber/Ola/Rapido available to college directly.</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            {/* Last Mile */}
+                            <div className="bg-brand-surface/30 border border-white/5 rounded-xl p-4 md:p-6 flex flex-col md:flex-row gap-4 items-center">
+                                <div className="p-3 bg-green-500/10 rounded-full">
+                                    <Navigation className="w-6 h-6 text-green-500" />
+                                </div>
+                                <div className="flex-1 space-y-1">
+                                    <h4 className="text-white font-medium">Destination: Tagarapuvalasa (ANITS College Stop)</h4>
+                                    <p className="text-sm text-gray-400">
+                                        Deboard at ANITS stop. Cross the highway or use the tunnel. The campus is 500m away (walkable/auto).
+                                    </p>
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    className="border-brand-primary/30 text-brand-primary hover:bg-brand-primary/10 whitespace-nowrap"
+                                    onClick={() => window.open('https://maps.google.com/?q=ANITS+College+Visakhapatnam', '_blank')}
+                                >
+                                    <MapPin className="w-4 h-4 mr-2" />
+                                    Google Maps
+                                </Button>
+                            </div>
+                            {/* Bottom Spacer */}
+                            <div className="h-20" />
                         </div>
                     )}
-                </DialogContent>
-            </Dialog>
-
-            {/* Problem Selection Modal */}
-            <Dialog open={isProblemModalOpen} onOpenChange={setIsProblemModalOpen}>
-                <DialogContent className="bg-brand-dark border-purple-500/20 max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle className="text-white flex items-center gap-2">
-                            <Zap className="w-5 h-5 text-purple-400" /> Select Problem Statement
-                        </DialogTitle>
-                        <DialogDescription className="text-gray-400">
-                            Choose your domain and select a problem statement for the hackathon.
-                        </DialogDescription>
-                    </DialogHeader>
-                    {participantData?.participantId && (
-                        <ProblemSelection
-                            participantId={participantData.participantId}
-                            onSuccess={() => {
-                                // Close modal after short delay or let component handle it?
-                                // Component calls onSuccess after confirmation.
-                                fetchParticipants(); // Refresh data
-                                setIsProblemModalOpen(false); // Optional: keep open to show success state
-                            }}
-                        />
-                    )}
-                </DialogContent>
-            </Dialog>
+                </div>
+            ) : (
+                <SocialFeed
+                    currentUserId={user.teamId || ''}
+                    currentUserName={user.name}
+                    currentUserAvatar={participantData?.avatarUrl}
+                    teamId={user.teamId || ''}
+                    members={teamMembers}
+                />
+            )}
 
             {/* Support Modals */}
             <Dialog open={isSOSModalOpen} onOpenChange={setIsSOSModalOpen}>

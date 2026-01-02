@@ -22,7 +22,8 @@ import {
     Loader2,
     LayoutGrid,
     CheckCircle2, FileCode2, Clock, Upload, Ban,
-    Database
+    Database,
+    Instagram
 } from 'lucide-react';
 import {
     Tooltip,
@@ -98,6 +99,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import SystemConfigTab from '@/components/admin/SystemConfigTab';
 import PendingRequestsTab from '@/components/admin/PendingRequestsTab';
 import { DashboardShell } from '@/components/dashboards/DashboardShell';
+import SocialFeed from '@/components/social/SocialFeed';
 import { NavItem } from '@/components/dashboards/DashboardNav';
 import { CampaignTab } from '@/components/admin/CampaignTab';
 import { FinanceTab } from '@/components/admin/FinanceTab';
@@ -835,6 +837,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         { label: 'Coordinators', icon: UserCog, value: 'coordinators', group: 'Users' },
         { label: 'Lab Management', icon: Zap, value: 'lab', group: 'Operations' },
         { label: 'Problem Statements', icon: FileText, value: 'problems', group: 'Operations' },
+        { label: 'Social Feed', icon: Instagram, value: 'social', group: 'Community' },
         { label: 'Campaigns', icon: Mail, value: 'campaigns', group: 'Operations' },
         { label: 'Support Requests', icon: AlertTriangle, value: 'support', group: 'Operations' },
         { label: 'Finance', icon: Download, value: 'finance', group: 'Operations' }, // Added Finance tab
@@ -1422,6 +1425,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                         data={supportRequests}
                         searchKey="teamId"
                         placeholder="Search by team ID..."
+                    />
+                </TabsContent>
+
+                <TabsContent value="social" className="mt-6">
+                    <SocialFeed
+                        currentUserId={user.email}
+                        currentUserName={user.name}
+                        teamId="ADMIN"
+                        members={[{ name: user.name }]}
                     />
                 </TabsContent>
 
